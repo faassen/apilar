@@ -141,12 +141,15 @@ impl Processor {
             stack_pointer: 0,
         };
     }
+
     pub fn execute(&mut self, memory: &mut Memory, rng: &mut SmallRng) {
         let value = memory.values[self.ip];
         let instruction: Option<Instruction> = num::FromPrimitive::from_u64(value);
         match instruction {
             Some(instruction) => instruction.execute(self, memory, rng),
-            None => {}
+            None => {
+                // no op, we cannot interpret this as a valid instruction
+            }
         }
     }
 
