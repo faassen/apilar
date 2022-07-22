@@ -56,7 +56,15 @@ enum Instruction {
     Addr = 120,
     Read,
     Write,
+
+    // processors
+    Spawn = 140, // spawn a new processor
+    End,         // end this processor's existence
 }
+
+// execution system: spawn new processors until amount of processors is
+// filled. Kill the oldest processor. This can be implemented with a
+// wrap around index overwriting the oldest processor with a new one
 
 impl Instruction {
     pub fn execute(&self, processor: &mut Processor, memory: &mut Memory, rng: &mut SmallRng) {
