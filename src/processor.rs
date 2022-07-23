@@ -29,6 +29,9 @@ impl Processor {
     }
 
     pub fn execute(&mut self, memory: &mut Memory, rng: &mut SmallRng) {
+        if self.ip >= memory.values.len() {
+            self.ip = 0;
+        }
         let value = memory.values[self.ip];
         let instruction: Option<Instruction> = Instruction::decode(value);
         match instruction {

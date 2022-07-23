@@ -416,4 +416,27 @@ mod tests {
         let (processor, _, _) = execute("N2 JMP NOOP NOOP N1 N2");
         assert_eq!(processor.current_stack(), [1, 2]);
     }
+
+    #[test]
+    fn test_jmpif_true() {
+        let (processor, _, _) = execute("ADDR N1 JMPIF");
+        assert_eq!(processor.current_stack(), []);
+        assert_eq!(processor.address(), 0);
+    }
+
+    #[test]
+    fn test_jmpif_false() {
+        let (processor, _, _) = execute("ADDR N1 N1 SUB JMPIF");
+        assert_eq!(processor.current_stack(), []);
+        assert_eq!(processor.address(), 5);
+    }
+
+    #[test]
+    fn test_wrap_around_memory() {
+        let (mut processor, mut memory, mut small_rng) = execute("N1 N2");
+        assert_eq!(processor.current_stack(), [1, 2]);
+        // execute two more
+        processor.execute_amount(&mut memory, &mut small_rng, 102);
+        assert_eq!(processor.current_stack(), [1, 2, 1, 2])
+    }
 }
