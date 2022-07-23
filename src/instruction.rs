@@ -108,7 +108,9 @@ impl Instruction {
             Instruction::SWAP => {
                 processor.swap();
             }
-
+            Instruction::OVER => {
+                processor.over();
+            }
             Instruction::JMP => {
                 let popped = processor.pop_address(memory);
                 if let Some(address) = popped {

@@ -91,6 +91,14 @@ impl Processor {
         self.stack[under] = temp;
     }
 
+    pub fn over(&mut self) {
+        if self.stack_pointer < 2 {
+            return;
+        }
+        let under = self.stack_pointer - 2;
+        self.push(self.stack[under]);
+    }
+
     fn compact_stack(&mut self) {
         self.stack_pointer = STACK_SIZE / 2;
         self.stack.moveslice(usize::from(self.stack_pointer).., 0);
@@ -194,5 +202,25 @@ mod tests {
         processor.push(1);
         processor.swap();
         assert_eq!(processor.pop(), 1);
+    }
+
+    #[test]
+    fn test_over() {
+        let mut processor = Processor::new(0);
+        processor.push(1);
+        processor.push(2);
+        processor.over();
+        assert_eq!(processor.pop(), 1);
+        assert_eq!(processor.pop(), 2);
+        assert_eq!(processor.pop(), 1);
+    }
+
+    #[test]
+    fn test_over_not_enough_on_stack() {
+        let mut processor = Processor::new(0);
+        processor.push(1);
+        processor.over();
+        assert_eq!(processor.pop(), 1);
+        assert_eq!(processor.pop(), u64::MAX);
     }
 }
