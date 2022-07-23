@@ -99,6 +99,19 @@ impl Processor {
         self.push(self.stack[under]);
     }
 
+    pub fn rot(&mut self) {
+        if self.stack_pointer < 3 {
+            return;
+        }
+        let one = self.stack_pointer - 3;
+        let two = self.stack_pointer - 2;
+        let three = self.stack_pointer - 1;
+        let temp = self.stack[one];
+        self.stack[one] = self.stack[two];
+        self.stack[two] = self.stack[three];
+        self.stack[three] = temp;
+    }
+
     fn compact_stack(&mut self) {
         self.stack_pointer = STACK_SIZE / 2;
         self.stack.moveslice(usize::from(self.stack_pointer).., 0);
@@ -222,5 +235,17 @@ mod tests {
         processor.over();
         assert_eq!(processor.pop(), 1);
         assert_eq!(processor.pop(), u64::MAX);
+    }
+
+    #[test]
+    fn test_rot() {
+        let mut processor = Processor::new(0);
+        processor.push(1);
+        processor.push(2);
+        processor.push(3);
+        processor.rot();
+        assert_eq!(processor.pop(), 1);
+        assert_eq!(processor.pop(), 3);
+        assert_eq!(processor.pop(), 2);
     }
 }
