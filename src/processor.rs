@@ -38,6 +38,12 @@ impl Processor {
         self.ip += 1;
     }
 
+    pub fn execute_amount(&mut self, memory: &mut Memory, rng: &mut SmallRng, amount: u64) {
+        for _ in 0..amount {
+            self.execute(memory, rng)
+        }
+    }
+
     pub fn push(&mut self, value: u64) {
         if self.stack_pointer >= STACK_SIZE {
             self.compact_stack();

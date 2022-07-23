@@ -311,11 +311,35 @@ mod tests {
         let mut processor = Processor::new(0);
         let mut small_rng = SmallRng::from_seed([0; 32]);
 
-        processor.execute(&mut memory, &mut small_rng);
-        processor.execute(&mut memory, &mut small_rng);
-        processor.execute(&mut memory, &mut small_rng);
+        processor.execute_amount(&mut memory, &mut small_rng, 3);
 
         assert_eq!(processor.current_stack(), [3]);
+    }
+
+    #[test]
+    fn test_sub() {
+        let assembler = Assembler::new();
+        let mut memory = Memory::new(100);
+        assembler.assemble("N4 N2 SUB", &mut memory, 0);
+        let mut processor = Processor::new(0);
+        let mut small_rng = SmallRng::from_seed([0; 32]);
+
+        processor.execute_amount(&mut memory, &mut small_rng, 3);
+
+        assert_eq!(processor.current_stack(), [2]);
+    }
+
+    #[test]
+    fn test_mul() {
+        let assembler = Assembler::new();
+        let mut memory = Memory::new(100);
+        assembler.assemble("N4 N2 MUL", &mut memory, 0);
+        let mut processor = Processor::new(0);
+        let mut small_rng = SmallRng::from_seed([0; 32]);
+
+        processor.execute_amount(&mut memory, &mut small_rng, 3);
+
+        assert_eq!(processor.current_stack(), [8]);
     }
 
     #[test]
