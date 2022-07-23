@@ -17,7 +17,7 @@ impl Assembler {
         return Assembler { instructions };
     }
 
-    pub fn assemble(&self, text: &str, memory: &mut Memory, index: usize) {
+    pub fn assemble(&self, text: &str, memory: &mut Memory, index: usize) -> usize {
         let mut i = index;
         for word in text.split_whitespace() {
             match self.instructions.get(word) {
@@ -33,6 +33,7 @@ impl Assembler {
             };
             i += 1;
         }
+        return i - index;
     }
 }
 
@@ -44,7 +45,8 @@ mod tests {
     fn test_assemble() {
         let mut memory = Memory::new(10);
         let assembler = Assembler::new();
-        assembler.assemble("N1 N2", &mut memory, 0);
+        let amount = assembler.assemble("N1 N2", &mut memory, 0);
+        assert_eq!(amount, 2);
         assert_eq!(memory.values[0..2], [1, 2]);
     }
 }
