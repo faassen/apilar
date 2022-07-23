@@ -5,6 +5,7 @@ use crate::instruction::Instruction;
 use crate::memory::Memory;
 
 const STACK_SIZE: usize = 64;
+const ADDRESS_DISTANCE: usize = 1024;
 
 pub struct Processor {
     pub ip: usize,
@@ -55,6 +56,14 @@ impl Processor {
         self.stack_pointer -= 1;
         let result = self.stack[self.stack_pointer] as usize;
         if result >= memory.values.len() {
+            return None;
+        }
+        let distance = if result > self.ip {
+            result - self.ip
+        } else {
+            self.ip - result
+        };
+        if distance > ADDRESS_DISTANCE {
             return None;
         }
         return Some(result);
@@ -136,10 +145,27 @@ mod tests {
     }
 
     #[test]
-    fn test_pop_address_out_of_bounds() {
+    fn test_pop_address_out_of_bounds_of_memory() {
         let mut memory = Memory::new(100);
         let mut processor = Processor::new(0);
         processor.push(1000);
+        assert_eq!(processor.pop_address(&mut memory), None);
+    }
+
+    #[test]
+    fn test_pop_address_beyond_address_distance() {
+        let mut memory = Memory::new(ADDRESS_DISTANCE * 10);
+        let mut processor = Processor::new(0);
+        let address_distance: u64 = ADDRESS_DISTANCE.try_into().unwrap();
+        processor.push(address_distance + 1); // cannot address this
+        assert_eq!(processor.pop_address(&mut memory), None);
+    }
+
+    #[test]
+    fn test_pop_address_beyond_address_distance_other_direction() {
+        let mut memory = Memory::new(ADDRESS_DISTANCE * 10);
+        let mut processor = Processor::new(ADDRESS_DISTANCE * 2);
+        processor.push(0); // cannot address this
         assert_eq!(processor.pop_address(&mut memory), None);
     }
 }
