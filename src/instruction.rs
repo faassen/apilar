@@ -290,8 +290,6 @@ impl Instruction {
             Instruction::END => {
                 processor.end();
             }
-
-            _ => panic!("unsupported instruction"),
         }
     }
 }
