@@ -19,9 +19,11 @@ impl Computer {
     }
 
     pub fn execute(&mut self, rng: &mut SmallRng, amount_per_processor: usize) {
+        // execute amount of instructions per processor
         for processor in &mut self.processors {
             processor.execute_amount(&mut self.memory, rng, amount_per_processor);
         }
+
         // obtain any start instructions
         let mut to_start: Vec<usize> = Vec::new();
         for processor in &self.processors {
@@ -47,5 +49,23 @@ impl Computer {
                 self.processors.push(Processor::new(address));
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rand::SeedableRng;
+
+    use super::*;
+    use crate::assembler::Assembler;
+
+    fn execute(text: &str) -> (Processor, Memory, SmallRng) {
+        let assembler = Assembler::new();
+        let mut memory = Memory::new(100);
+        let amount = assembler.assemble(text, &mut memory, 0);
+        let mut processor = Processor::new(0);
+        let mut small_rng = SmallRng::from_seed([0; 32]);
+        processor.execute_amount(&mut memory, &mut small_rng, amount);
+        return (processor, memory, small_rng);
     }
 }
