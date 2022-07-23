@@ -52,6 +52,7 @@ impl Processor {
         if self.stack_pointer == 0 {
             return None;
         }
+        self.stack_pointer -= 1;
         let result = self.stack[self.stack_pointer] as usize;
         if result >= memory.values.len() {
             return None;
@@ -123,5 +124,22 @@ mod tests {
         processor.push(10);
         assert_eq!(processor.pop(), 10);
         assert_eq!(processor.pop(), u64::MAX);
+    }
+
+    #[test]
+    fn test_pop_address() {
+        let mut memory = Memory::new(100);
+        let mut processor = Processor::new(0);
+        processor.push(10);
+        assert_eq!(processor.pop_address(&mut memory), Some(10));
+        assert_eq!(processor.pop_address(&mut memory), None);
+    }
+
+    #[test]
+    fn test_pop_address_out_of_bounds() {
+        let mut memory = Memory::new(100);
+        let mut processor = Processor::new(0);
+        processor.push(1000);
+        assert_eq!(processor.pop_address(&mut memory), None);
     }
 }
