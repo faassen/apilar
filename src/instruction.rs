@@ -267,7 +267,6 @@ impl Instruction {
                             // truncate
                             value as u8
                         };
-                        println!("write {} {}", address, constrained_value);
                         memory.values[address] = constrained_value;
                     }
                     None => {
@@ -447,36 +446,36 @@ mod tests {
         assert_eq!(processor.current_stack(), [1, 2, 1, 2])
     }
 
-    #[test]
-    fn test_copy_self() {
-        let (mut processor, mut memory, mut small_rng) = execute(
-            "
-            ADDR
-            ADDR
-            SWAP
-            DUP
-            READ
-            SWAP
-            DUP
-            N8
-            N8
-            MUL
-            ADD
-            ROT
-            WRITE
-            N1
-            ADD
-            SWAP
-            JMP",
-        );
-        // println!("{:?}", processor.current_stack());
-        // execute again
-        processor.execute_amount(&mut memory, &mut small_rng, 16 * 17);
-        // println!("{:?}", processor.current_stack());
-        // processor.execute_amount(&mut memory, &mut small_rng, 17);
-        // println!("{:?}", processor.current_stack());
+    // #[test]
+    // fn test_copy_self() {
+    //     let (mut processor, mut memory, mut small_rng) = execute(
+    //         "
+    //         ADDR
+    //         ADDR
+    //         SWAP
+    //         DUP
+    //         READ
+    //         SWAP
+    //         DUP
+    //         N8
+    //         N8
+    //         MUL
+    //         ADD
+    //         ROT
+    //         WRITE
+    //         N1
+    //         ADD
+    //         SWAP
+    //         JMP",
+    //     );
+    //     // println!("{:?}", processor.current_stack());
+    //     // execute again
+    //     processor.execute_amount(&mut memory, &mut small_rng, 16 * 17);
+    //     // println!("{:?}", processor.current_stack());
+    //     // processor.execute_amount(&mut memory, &mut small_rng, 17);
+    //     // println!("{:?}", processor.current_stack());
 
-        assert_eq!(memory.values[64..64 + 17], []);
-        // assert_eq!(processor.current_stack(), [1, 2, 1, 2])
-    }
+    //     assert_eq!(memory.values[64..64 + 17], []);
+    //     // assert_eq!(processor.current_stack(), [1, 2, 1, 2])
+    // }
 }
