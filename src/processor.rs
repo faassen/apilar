@@ -44,9 +44,8 @@ impl Processor {
         if self.stack_pointer == 0 {
             return u64::MAX;
         }
-        let result = self.stack[self.stack_pointer];
         self.stack_pointer -= 1;
-        return result;
+        return self.stack[self.stack_pointer];
     }
 
     pub fn pop_address(&mut self, memory: &Memory) -> Option<usize> {
@@ -107,5 +106,22 @@ mod tests {
 
         assert_eq!(processor.stack_pointer, STACK_SIZE / 2 + 1);
         assert_eq!(processor.top(), 100);
+    }
+
+    #[test]
+    fn test_pop() {
+        let mut processor = Processor::new(0);
+        processor.push(10);
+        processor.push(100);
+        assert_eq!(processor.pop(), 100);
+        assert_eq!(processor.pop(), 10);
+    }
+
+    #[test]
+    fn test_pop_empty_stack() {
+        let mut processor = Processor::new(0);
+        processor.push(10);
+        assert_eq!(processor.pop(), 10);
+        assert_eq!(processor.pop(), u64::MAX);
     }
 }

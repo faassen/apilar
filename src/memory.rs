@@ -1,5 +1,3 @@
-use crate::instruction::Instruction;
-
 pub struct Memory {
     pub values: Vec<u8>,
 }
