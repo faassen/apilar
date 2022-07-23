@@ -187,4 +187,12 @@ mod tests {
         assert_eq!(processor.pop(), 1);
         assert_eq!(processor.pop(), 2);
     }
+
+    #[test]
+    fn test_swap_not_enough_on_stack() {
+        let mut processor = Processor::new(0);
+        processor.push(1);
+        processor.swap();
+        assert_eq!(processor.pop(), 1);
+    }
 }
