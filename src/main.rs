@@ -3,6 +3,7 @@ extern crate num;
 extern crate num_derive;
 
 pub mod assembler;
+pub mod computer;
 pub mod instruction;
 pub mod memory;
 pub mod processor;

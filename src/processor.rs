@@ -1,16 +1,20 @@
 use moveslice::Moveslice;
 use rand::rngs::SmallRng;
 
+use crate::computer::Computer;
 use crate::instruction::Instruction;
 use crate::memory::Memory;
 
 const STACK_SIZE: usize = 64;
 const ADDRESS_DISTANCE: usize = 1024;
 
+#[derive(Debug)]
 pub struct Processor {
     ip: usize,
     stack_pointer: usize,
     jumped: bool,
+    pub alive: bool,
+    start: Option<usize>,
     stack: [u64; STACK_SIZE],
 }
 
@@ -20,6 +24,8 @@ impl Processor {
             ip,
             stack: [0; STACK_SIZE],
             jumped: false,
+            alive: true,
+            start: None,
             stack_pointer: 0,
         };
     }
@@ -29,6 +35,9 @@ impl Processor {
     }
 
     pub fn execute(&mut self, memory: &mut Memory, rng: &mut SmallRng) {
+        if !self.alive {
+            return;
+        }
         if self.ip >= memory.values.len() {
             self.ip = 0;
         }
@@ -48,9 +57,22 @@ impl Processor {
     }
 
     pub fn execute_amount(&mut self, memory: &mut Memory, rng: &mut SmallRng, amount: usize) {
+        self.start = None;
         for _ in 0..amount {
             self.execute(memory, rng)
         }
+    }
+
+    pub fn start(&mut self, address: usize) {
+        self.start = Some(address);
+    }
+
+    pub fn end(&mut self) {
+        self.alive = false;
+    }
+
+    pub fn get_start(&self) -> Option<usize> {
+        return self.start;
     }
 
     pub fn jump(&mut self, address: usize) {

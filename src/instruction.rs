@@ -57,7 +57,7 @@ pub enum Instruction {
     WRITE,
 
     // processors
-    START = 140, // start a new processor
+    START = 140, // start a new processor given a starting point (only 1 can started in execution block)
     END,         // end this processor's existence
 }
 
@@ -277,6 +277,18 @@ impl Instruction {
                         // no write out of bounds
                     }
                 }
+            }
+
+            // Processors
+            Instruction::START => {
+                let popped = processor.pop_address(memory);
+                if let Some(address) = popped {
+                    processor.start(address);
+                }
+            }
+
+            Instruction::END => {
+                processor.end();
             }
 
             _ => panic!("unsupported instruction"),
