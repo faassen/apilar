@@ -81,14 +81,14 @@ impl Processor {
     }
 
     pub fn swap(&mut self) {
-        if self.stack_pointer <= 1 {
+        if self.stack_pointer < 2 {
             return;
         }
-        let first = self.stack_pointer - 1;
-        let second = self.stack_pointer;
-        let temp = self.stack[second];
-        self.stack[second] = self.stack[first];
-        self.stack[first] = temp;
+        let under = self.stack_pointer - 2;
+        let over = self.stack_pointer - 1;
+        let temp = self.stack[over];
+        self.stack[over] = self.stack[under];
+        self.stack[under] = temp;
     }
 
     fn compact_stack(&mut self) {
@@ -176,5 +176,15 @@ mod tests {
         processor.push(100);
         processor.drop();
         assert_eq!(processor.pop(), 10);
+    }
+
+    #[test]
+    fn test_swap() {
+        let mut processor = Processor::new(0);
+        processor.push(1);
+        processor.push(2);
+        processor.swap();
+        assert_eq!(processor.pop(), 1);
+        assert_eq!(processor.pop(), 2);
     }
 }
