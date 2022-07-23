@@ -295,7 +295,7 @@ mod tests {
     use rand::SeedableRng;
 
     use super::*;
-    use crate::assembler::Assembler;
+    use crate::assembler::{text_to_words, Assembler};
 
     #[test]
     fn test_decode_success() {
@@ -307,185 +307,208 @@ mod tests {
         assert_eq!(Instruction::decode(u8::MAX), None);
     }
 
-    fn execute(text: &str) -> (Processor, Memory, SmallRng) {
+    struct Exec {
+        assembler: Assembler,
+        processor: Processor,
+        memory: Memory,
+        small_rng: SmallRng,
+    }
+
+    fn execute(text: &str) -> Exec {
         let assembler = Assembler::new();
         let mut memory = Memory::new(1000);
         let amount = assembler.assemble(text, &mut memory, 0);
         let mut processor = Processor::new(0);
         let mut small_rng = SmallRng::from_seed([0; 32]);
         processor.execute_amount(&mut memory, &mut small_rng, amount);
-        return (processor, memory, small_rng);
+        return Exec {
+            assembler,
+            processor,
+            memory,
+            small_rng,
+        };
     }
 
-    fn execute_lines(text: &str) -> (Processor, Memory, SmallRng) {
+    fn execute_lines(text: &str) -> Exec {
         let assembler = Assembler::new();
         let mut memory = Memory::new(1000);
         let amount = assembler.line_assemble(text, &mut memory, 0);
         let mut processor = Processor::new(0);
         let mut small_rng = SmallRng::from_seed([0; 32]);
         processor.execute_amount(&mut memory, &mut small_rng, amount);
-        return (processor, memory, small_rng);
+        return Exec {
+            assembler,
+            processor,
+            memory,
+            small_rng,
+        };
     }
 
     #[test]
     fn test_rnd() {
-        let (processor, _, _) = execute("RND RND");
+        let exec = execute("RND RND");
 
         assert_eq!(
-            processor.current_stack(),
+            exec.processor.current_stack(),
             [5987356902031041503, 7051070477665621255]
         );
     }
 
     #[test]
     fn test_add() {
-        let (processor, _, _) = execute("N2 N1 ADD");
+        let exec = execute("N2 N1 ADD");
 
-        assert_eq!(processor.current_stack(), [3]);
+        assert_eq!(exec.processor.current_stack(), [3]);
     }
 
     #[test]
     fn test_sub() {
-        let (processor, _, _) = execute("N4 N2 SUB");
+        let exec = execute("N4 N2 SUB");
 
-        assert_eq!(processor.current_stack(), [2]);
+        assert_eq!(exec.processor.current_stack(), [2]);
     }
 
     #[test]
     fn test_mul() {
-        let (processor, _, _) = execute("N4 N2 MUL");
+        let exec = execute("N4 N2 MUL");
 
-        assert_eq!(processor.current_stack(), [8]);
+        assert_eq!(exec.processor.current_stack(), [8]);
     }
 
     #[test]
     fn test_div() {
-        let (processor, _, _) = execute("N8 N2 DIV");
+        let exec = execute("N8 N2 DIV");
 
-        assert_eq!(processor.current_stack(), [4]);
+        assert_eq!(exec.processor.current_stack(), [4]);
     }
 
     #[test]
     fn test_div_by_zero() {
-        let (processor, _, _) = execute("N8 N2 N2 SUB DIV");
-        assert_eq!(processor.current_stack(), [0]);
+        let exec = execute("N8 N2 N2 SUB DIV");
+        assert_eq!(exec.processor.current_stack(), [0]);
     }
 
     #[test]
     fn test_mod() {
-        let (processor, _, _) = execute("N8 N2 N1 ADD MOD");
-        assert_eq!(processor.current_stack(), [2]);
+        let exec = execute("N8 N2 N1 ADD MOD");
+        assert_eq!(exec.processor.current_stack(), [2]);
     }
 
     #[test]
     fn test_mod_by_zero() {
-        let (processor, _, _) = execute("N8 N2 N2 SUB MOD");
-        assert_eq!(processor.current_stack(), [0]);
+        let exec = execute("N8 N2 N2 SUB MOD");
+        assert_eq!(exec.processor.current_stack(), [0]);
     }
 
     #[test]
     fn test_not_positive() {
-        let (processor, _, _) = execute("N2 NOT");
-        assert_eq!(processor.current_stack(), [0]);
+        let exec = execute("N2 NOT");
+        assert_eq!(exec.processor.current_stack(), [0]);
     }
 
     #[test]
     fn test_not_zero() {
-        let (processor, _, _) = execute("N2 N2 SUB NOT");
-        assert_eq!(processor.current_stack(), [1]);
+        let exec = execute("N2 N2 SUB NOT");
+        assert_eq!(exec.processor.current_stack(), [1]);
     }
 
     #[test]
     fn test_eq_equal() {
-        let (processor, _, _) = execute("N2 N2 EQ");
+        let exec = execute("N2 N2 EQ");
 
-        assert_eq!(processor.current_stack(), [1]);
+        assert_eq!(exec.processor.current_stack(), [1]);
     }
 
     #[test]
     fn test_eq_not_equal() {
-        let (processor, _, _) = execute("N1 N2 EQ");
-        assert_eq!(processor.current_stack(), [0]);
+        let exec = execute("N1 N2 EQ");
+        assert_eq!(exec.processor.current_stack(), [0]);
     }
 
     #[test]
     fn test_addr() {
-        let (processor, _, _) = execute("ADDR");
-        assert_eq!(processor.current_stack(), [0]);
+        let exec = execute("ADDR");
+        assert_eq!(exec.processor.current_stack(), [0]);
     }
 
     #[test]
     fn test_addr_further() {
-        let (processor, _, _) = execute("N1 N2 N4 ADDR");
-        assert_eq!(processor.current_stack(), [1, 2, 4, 3]);
+        let exec = execute("N1 N2 N4 ADDR");
+        assert_eq!(exec.processor.current_stack(), [1, 2, 4, 3]);
     }
 
     #[test]
     fn test_jmp() {
-        let (processor, _, _) = execute("ADDR JMP");
-        assert_eq!(processor.current_stack(), []);
-        assert_eq!(processor.address(), 0);
+        let exec = execute("ADDR JMP");
+        assert_eq!(exec.processor.current_stack(), []);
+        assert_eq!(exec.processor.address(), 0);
     }
 
     #[test]
     fn test_jump_further() {
-        let (processor, _, _) = execute("N2 JMP NOOP NOOP N1 N2");
-        assert_eq!(processor.current_stack(), [1, 2]);
+        let exec = execute("N2 JMP NOOP NOOP N1 N2");
+        assert_eq!(exec.processor.current_stack(), [1, 2]);
     }
 
     #[test]
     fn test_jmpif_true() {
-        let (processor, _, _) = execute("ADDR N1 JMPIF");
-        assert_eq!(processor.current_stack(), []);
-        assert_eq!(processor.address(), 0);
+        let exec = execute("ADDR N1 JMPIF");
+        assert_eq!(exec.processor.current_stack(), []);
+        assert_eq!(exec.processor.address(), 0);
     }
 
     #[test]
     fn test_jmpif_false() {
-        let (processor, _, _) = execute("ADDR N1 N1 SUB JMPIF");
-        assert_eq!(processor.current_stack(), []);
-        assert_eq!(processor.address(), 5);
+        let exec = execute("ADDR N1 N1 SUB JMPIF");
+        assert_eq!(exec.processor.current_stack(), []);
+        assert_eq!(exec.processor.address(), 5);
     }
 
     #[test]
     fn test_wrap_around_memory() {
-        let (mut processor, mut memory, mut small_rng) = execute("N1 N2");
-        assert_eq!(processor.current_stack(), [1, 2]);
+        let mut exec = execute("N1 N2");
+        assert_eq!(exec.processor.current_stack(), [1, 2]);
         // execute two more
-        processor.execute_amount(&mut memory, &mut small_rng, 1002);
-        assert_eq!(processor.current_stack(), [1, 2, 1, 2])
+        exec.processor
+            .execute_amount(&mut exec.memory, &mut exec.small_rng, 1002);
+        assert_eq!(exec.processor.current_stack(), [1, 2, 1, 2])
     }
 
-    // #[test]
-    // fn test_copy_self() {
-    //     let (mut processor, mut memory, mut small_rng) = execute_lines(
-    //         "
-    //         ADDR  # c
-    //         ADDR  # c loop
-    //         SWAP  # loop c
-    //         DUP   # loop c c
-    //         READ  # loop c inst
-    //         SWAP  # loop inst c
-    //         DUP   # loop inst c c
-    //         N8
-    //         N8
-    //         MUL
-    //         ADD   # loop inst c c+64
-    //         ROT   # loop c c+64 inst
-    //         WRITE # loop c
-    //         N1
-    //         ADD   # loop c+1
-    //         SWAP  # c+1 loop
-    //         JMP",
-    //     );
-    //     // println!("{:?}", processor.current_stack());
-    //     // execute again
-    //     processor.execute_amount(&mut memory, &mut small_rng, 16 * 17);
-    //     // println!("{:?}", processor.current_stack());
-    //     // processor.execute_amount(&mut memory, &mut small_rng, 17);
-    //     // println!("{:?}", processor.current_stack());
+    #[test]
+    fn test_copy_self() {
+        let text = "
+            ADDR  # c
+            ADDR  # c loop
+            SWAP  # loop c
+            DUP   # loop c c
+            READ  # loop c inst
+            SWAP  # loop inst c
+            DUP   # loop inst c c
+            N8
+            N8
+            MUL
+            ADD   # loop inst c c+64
+            ROT   # loop c c+64 inst
+            WRITE # loop c
+            N1
+            ADD   # loop c+1
+            SWAP  # c+1 loop
+            JMP";
 
-    //     assert_eq!(memory.values[64..64 + 17], []);
-    //     // assert_eq!(processor.current_stack(), [1, 2, 1, 2])
-    // }
+        let mut exec = execute_lines(text);
+        let words = text_to_words(text);
+        let words_amount = words.len();
+
+        exec.processor.execute_amount(
+            &mut exec.memory,
+            &mut exec.small_rng,
+            (words_amount - 1) * words_amount,
+        );
+
+        assert_eq!(
+            exec.assembler
+                .line_disassemble_to_words(&exec.memory.values[64..64 + words_amount]),
+            words
+        );
+    }
 }

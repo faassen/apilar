@@ -41,15 +41,11 @@ impl Assembler {
     }
 
     pub fn line_assemble(&self, text: &str, memory: &mut Memory, index: usize) -> usize {
-        let words = text
-            .split("\n")
-            .map(|line| line.split("#").collect::<Vec<&str>>()[0].trim())
-            .filter(|line| !line.is_empty())
-            .collect();
+        let words = text_to_words(text);
         return self.assemble_words(words, memory, index);
     }
 
-    pub fn line_disassemble(&self, values: &[u8]) -> String {
+    pub fn line_disassemble_to_words(&self, values: &[u8]) -> Vec<String> {
         let mut words: Vec<String> = Vec::new();
         for value in values {
             let decoded = Instruction::decode(*value);
@@ -58,12 +54,23 @@ impl Assembler {
                     words.push(instruction.to_string());
                 }
                 None => {
-                    words.push(format!("{}", value));
+                    words.push(format!("noop {}", value));
                 }
             }
         }
-        return words.join("\n");
+        return words;
     }
+
+    pub fn line_disassemble(&self, values: &[u8]) -> String {
+        return self.line_disassemble_to_words(values).join("\n");
+    }
+}
+
+pub fn text_to_words(text: &str) -> Vec<&str> {
+    text.split("\n")
+        .map(|line| line.split("#").collect::<Vec<&str>>()[0].trim())
+        .filter(|line| !line.is_empty())
+        .collect()
 }
 
 #[cfg(test)]
