@@ -48,6 +48,22 @@ impl Assembler {
             .collect();
         return self.assemble_words(words, memory, index);
     }
+
+    pub fn line_disassemble(&self, values: &[u8]) -> String {
+        let mut words: Vec<String> = Vec::new();
+        for value in values {
+            let decoded = Instruction::decode(*value);
+            match decoded {
+                Some(instruction) => {
+                    words.push(instruction.to_string());
+                }
+                None => {
+                    words.push(format!("{}", value));
+                }
+            }
+        }
+        return words.join("\n");
+    }
 }
 
 #[cfg(test)]
@@ -60,7 +76,7 @@ mod tests {
         let assembler = Assembler::new();
         let amount = assembler.assemble("N1 N2", &mut memory, 0);
         assert_eq!(amount, 2);
-        assert_eq!(memory.values[0..2], [1, 2]);
+        assert_eq!(memory.values[0..amount], [1, 2]);
     }
 
     #[test]
@@ -77,6 +93,25 @@ mod tests {
             0,
         );
         assert_eq!(amount, 2);
-        assert_eq!(memory.values[0..2], [1, 2]);
+        assert_eq!(memory.values[0..amount], [1, 2]);
+    }
+
+    #[test]
+    fn test_line_disassemble() {
+        let mut memory = Memory::new(10);
+        let assembler = Assembler::new();
+        let amount = assembler.line_assemble(
+            "
+        N1 # 1
+
+        # explanatory comment
+        N2 # 2",
+            &mut memory,
+            0,
+        );
+        assert_eq!(
+            assembler.line_disassemble(&memory.values[0..amount]),
+            "N1\nN2"
+        );
     }
 }
