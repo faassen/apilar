@@ -23,6 +23,7 @@ pub enum Instruction {
 
     // stack operators
     DUP = 20,
+    DUP2,
     DROP,
     SWAP,
     OVER,
@@ -56,6 +57,10 @@ pub enum Instruction {
     READ,
     WRITE,
 
+    // PRINT0,
+    // PRINT1,
+    // PRINT2,
+
     // processors
     START = 140, // start a new processor given a starting point (only 1 can started in execution block)
     END,         // end this processor's existence
@@ -68,6 +73,15 @@ impl Instruction {
 
     pub fn execute(&self, processor: &mut Processor, memory: &mut Memory, rng: &mut SmallRng) {
         match self {
+            // Instruction::PRINT0 => {
+            //     println!("P0 {:?}", processor.current_stack());
+            // }
+            // Instruction::PRINT1 => {
+            //     println!("P1 {:?}", processor.current_stack());
+            // }
+            // Instruction::PRINT2 => {
+            //     println!("P2 {:?}", processor.current_stack());
+            // }
             Instruction::NOOP => {
                 // nothing
             }
@@ -97,12 +111,15 @@ impl Instruction {
                 processor.push(8);
             }
             Instruction::RND => {
-                processor.push(rng.gen::<u64>());
+                processor.push(rng.gen::<u8>() as u64);
             }
 
             // Stack manipulation
             Instruction::DUP => {
                 processor.dup();
+            }
+            Instruction::DUP2 => {
+                processor.dup2();
             }
             Instruction::DROP => {
                 processor.drop();
@@ -311,10 +328,7 @@ mod tests {
     fn test_rnd() {
         let exec = execute("RND RND");
 
-        assert_eq!(
-            exec.processor.current_stack(),
-            [5987356902031041503, 7051070477665621255]
-        );
+        assert_eq!(exec.processor.current_stack(), [97, 61]);
     }
 
     #[test]

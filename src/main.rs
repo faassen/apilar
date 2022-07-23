@@ -15,57 +15,75 @@ use crate::assembler::{text_to_words, Assembler};
 use crate::computer::Computer;
 use rand::rngs::SmallRng;
 use rand::SeedableRng;
+use std::fs::File;
+use std::io::prelude::*;
 
-fn main() {
+fn main() -> std::io::Result<()> {
     let assembler = Assembler::new();
 
     let text = "
-        ADDR  # c
-        DUP   # preserve starting point
-        ADDR  # c loop
-        SWAP  # loop c
-        DUP   # loop c c
-        READ  # loop c inst
-        SWAP  # loop inst c
-        DUP   # loop inst c c
-        N8
-        N8
-        MUL
-        ADD   # loop inst c c+64
-        ROT   # loop c c+64 inst
-        WRITE # loop c
+        # startup
+        ADDR  # s
+        DUP   # s c
+        DUP   # s c c
+        RND   # 
+        ADD   # s c t
+        RND   
+        ADD   # s c t
+        SWAP  # s t c
+        # start copy loop
+        ADDR  # s t c l
+        SWAP  # s t l c
+        ROT   # s l c t
+        DUP2
+        ADD   # s l c t c+t
+        ROT   # s l t c+t c
+        DUP   # s l t c+t c c
+        READ  # s l t c+t c inst
+        ROT   # s l t c inst c+t
+        SWAP  # s l t c c+t inst
+        WRITE # s l t c
         N1
-        ADD   # loop c+1
-        DUP   # loop c+1 c+1
+        ADD   # s l t c+1
+        ROT   # s t c+1 l
+        SWAP  # s t l c+1
+        DUP   # s t l c+1 c+1
         ADDR
         N8
         N8
         N4
         ADD
         ADD   # add to get end of replicator
-        ADD   # loop c+1 c+1 end
-        LT    # loop c+1 b
-        ROT   # c+1 b loop
-        SWAP  # c+1 loop b
-        JMPIF # go to loop
-        DROP  # start
-        DUP   # start start
-        N8
-        N8
-        MUL
-        ADD   # start newstart
-        START # start
+        ADD   # s t l c+1 c+1 end
+        LT    # s t l c+1 b
+        ROT   # s t c+1 b l
+        SWAP  # s t c+1 l b
+        JMPIF # s t c+1
+        DROP  # s t
+        OVER  # s t s
+        ADD   # s s+t
+        START # s
         JMP   # jump to first addr
         ";
     let words = text_to_words(text);
 
-    let mut computer = Computer::new(1024 * 1024 * 1024, 100000);
+    let mut computer = Computer::new(1024 * 1024, 100);
     assembler.assemble_words(words.clone(), &mut computer.memory, 0);
     let mut small_rng = SmallRng::from_seed([0; 32]);
 
     computer.add_processor(0);
-    loop {
+
+    for _ in 0..50 {
         println!("Processors {}", computer.processors.len());
         computer.execute(&mut small_rng, 100);
     }
+
+    let words = assembler.disassemble_to_words(&computer.memory.values);
+
+    let mut file = File::create("dump.apil")?;
+    for word in words {
+        file.write(word.as_bytes())?;
+        file.write("\n".as_bytes())?;
+    }
+    Ok(())
 }

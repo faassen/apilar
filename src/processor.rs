@@ -102,10 +102,20 @@ impl Processor {
     }
 
     pub fn dup(&mut self) {
-        if self.stack_pointer == 0 {
+        if self.stack_pointer < 1 {
             return;
         }
         self.push(self.top());
+    }
+
+    pub fn dup2(&mut self) {
+        if self.stack_pointer < 2 {
+            return;
+        }
+        let first = self.stack[self.stack_pointer - 2];
+        let second = self.stack[self.stack_pointer - 1];
+        self.push(first);
+        self.push(second);
     }
 
     pub fn pop(&mut self) -> u64 {
