@@ -30,30 +30,30 @@ pub enum Instruction {
     ROT,
 
     // Arithmetic
-    ADD = 40,
+    ADD = 30,
     SUB,
     MUL,
     DIV,
     MOD,
 
     // Comparison
-    EQ = 60,
+    EQ = 40,
     GT,
     LT,
 
     // Logic
-    NOT = 80,
+    NOT = 50,
     AND,
     OR,
 
     // control
-    JMP = 100, // also serves as return
-    JMPIF,     // jump if boolean true,
-    CALL,      // put return address on stack before jumping,
-    CALLIF,    // call if boolean true
+    JMP = 60, // also serves as return
+    JMPIF,    // jump if boolean true,
+    CALL,     // put return address on stack before jumping,
+    CALLIF,   // call if boolean true
 
     // memory
-    ADDR = 120,
+    ADDR = 70,
     READ,
     WRITE,
 
@@ -62,8 +62,8 @@ pub enum Instruction {
     // PRINT2,
 
     // processors
-    START = 140, // start a new processor given a starting point (only 1 can started in execution block)
-    END,         // end this processor's existence
+    START = 80, // start a new processor given a starting point (only 1 can started in execution block)
+    END,        // end this processor's existence
 }
 
 impl Instruction {
