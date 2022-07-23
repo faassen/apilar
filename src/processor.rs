@@ -41,6 +41,11 @@ impl Processor {
         self.stack_pointer += 1;
     }
 
+    fn compact_stack(&mut self) {
+        self.stack_pointer = STACK_SIZE / 2;
+        self.stack.moveslice(usize::from(self.stack_pointer).., 0);
+    }
+
     pub fn pop(&mut self) -> u64 {
         if self.stack_pointer == 0 {
             return u64::MAX;
@@ -110,11 +115,6 @@ impl Processor {
         self.stack[one] = self.stack[two];
         self.stack[two] = self.stack[three];
         self.stack[three] = temp;
-    }
-
-    fn compact_stack(&mut self) {
-        self.stack_pointer = STACK_SIZE / 2;
-        self.stack.moveslice(usize::from(self.stack_pointer).., 0);
     }
 }
 

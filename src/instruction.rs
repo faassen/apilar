@@ -72,6 +72,10 @@ impl Instruction {
 
     pub fn execute(&self, processor: &mut Processor, memory: &mut Memory, rng: &mut SmallRng) {
         match self {
+            Instruction::NOOP => {
+                // nothing
+            }
+            // Numbers
             Instruction::N1 => {
                 processor.push(1);
             }
@@ -99,6 +103,8 @@ impl Instruction {
             Instruction::RND => {
                 processor.push(rng.gen::<u64>());
             }
+
+            // Stack manipulation
             Instruction::DUP => {
                 processor.push(processor.top());
             }
@@ -111,13 +117,139 @@ impl Instruction {
             Instruction::OVER => {
                 processor.over();
             }
+            Instruction::ROT => {
+                processor.rot();
+            }
+
+            // Arithmetic
+            Instruction::ADD => {
+                let a = processor.pop();
+                let b = processor.pop();
+                processor.push(b.wrapping_add(a));
+            }
+            Instruction::SUB => {
+                let a = processor.pop();
+                let b = processor.pop();
+                processor.push(b.wrapping_sub(a));
+            }
+            Instruction::MUL => {
+                let a = processor.pop();
+                let b = processor.pop();
+                processor.push(b.wrapping_mul(a));
+            }
+            Instruction::DIV => {
+                let a = processor.pop();
+                let b = processor.pop();
+                if a == 0 {
+                    processor.push(0);
+                    return;
+                }
+                processor.push(b.wrapping_div(a));
+            }
+            Instruction::MOD => {
+                let a = processor.pop();
+                let b = processor.pop();
+                if a == 0 {
+                    processor.push(0);
+                    return;
+                }
+                processor.push(b.wrapping_rem(a));
+            }
+
+            // Comparison
+            Instruction::EQ => {
+                let a = processor.pop();
+                let b = processor.pop();
+                if a == b {
+                    processor.push(1);
+                } else {
+                    processor.push(0);
+                }
+            }
+            Instruction::GT => {
+                let a = processor.pop();
+                let b = processor.pop();
+                if b > a {
+                    processor.push(1);
+                } else {
+                    processor.push(0);
+                }
+            }
+            Instruction::LT => {
+                let a = processor.pop();
+                let b = processor.pop();
+                if b < a {
+                    processor.push(1);
+                } else {
+                    processor.push(0);
+                }
+            }
+
+            // Logic
+            Instruction::NOT => {
+                let a = processor.pop();
+                if a > 0 {
+                    processor.push(0);
+                } else {
+                    processor.push(1);
+                }
+            }
+            Instruction::AND => {
+                let a = processor.pop();
+                let b = processor.pop();
+                if a > 0 && b > 0 {
+                    processor.push(1);
+                } else {
+                    processor.push(0);
+                }
+            }
+            Instruction::OR => {
+                let a = processor.pop();
+                let b = processor.pop();
+                if a > 0 || b > 0 {
+                    processor.push(1);
+                } else {
+                    processor.push(0);
+                }
+            }
+
+            // Control
             Instruction::JMP => {
                 let popped = processor.pop_address(memory);
                 if let Some(address) = popped {
                     processor.ip = address;
                 }
             }
+            Instruction::JMPIF => {
+                let condition = processor.pop();
+                let popped = processor.pop_address(memory);
+                if condition == 0 {
+                    return;
+                }
+                if let Some(address) = popped {
+                    processor.ip = address;
+                }
+            }
+            Instruction::CALL => {
+                let popped = processor.pop_address(memory);
+                processor.push(processor.ip as u64);
+                if let Some(address) = popped {
+                    processor.ip = address;
+                }
+            }
+            Instruction::CALLIF => {
+                let condition = processor.pop();
+                let popped = processor.pop_address(memory);
+                if condition == 0 {
+                    return;
+                }
+                processor.push(processor.ip as u64);
+                if let Some(address) = popped {
+                    processor.ip = address;
+                }
+            }
 
+            // Memory
             Instruction::ADDR => {
                 processor.push(processor.ip as u64);
             }
@@ -125,10 +257,30 @@ impl Instruction {
                 let popped = processor.pop_address(memory);
                 let value = match popped {
                     Some(address) => memory.values[address],
+                    // out of bounds address
                     None => u8::MAX,
                 };
                 processor.push(value as u64);
             }
+            Instruction::WRITE => {
+                let value = processor.pop();
+                let popped = processor.pop_address(memory);
+                match popped {
+                    Some(address) => {
+                        let constrained_value = if value >= u8::MAX as u64 {
+                            u8::MAX
+                        } else {
+                            // truncate
+                            value as u8
+                        };
+                        memory.values[address] = constrained_value;
+                    }
+                    None => {
+                        // no write out of bounds
+                    }
+                }
+            }
+
             _ => panic!("unsupported instruction"),
         }
     }
