@@ -1,7 +1,6 @@
 use moveslice::Moveslice;
 use rand::rngs::SmallRng;
 
-use crate::computer::Computer;
 use crate::instruction::Instruction;
 use crate::memory::Memory;
 

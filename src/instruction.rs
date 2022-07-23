@@ -470,7 +470,7 @@ mod tests {
 
         assert_eq!(
             exec.assembler
-                .line_disassemble_to_words(&exec.memory.values[64..64 + words_amount]),
+                .disassemble_to_words(&exec.memory.values[64..64 + words_amount]),
             words
         );
     }

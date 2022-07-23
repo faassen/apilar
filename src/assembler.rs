@@ -17,7 +17,7 @@ impl Assembler {
         return Assembler { instructions };
     }
 
-    fn assemble_words(&self, words: Vec<&str>, memory: &mut Memory, index: usize) -> usize {
+    pub fn assemble_words(&self, words: Vec<&str>, memory: &mut Memory, index: usize) -> usize {
         let mut i = index;
         for word in words {
             match self.instructions.get(word) {
@@ -45,7 +45,7 @@ impl Assembler {
         return self.assemble_words(words, memory, index);
     }
 
-    pub fn line_disassemble_to_words(&self, values: &[u8]) -> Vec<String> {
+    pub fn disassemble_to_words(&self, values: &[u8]) -> Vec<String> {
         let mut words: Vec<String> = Vec::new();
         for value in values {
             let decoded = Instruction::decode(*value);
@@ -62,7 +62,7 @@ impl Assembler {
     }
 
     pub fn line_disassemble(&self, values: &[u8]) -> String {
-        return self.line_disassemble_to_words(values).join("\n");
+        return self.disassemble_to_words(values).join("\n");
     }
 }
 
