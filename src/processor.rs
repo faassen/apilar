@@ -22,6 +22,10 @@ impl Processor {
         };
     }
 
+    pub fn current_stack(&self) -> &[u64] {
+        &self.stack[0..self.stack_pointer]
+    }
+
     pub fn execute(&mut self, memory: &mut Memory, rng: &mut SmallRng) {
         let value = memory.values[self.ip];
         let instruction: Option<Instruction> = Instruction::decode(value);
@@ -31,6 +35,7 @@ impl Processor {
                 // no op, we cannot interpret this as a valid instruction
             }
         }
+        self.ip += 1;
     }
 
     pub fn push(&mut self, value: u64) {

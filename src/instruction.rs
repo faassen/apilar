@@ -288,7 +288,10 @@ impl Instruction {
 
 #[cfg(test)]
 mod tests {
+    use rand::SeedableRng;
+
     use super::*;
+    use crate::assembler::Assembler;
 
     #[test]
     fn test_decode_success() {
@@ -298,5 +301,20 @@ mod tests {
     #[test]
     fn test_decode_failure() {
         assert_eq!(Instruction::decode(u8::MAX), None);
+    }
+
+    #[test]
+    fn test_add() {
+        let assembler = Assembler::new();
+        let mut memory = Memory::new(100);
+        assembler.assemble("N1 N2 ADD", &mut memory, 0);
+        let mut processor = Processor::new(0);
+        let mut small_rng = SmallRng::from_seed([0; 32]);
+
+        processor.execute(&mut memory, &mut small_rng);
+        processor.execute(&mut memory, &mut small_rng);
+        processor.execute(&mut memory, &mut small_rng);
+
+        assert_eq!(processor.current_stack(), [3]);
     }
 }
