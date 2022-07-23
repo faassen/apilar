@@ -13,12 +13,12 @@ pub enum Instruction {
     // Numbers
     N1 = 1,
     N2,
+    N3,
     N4,
+    N5,
+    N6,
+    N7,
     N8,
-    N16,
-    N32,
-    N64,
-    N128,
     RND, // Random number
 
     // stack operators
@@ -82,23 +82,23 @@ impl Instruction {
             Instruction::N2 => {
                 processor.push(2);
             }
+            Instruction::N3 => {
+                processor.push(3);
+            }
             Instruction::N4 => {
                 processor.push(4);
             }
+            Instruction::N5 => {
+                processor.push(5);
+            }
+            Instruction::N6 => {
+                processor.push(6);
+            }
+            Instruction::N7 => {
+                processor.push(7);
+            }
             Instruction::N8 => {
                 processor.push(8);
-            }
-            Instruction::N16 => {
-                processor.push(16);
-            }
-            Instruction::N32 => {
-                processor.push(32);
-            }
-            Instruction::N64 => {
-                processor.push(64);
-            }
-            Instruction::N128 => {
-                processor.push(128);
             }
             Instruction::RND => {
                 processor.push(rng.gen::<u64>());
@@ -217,7 +217,7 @@ impl Instruction {
             Instruction::JMP => {
                 let popped = processor.pop_address(memory);
                 if let Some(address) = popped {
-                    processor.ip = address;
+                    processor.jump(address);
                 }
             }
             Instruction::JMPIF => {
@@ -227,14 +227,13 @@ impl Instruction {
                     return;
                 }
                 if let Some(address) = popped {
-                    processor.ip = address;
+                    processor.jump(address);
                 }
             }
             Instruction::CALL => {
                 let popped = processor.pop_address(memory);
-                processor.push(processor.ip as u64);
                 if let Some(address) = popped {
-                    processor.ip = address;
+                    processor.call(address);
                 }
             }
             Instruction::CALLIF => {
@@ -243,15 +242,14 @@ impl Instruction {
                 if condition == 0 {
                     return;
                 }
-                processor.push(processor.ip as u64);
                 if let Some(address) = popped {
-                    processor.ip = address;
+                    processor.call(address);
                 }
             }
 
             // Memory
             Instruction::ADDR => {
-                processor.push(processor.ip as u64);
+                processor.push(processor.address());
             }
             Instruction::READ => {
                 let popped = processor.pop_address(memory);
@@ -303,19 +301,19 @@ mod tests {
         assert_eq!(Instruction::decode(u8::MAX), None);
     }
 
-    fn execute(text: &str) -> (Processor, Memory) {
+    fn execute(text: &str) -> (Processor, Memory, SmallRng) {
         let assembler = Assembler::new();
         let mut memory = Memory::new(100);
         let amount = assembler.assemble(text, &mut memory, 0);
         let mut processor = Processor::new(0);
         let mut small_rng = SmallRng::from_seed([0; 32]);
         processor.execute_amount(&mut memory, &mut small_rng, amount);
-        return (processor, memory);
+        return (processor, memory, small_rng);
     }
 
     #[test]
     fn test_rnd() {
-        let (processor, _) = execute("RND RND");
+        let (processor, _, _) = execute("RND RND");
 
         assert_eq!(
             processor.current_stack(),
@@ -325,72 +323,97 @@ mod tests {
 
     #[test]
     fn test_add() {
-        let (processor, _) = execute("N2 N1 ADD");
+        let (processor, _, _) = execute("N2 N1 ADD");
 
         assert_eq!(processor.current_stack(), [3]);
     }
 
     #[test]
     fn test_sub() {
-        let (processor, _) = execute("N4 N2 SUB");
+        let (processor, _, _) = execute("N4 N2 SUB");
 
         assert_eq!(processor.current_stack(), [2]);
     }
 
     #[test]
     fn test_mul() {
-        let (processor, _) = execute("N4 N2 MUL");
+        let (processor, _, _) = execute("N4 N2 MUL");
 
         assert_eq!(processor.current_stack(), [8]);
     }
 
     #[test]
     fn test_div() {
-        let (processor, _) = execute("N8 N2 DIV");
+        let (processor, _, _) = execute("N8 N2 DIV");
 
         assert_eq!(processor.current_stack(), [4]);
     }
 
     #[test]
     fn test_div_by_zero() {
-        let (processor, _) = execute("N8 N2 N2 SUB DIV");
+        let (processor, _, _) = execute("N8 N2 N2 SUB DIV");
         assert_eq!(processor.current_stack(), [0]);
     }
 
     #[test]
     fn test_mod() {
-        let (processor, _) = execute("N8 N2 N1 ADD MOD");
+        let (processor, _, _) = execute("N8 N2 N1 ADD MOD");
         assert_eq!(processor.current_stack(), [2]);
     }
 
     #[test]
     fn test_mod_by_zero() {
-        let (processor, _) = execute("N8 N2 N2 SUB MOD");
+        let (processor, _, _) = execute("N8 N2 N2 SUB MOD");
         assert_eq!(processor.current_stack(), [0]);
     }
 
     #[test]
     fn test_not_positive() {
-        let (processor, _) = execute("N2 NOT");
+        let (processor, _, _) = execute("N2 NOT");
         assert_eq!(processor.current_stack(), [0]);
     }
 
     #[test]
     fn test_not_zero() {
-        let (processor, _) = execute("N2 N2 SUB NOT");
+        let (processor, _, _) = execute("N2 N2 SUB NOT");
         assert_eq!(processor.current_stack(), [1]);
     }
 
     #[test]
     fn test_eq_equal() {
-        let (processor, _) = execute("N2 N2 EQ");
+        let (processor, _, _) = execute("N2 N2 EQ");
 
         assert_eq!(processor.current_stack(), [1]);
     }
 
     #[test]
     fn test_eq_not_equal() {
-        let (processor, _) = execute("N1 N2 EQ");
+        let (processor, _, _) = execute("N1 N2 EQ");
         assert_eq!(processor.current_stack(), [0]);
+    }
+
+    #[test]
+    fn test_addr() {
+        let (processor, _, _) = execute("ADDR");
+        assert_eq!(processor.current_stack(), [0]);
+    }
+
+    #[test]
+    fn test_addr_further() {
+        let (processor, _, _) = execute("N1 N2 N4 ADDR");
+        assert_eq!(processor.current_stack(), [1, 2, 4, 3]);
+    }
+
+    #[test]
+    fn test_jmp() {
+        let (processor, _, _) = execute("ADDR JMP");
+        assert_eq!(processor.current_stack(), []);
+        assert_eq!(processor.address(), 0);
+    }
+
+    #[test]
+    fn test_jump_further() {
+        let (processor, _, _) = execute("N2 JMP NOOP NOOP N1 N2");
+        assert_eq!(processor.current_stack(), [1, 2]);
     }
 }

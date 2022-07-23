@@ -8,8 +8,9 @@ const STACK_SIZE: usize = 64;
 const ADDRESS_DISTANCE: usize = 1024;
 
 pub struct Processor {
-    pub ip: usize,
+    ip: usize,
     stack_pointer: usize,
+    jumped: bool,
     stack: [u64; STACK_SIZE],
 }
 
@@ -18,6 +19,7 @@ impl Processor {
         return Processor {
             ip,
             stack: [0; STACK_SIZE],
+            jumped: false,
             stack_pointer: 0,
         };
     }
@@ -35,13 +37,31 @@ impl Processor {
                 // no op, we cannot interpret this as a valid instruction
             }
         }
-        self.ip += 1;
+        if !self.jumped {
+            self.ip += 1;
+        } else {
+            self.jumped = false;
+        }
     }
 
     pub fn execute_amount(&mut self, memory: &mut Memory, rng: &mut SmallRng, amount: usize) {
         for _ in 0..amount {
             self.execute(memory, rng)
         }
+    }
+
+    pub fn jump(&mut self, address: usize) {
+        self.ip = address;
+        self.jumped = true;
+    }
+
+    pub fn call(&mut self, address: usize) {
+        self.push(self.ip as u64);
+        self.jump(address);
+    }
+
+    pub fn address(&self) -> u64 {
+        self.ip as u64
     }
 
     pub fn push(&mut self, value: u64) {
