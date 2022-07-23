@@ -46,7 +46,5 @@ mod tests {
         let assembler = Assembler::new();
         assembler.assemble("N1 N2", &mut memory, 0);
         assert_eq!(memory.values[0..2], [1, 2]);
-        // assert_eq!(memory.values[0], 1);
-        // assert_eq!(memory.values[1], 2);
     }
 }
