@@ -317,4 +317,21 @@ mod tests {
 
         assert_eq!(processor.current_stack(), [3]);
     }
+
+    #[test]
+    fn test_rnd() {
+        let assembler = Assembler::new();
+        let mut memory = Memory::new(100);
+        assembler.assemble("RND RND", &mut memory, 0);
+        let mut processor = Processor::new(0);
+        let mut small_rng = SmallRng::from_seed([0; 32]);
+
+        processor.execute(&mut memory, &mut small_rng);
+        processor.execute(&mut memory, &mut small_rng);
+
+        assert_eq!(
+            processor.current_stack(),
+            [5987356902031041503, 7051070477665621255]
+        );
+    }
 }
