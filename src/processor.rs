@@ -33,7 +33,7 @@ impl Processor {
     }
 
     pub fn push(&mut self, value: u64) {
-        if self.stack_pointer >= (STACK_SIZE - 1) {
+        if self.stack_pointer >= STACK_SIZE {
             self.compact_stack();
         }
         self.stack[self.stack_pointer] = value;
@@ -61,7 +61,7 @@ impl Processor {
     }
 
     pub fn top(&self) -> u64 {
-        self.stack[self.stack_pointer]
+        self.stack[self.stack_pointer - 1]
     }
 
     pub fn drop(&mut self) {
@@ -85,5 +85,27 @@ impl Processor {
     pub fn compact_stack(&mut self) {
         self.stack_pointer = STACK_SIZE / 2;
         self.stack.moveslice(usize::from(self.stack_pointer).., 0);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_compact_stack() {
+        let mut processor = Processor::new(0);
+        let stack_size: u64 = STACK_SIZE.try_into().unwrap();
+        for value in 0..stack_size {
+            processor.push(value);
+        }
+        assert_eq!(processor.stack_pointer, STACK_SIZE);
+        assert_eq!(processor.top(), stack_size - 1);
+
+        // push one more item which should cause stack compaction
+        processor.push(100);
+
+        assert_eq!(processor.stack_pointer, STACK_SIZE / 2 + 1);
+        assert_eq!(processor.top(), 100);
     }
 }
