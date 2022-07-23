@@ -9,7 +9,7 @@ use crate::processor::Processor;
 #[derive(EnumIter, Display, FromPrimitive, ToPrimitive)]
 pub enum Instruction {
     // Noop
-    Noop = 0,
+    NOOP = 0,
     // Numbers
     N1 = 1,
     N2,
@@ -19,46 +19,46 @@ pub enum Instruction {
     N32,
     N64,
     N128,
-    Rnd, // Random number
+    RND, // Random number
 
     // stack operators
-    Dup = 20,
-    Drop,
-    Swap,
-    Over,
-    Rot,
+    DUP = 20,
+    DROP,
+    SWAP,
+    OVER,
+    ROT,
 
     // Arithmetic
-    Add = 40,
-    Sub,
-    Mul,
-    Div,
-    Mod,
+    ADD = 40,
+    SUB,
+    MUL,
+    DIV,
+    MOD,
 
     // Comparison
-    Eq = 60,
-    Gt,
-    Lt,
+    EQ = 60,
+    GT,
+    LT,
 
     // Logic
-    Not = 80,
-    And,
-    Or,
+    NOT = 80,
+    AND,
+    OR,
 
     // control
-    Jmp = 100, // also serves as return
-    JmpIf,     // jump if boolean true,
-    Call,      // put return address on stack before jumping,
-    CallIf,    // call if boolean true
+    JMP = 100, // also serves as return
+    JMPIF,     // jump if boolean true,
+    CALL,      // put return address on stack before jumping,
+    CALLIF,    // call if boolean true
 
     // memory
-    Addr = 120,
-    Read,
-    Write,
+    ADDR = 120,
+    READ,
+    WRITE,
 
     // processors
-    Spawn = 140, // spawn a new processor
-    End,         // end this processor's existence
+    START = 140, // start a new processor
+    END,         // end this processor's existence
 }
 
 // execution system: spawn new processors until amount of processors is
@@ -92,30 +92,30 @@ impl Instruction {
             Instruction::N128 => {
                 processor.push(128);
             }
-            Instruction::Rnd => {
+            Instruction::RND => {
                 processor.push(rng.gen::<u64>());
             }
-            Instruction::Dup => {
+            Instruction::DUP => {
                 processor.push(processor.top());
             }
-            Instruction::Drop => {
+            Instruction::DROP => {
                 processor.drop();
             }
-            Instruction::Swap => {
+            Instruction::SWAP => {
                 processor.swap();
             }
 
-            Instruction::Jmp => {
+            Instruction::JMP => {
                 let popped = processor.pop_address(memory);
                 if let Some(address) = popped {
                     processor.ip = address;
                 }
             }
 
-            Instruction::Addr => {
+            Instruction::ADDR => {
                 processor.push(processor.ip as u64);
             }
-            Instruction::Read => {
+            Instruction::READ => {
                 let popped = processor.pop_address(memory);
                 let value = match popped {
                     Some(address) => memory.values[address],
