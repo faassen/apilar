@@ -102,6 +102,13 @@ impl Processor {
         self.stack.moveslice(usize::from(self.stack_pointer).., 0);
     }
 
+    pub fn dup(&mut self) {
+        if self.stack_pointer == 0 {
+            return;
+        }
+        self.push(self.top());
+    }
+
     pub fn pop(&mut self) -> u64 {
         if self.stack_pointer == 0 {
             return u64::MAX;
@@ -130,7 +137,7 @@ impl Processor {
         return Some(result);
     }
 
-    pub fn top(&self) -> u64 {
+    fn top(&self) -> u64 {
         self.stack[self.stack_pointer - 1]
     }
 

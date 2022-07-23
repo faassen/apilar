@@ -102,7 +102,7 @@ impl Instruction {
 
             // Stack manipulation
             Instruction::DUP => {
-                processor.push(processor.top());
+                processor.dup();
             }
             Instruction::DROP => {
                 processor.drop();
@@ -267,6 +267,7 @@ impl Instruction {
                             // truncate
                             value as u8
                         };
+                        println!("write {} {}", address, constrained_value);
                         memory.values[address] = constrained_value;
                     }
                     None => {
@@ -309,7 +310,7 @@ mod tests {
 
     fn execute(text: &str) -> (Processor, Memory, SmallRng) {
         let assembler = Assembler::new();
-        let mut memory = Memory::new(100);
+        let mut memory = Memory::new(1000);
         let amount = assembler.assemble(text, &mut memory, 0);
         let mut processor = Processor::new(0);
         let mut small_rng = SmallRng::from_seed([0; 32]);
@@ -442,7 +443,40 @@ mod tests {
         let (mut processor, mut memory, mut small_rng) = execute("N1 N2");
         assert_eq!(processor.current_stack(), [1, 2]);
         // execute two more
-        processor.execute_amount(&mut memory, &mut small_rng, 102);
+        processor.execute_amount(&mut memory, &mut small_rng, 1002);
         assert_eq!(processor.current_stack(), [1, 2, 1, 2])
+    }
+
+    #[test]
+    fn test_copy_self() {
+        let (mut processor, mut memory, mut small_rng) = execute(
+            "
+            ADDR
+            ADDR
+            SWAP
+            DUP
+            READ
+            SWAP
+            DUP
+            N8
+            N8
+            MUL
+            ADD
+            ROT
+            WRITE
+            N1
+            ADD
+            SWAP
+            JMP",
+        );
+        // println!("{:?}", processor.current_stack());
+        // execute again
+        processor.execute_amount(&mut memory, &mut small_rng, 16 * 17);
+        // println!("{:?}", processor.current_stack());
+        // processor.execute_amount(&mut memory, &mut small_rng, 17);
+        // println!("{:?}", processor.current_stack());
+
+        assert_eq!(memory.values[64..64 + 17], []);
+        // assert_eq!(processor.current_stack(), [1, 2, 1, 2])
     }
 }
