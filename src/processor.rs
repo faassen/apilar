@@ -23,7 +23,7 @@ impl Processor {
 
     pub fn execute(&mut self, memory: &mut Memory, rng: &mut SmallRng) {
         let value = memory.values[self.ip];
-        let instruction: Option<Instruction> = num::FromPrimitive::from_u8(value);
+        let instruction: Option<Instruction> = Instruction::decode(value);
         match instruction {
             Some(instruction) => instruction.execute(self, memory, rng),
             None => {

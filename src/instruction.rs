@@ -6,7 +6,7 @@ use strum_macros::{Display, EnumIter};
 use crate::memory::Memory;
 use crate::processor::Processor;
 
-#[derive(EnumIter, Display, FromPrimitive, ToPrimitive)]
+#[derive(EnumIter, Debug, PartialEq, Display, FromPrimitive, ToPrimitive)]
 pub enum Instruction {
     // Noop
     NOOP = 0,
@@ -66,6 +66,10 @@ pub enum Instruction {
 // wrap around index overwriting the oldest processor with a new one
 
 impl Instruction {
+    pub fn decode(value: u8) -> Option<Instruction> {
+        num::FromPrimitive::from_u8(value)
+    }
+
     pub fn execute(&self, processor: &mut Processor, memory: &mut Memory, rng: &mut SmallRng) {
         match self {
             Instruction::N1 => {
@@ -125,5 +129,20 @@ impl Instruction {
             }
             _ => panic!("unsupported instruction"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decode_success() {
+        assert_eq!(Instruction::decode(0), Some(Instruction::NOOP));
+    }
+
+    #[test]
+    fn test_decode_failure() {
+        assert_eq!(Instruction::decode(u8::MAX), None);
     }
 }
