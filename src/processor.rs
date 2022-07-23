@@ -33,12 +33,13 @@ impl Processor {
         &self.stack[0..self.stack_pointer]
     }
 
-    pub fn execute(&mut self, memory: &mut Memory, rng: &mut SmallRng) {
+    pub fn execute(&mut self, memory: &mut Memory, rng: &mut SmallRng) -> bool {
         if !self.alive {
-            return;
+            return false;
         }
         if self.ip >= memory.values.len() {
-            self.ip = 0;
+            self.alive = false;
+            return false;
         }
         let value = memory.values[self.ip];
         let instruction: Option<Instruction> = Instruction::decode(value);
@@ -53,13 +54,23 @@ impl Processor {
         } else {
             self.jumped = false;
         }
+        return true;
     }
 
-    pub fn execute_amount(&mut self, memory: &mut Memory, rng: &mut SmallRng, amount: usize) {
+    pub fn execute_amount(
+        &mut self,
+        memory: &mut Memory,
+        rng: &mut SmallRng,
+        amount: usize,
+    ) -> usize {
         self.start = None;
+        let mut total = 0;
         for _ in 0..amount {
-            self.execute(memory, rng)
+            if self.execute(memory, rng) {
+                total += 1;
+            }
         }
+        return total;
     }
 
     pub fn start(&mut self, address: usize) {

@@ -67,23 +67,38 @@ fn main() -> std::io::Result<()> {
         ";
     let words = text_to_words(text);
 
-    let mut computer = Computer::new(1024 * 1024, 100);
+    let mut computer = Computer::new(1024 * 1024 * 1024, 1024);
     assembler.assemble_words(words.clone(), &mut computer.memory, 0);
-    let mut small_rng = SmallRng::from_seed([0; 32]);
+    // let mut small_rng = SmallRng::from_seed([0; 32]);
+    let mut small_rng = SmallRng::from_entropy();
 
     computer.add_processor(0);
 
-    for _ in 0..50 {
-        println!("Processors {}", computer.processors.len());
-        computer.execute(&mut small_rng, 100);
+    let mut i = 0;
+    let mut total = 0;
+    loop {
+        total += computer.execute(&mut small_rng, 100);
+        if total > 10000 {
+            println!("Processors {}", computer.processors.len());
+            computer.mutate_memory(&mut small_rng, 1);
+            computer.mutate_processors(&mut small_rng, 1);
+            total = 0;
+        }
+        // mutation should be somehow relative to instructions executed, not
+        // steps in this loop. it's not quite there yet as the total is increasing
+        // by huge steps. Perhaps I should sample processors
+        // if i % 1000000 == 0 {
+        //     computer.mutate_processors(&mut small_rng, 1);
+        // }
+        i += 1;
     }
 
-    let words = assembler.disassemble_to_words(&computer.memory.values);
+    // let words = assembler.disassemble_to_words(&computer.memory.values);
 
-    let mut file = File::create("dump.apil")?;
-    for word in words {
-        file.write(word.as_bytes())?;
-        file.write("\n".as_bytes())?;
-    }
+    // let mut file = File::create("dump.apil")?;
+    // for word in words {
+    //     file.write(word.as_bytes())?;
+    //     file.write("\n".as_bytes())?;
+    // }
     Ok(())
 }

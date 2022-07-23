@@ -1,4 +1,6 @@
 use rand::rngs::SmallRng;
+use rand::seq::SliceRandom;
+use rand::Rng;
 
 use crate::memory::Memory;
 use crate::processor::Processor;
@@ -22,10 +24,11 @@ impl Computer {
         self.processors.push(Processor::new(index));
     }
 
-    pub fn execute(&mut self, rng: &mut SmallRng, amount_per_processor: usize) {
+    pub fn execute(&mut self, rng: &mut SmallRng, amount_per_processor: usize) -> usize {
         // execute amount of instructions per processor
+        let mut total = 0;
         for processor in &mut self.processors {
-            processor.execute_amount(&mut self.memory, rng, amount_per_processor);
+            total += processor.execute_amount(&mut self.memory, rng, amount_per_processor);
         }
 
         // obtain any start instructions
@@ -37,7 +40,7 @@ impl Computer {
         }
 
         // sweep any dead processors
-        // found in descriptoin of nightly drain_filter
+        // found in description of drain_filter (method in nightly)
         let mut i = 0;
         while i < self.processors.len() {
             if !self.processors[i].alive {
@@ -51,6 +54,28 @@ impl Computer {
         for address in to_start {
             if self.processors.len() < self.max_processors {
                 self.processors.push(Processor::new(address));
+            }
+        }
+
+        return total;
+    }
+
+    pub fn mutate_memory(&mut self, rng: &mut SmallRng, amount: u64) {
+        for _ in 0..amount {
+            let address = rng.gen_range(0..self.memory.values.len());
+            self.memory.values[address] = rng.gen::<u8>();
+        }
+    }
+
+    pub fn mutate_processors(&mut self, rng: &mut SmallRng, amount: u64) {
+        for _ in 0..amount {
+            let choice = self.processors.choose_mut(rng);
+            if let Some(processor) = choice {
+                if rng.gen_ratio(1, 5) {
+                    processor.pop();
+                } else {
+                    processor.push(rng.gen::<u8>() as u64);
+                }
             }
         }
     }

@@ -441,13 +441,14 @@ mod tests {
     }
 
     #[test]
-    fn test_wrap_around_memory() {
+    fn test_die_if_out_of_bounds() {
         let mut exec = execute("N1 N2");
         assert_eq!(exec.processor.current_stack(), [1, 2]);
         // execute two more
         exec.processor
             .execute_amount(&mut exec.memory, &mut exec.small_rng, 1002);
-        assert_eq!(exec.processor.current_stack(), [1, 2, 1, 2])
+        assert_eq!(exec.processor.current_stack(), [1, 2]);
+        assert_eq!(exec.processor.alive, false);
     }
 
     #[test]
