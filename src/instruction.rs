@@ -61,10 +61,6 @@ pub enum Instruction {
     END,         // end this processor's existence
 }
 
-// execution system: spawn new processors until amount of processors is
-// filled. Kill the oldest processor. This can be implemented with a
-// wrap around index overwriting the oldest processor with a new one
-
 impl Instruction {
     pub fn decode(value: u8) -> Option<Instruction> {
         num::FromPrimitive::from_u8(value)
