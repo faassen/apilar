@@ -304,6 +304,23 @@ mod tests {
     }
 
     #[test]
+    fn test_rnd() {
+        let assembler = Assembler::new();
+        let mut memory = Memory::new(100);
+        assembler.assemble("RND RND", &mut memory, 0);
+        let mut processor = Processor::new(0);
+        let mut small_rng = SmallRng::from_seed([0; 32]);
+
+        processor.execute(&mut memory, &mut small_rng);
+        processor.execute(&mut memory, &mut small_rng);
+
+        assert_eq!(
+            processor.current_stack(),
+            [5987356902031041503, 7051070477665621255]
+        );
+    }
+
+    #[test]
     fn test_add() {
         let assembler = Assembler::new();
         let mut memory = Memory::new(100);
@@ -395,19 +412,54 @@ mod tests {
     }
 
     #[test]
-    fn test_rnd() {
+    fn test_not_positive() {
         let assembler = Assembler::new();
         let mut memory = Memory::new(100);
-        assembler.assemble("RND RND", &mut memory, 0);
+        assembler.assemble("N2 NOT", &mut memory, 0);
         let mut processor = Processor::new(0);
         let mut small_rng = SmallRng::from_seed([0; 32]);
 
-        processor.execute(&mut memory, &mut small_rng);
-        processor.execute(&mut memory, &mut small_rng);
+        processor.execute_amount(&mut memory, &mut small_rng, 2);
 
-        assert_eq!(
-            processor.current_stack(),
-            [5987356902031041503, 7051070477665621255]
-        );
+        assert_eq!(processor.current_stack(), [0]);
+    }
+
+    #[test]
+    fn test_not_zero() {
+        let assembler = Assembler::new();
+        let mut memory = Memory::new(100);
+        assembler.assemble("N2 N2 SUB NOT", &mut memory, 0);
+        let mut processor = Processor::new(0);
+        let mut small_rng = SmallRng::from_seed([0; 32]);
+
+        processor.execute_amount(&mut memory, &mut small_rng, 4);
+
+        assert_eq!(processor.current_stack(), [1]);
+    }
+
+    #[test]
+    fn test_eq_equal() {
+        let assembler = Assembler::new();
+        let mut memory = Memory::new(100);
+        assembler.assemble("N2 N2 EQ", &mut memory, 0);
+        let mut processor = Processor::new(0);
+        let mut small_rng = SmallRng::from_seed([0; 32]);
+
+        processor.execute_amount(&mut memory, &mut small_rng, 3);
+
+        assert_eq!(processor.current_stack(), [1]);
+    }
+
+    #[test]
+    fn test_eq_not_equal() {
+        let assembler = Assembler::new();
+        let mut memory = Memory::new(100);
+        assembler.assemble("N1 N2 EQ", &mut memory, 0);
+        let mut processor = Processor::new(0);
+        let mut small_rng = SmallRng::from_seed([0; 32]);
+
+        processor.execute_amount(&mut memory, &mut small_rng, 3);
+
+        assert_eq!(processor.current_stack(), [0]);
     }
 }
