@@ -317,6 +317,16 @@ mod tests {
         return (processor, memory, small_rng);
     }
 
+    fn execute_lines(text: &str) -> (Processor, Memory, SmallRng) {
+        let assembler = Assembler::new();
+        let mut memory = Memory::new(1000);
+        let amount = assembler.line_assemble(text, &mut memory, 0);
+        let mut processor = Processor::new(0);
+        let mut small_rng = SmallRng::from_seed([0; 32]);
+        processor.execute_amount(&mut memory, &mut small_rng, amount);
+        return (processor, memory, small_rng);
+    }
+
     #[test]
     fn test_rnd() {
         let (processor, _, _) = execute("RND RND");
@@ -448,24 +458,24 @@ mod tests {
 
     // #[test]
     // fn test_copy_self() {
-    //     let (mut processor, mut memory, mut small_rng) = execute(
+    //     let (mut processor, mut memory, mut small_rng) = execute_lines(
     //         "
-    //         ADDR
-    //         ADDR
-    //         SWAP
-    //         DUP
-    //         READ
-    //         SWAP
-    //         DUP
+    //         ADDR  # c
+    //         ADDR  # c loop
+    //         SWAP  # loop c
+    //         DUP   # loop c c
+    //         READ  # loop c inst
+    //         SWAP  # loop inst c
+    //         DUP   # loop inst c c
     //         N8
     //         N8
     //         MUL
-    //         ADD
-    //         ROT
-    //         WRITE
+    //         ADD   # loop inst c c+64
+    //         ROT   # loop c c+64 inst
+    //         WRITE # loop c
     //         N1
-    //         ADD
-    //         SWAP
+    //         ADD   # loop c+1
+    //         SWAP  # c+1 loop
     //         JMP",
     //     );
     //     // println!("{:?}", processor.current_stack());
