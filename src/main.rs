@@ -10,6 +10,10 @@ use std::collections::HashMap;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter};
 
+mod memory;
+
+use memory::Memory;
+
 const STACK_SIZE: usize = 64;
 
 #[derive(EnumIter, Display, FromPrimitive, ToPrimitive)]
@@ -131,25 +135,6 @@ impl Instruction {
             }
             _ => panic!("unsupported instruction"),
         }
-    }
-}
-
-struct Memory {
-    values: Vec<u8>,
-}
-
-impl Memory {
-    pub fn new(size: usize) -> Memory {
-        let values: Vec<u8> = vec![0; size];
-        return Memory { values };
-    }
-
-    pub fn write(&mut self, index: usize, value: u8) -> bool {
-        if index >= self.values.len() {
-            return false;
-        }
-        self.values[index] = value;
-        return true;
     }
 }
 
