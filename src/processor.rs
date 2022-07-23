@@ -38,7 +38,7 @@ impl Processor {
         self.ip += 1;
     }
 
-    pub fn execute_amount(&mut self, memory: &mut Memory, rng: &mut SmallRng, amount: u64) {
+    pub fn execute_amount(&mut self, memory: &mut Memory, rng: &mut SmallRng, amount: usize) {
         for _ in 0..amount {
             self.execute(memory, rng)
         }

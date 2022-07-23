@@ -303,16 +303,19 @@ mod tests {
         assert_eq!(Instruction::decode(u8::MAX), None);
     }
 
-    #[test]
-    fn test_rnd() {
+    fn execute(text: &str) -> (Processor, Memory) {
         let assembler = Assembler::new();
         let mut memory = Memory::new(100);
-        assembler.assemble("RND RND", &mut memory, 0);
+        let amount = assembler.assemble(text, &mut memory, 0);
         let mut processor = Processor::new(0);
         let mut small_rng = SmallRng::from_seed([0; 32]);
+        processor.execute_amount(&mut memory, &mut small_rng, amount);
+        return (processor, memory);
+    }
 
-        processor.execute(&mut memory, &mut small_rng);
-        processor.execute(&mut memory, &mut small_rng);
+    #[test]
+    fn test_rnd() {
+        let (processor, _) = execute("RND RND");
 
         assert_eq!(
             processor.current_stack(),
@@ -322,144 +325,72 @@ mod tests {
 
     #[test]
     fn test_add() {
-        let assembler = Assembler::new();
-        let mut memory = Memory::new(100);
-        assembler.assemble("N1 N2 ADD", &mut memory, 0);
-        let mut processor = Processor::new(0);
-        let mut small_rng = SmallRng::from_seed([0; 32]);
-
-        processor.execute_amount(&mut memory, &mut small_rng, 3);
+        let (processor, _) = execute("N2 N1 ADD");
 
         assert_eq!(processor.current_stack(), [3]);
     }
 
     #[test]
     fn test_sub() {
-        let assembler = Assembler::new();
-        let mut memory = Memory::new(100);
-        assembler.assemble("N4 N2 SUB", &mut memory, 0);
-        let mut processor = Processor::new(0);
-        let mut small_rng = SmallRng::from_seed([0; 32]);
-
-        processor.execute_amount(&mut memory, &mut small_rng, 3);
+        let (processor, _) = execute("N4 N2 SUB");
 
         assert_eq!(processor.current_stack(), [2]);
     }
 
     #[test]
     fn test_mul() {
-        let assembler = Assembler::new();
-        let mut memory = Memory::new(100);
-        assembler.assemble("N4 N2 MUL", &mut memory, 0);
-        let mut processor = Processor::new(0);
-        let mut small_rng = SmallRng::from_seed([0; 32]);
-
-        processor.execute_amount(&mut memory, &mut small_rng, 3);
+        let (processor, _) = execute("N4 N2 MUL");
 
         assert_eq!(processor.current_stack(), [8]);
     }
 
     #[test]
     fn test_div() {
-        let assembler = Assembler::new();
-        let mut memory = Memory::new(100);
-        assembler.assemble("N8 N2 DIV", &mut memory, 0);
-        let mut processor = Processor::new(0);
-        let mut small_rng = SmallRng::from_seed([0; 32]);
-
-        processor.execute_amount(&mut memory, &mut small_rng, 3);
+        let (processor, _) = execute("N8 N2 DIV");
 
         assert_eq!(processor.current_stack(), [4]);
     }
 
     #[test]
     fn test_div_by_zero() {
-        let assembler = Assembler::new();
-        let mut memory = Memory::new(100);
-        assembler.assemble("N8 N2 N2 SUB DIV", &mut memory, 0);
-        let mut processor = Processor::new(0);
-        let mut small_rng = SmallRng::from_seed([0; 32]);
-
-        processor.execute_amount(&mut memory, &mut small_rng, 5);
-
+        let (processor, _) = execute("N8 N2 N2 SUB DIV");
         assert_eq!(processor.current_stack(), [0]);
     }
 
     #[test]
     fn test_mod() {
-        let assembler = Assembler::new();
-        let mut memory = Memory::new(100);
-        assembler.assemble("N8 N2 N1 ADD MOD", &mut memory, 0);
-        let mut processor = Processor::new(0);
-        let mut small_rng = SmallRng::from_seed([0; 32]);
-
-        processor.execute_amount(&mut memory, &mut small_rng, 5);
-
+        let (processor, _) = execute("N8 N2 N1 ADD MOD");
         assert_eq!(processor.current_stack(), [2]);
     }
 
     #[test]
     fn test_mod_by_zero() {
-        let assembler = Assembler::new();
-        let mut memory = Memory::new(100);
-        assembler.assemble("N8 N2 N2 SUB MOD", &mut memory, 0);
-        let mut processor = Processor::new(0);
-        let mut small_rng = SmallRng::from_seed([0; 32]);
-
-        processor.execute_amount(&mut memory, &mut small_rng, 5);
-
+        let (processor, _) = execute("N8 N2 N2 SUB MOD");
         assert_eq!(processor.current_stack(), [0]);
     }
 
     #[test]
     fn test_not_positive() {
-        let assembler = Assembler::new();
-        let mut memory = Memory::new(100);
-        assembler.assemble("N2 NOT", &mut memory, 0);
-        let mut processor = Processor::new(0);
-        let mut small_rng = SmallRng::from_seed([0; 32]);
-
-        processor.execute_amount(&mut memory, &mut small_rng, 2);
-
+        let (processor, _) = execute("N2 NOT");
         assert_eq!(processor.current_stack(), [0]);
     }
 
     #[test]
     fn test_not_zero() {
-        let assembler = Assembler::new();
-        let mut memory = Memory::new(100);
-        assembler.assemble("N2 N2 SUB NOT", &mut memory, 0);
-        let mut processor = Processor::new(0);
-        let mut small_rng = SmallRng::from_seed([0; 32]);
-
-        processor.execute_amount(&mut memory, &mut small_rng, 4);
-
+        let (processor, _) = execute("N2 N2 SUB NOT");
         assert_eq!(processor.current_stack(), [1]);
     }
 
     #[test]
     fn test_eq_equal() {
-        let assembler = Assembler::new();
-        let mut memory = Memory::new(100);
-        assembler.assemble("N2 N2 EQ", &mut memory, 0);
-        let mut processor = Processor::new(0);
-        let mut small_rng = SmallRng::from_seed([0; 32]);
-
-        processor.execute_amount(&mut memory, &mut small_rng, 3);
+        let (processor, _) = execute("N2 N2 EQ");
 
         assert_eq!(processor.current_stack(), [1]);
     }
 
     #[test]
     fn test_eq_not_equal() {
-        let assembler = Assembler::new();
-        let mut memory = Memory::new(100);
-        assembler.assemble("N1 N2 EQ", &mut memory, 0);
-        let mut processor = Processor::new(0);
-        let mut small_rng = SmallRng::from_seed([0; 32]);
-
-        processor.execute_amount(&mut memory, &mut small_rng, 3);
-
+        let (processor, _) = execute("N1 N2 EQ");
         assert_eq!(processor.current_stack(), [0]);
     }
 }
