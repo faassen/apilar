@@ -3,16 +3,21 @@ extern crate num;
 extern crate num_derive;
 
 use moveslice::Moveslice;
+// use num_derive::{FromPrimitive, ToPrimitive};
 use rand::rngs::SmallRng;
 use rand::Rng;
+use std::collections::HashMap;
+use strum::IntoEnumIterator;
+use strum_macros::{Display, EnumIter};
 
 const STACK_SIZE: usize = 64;
 
-#[derive(FromPrimitive, ToPrimitive)]
+#[derive(EnumIter, Display, FromPrimitive, ToPrimitive)]
 enum Instruction {
+    // Noop
+    Noop = 0,
     // Numbers
-    N0 = 0,
-    N1,
+    N1 = 1,
     N2,
     N4,
     N8,
@@ -69,9 +74,6 @@ enum Instruction {
 impl Instruction {
     pub fn execute(&self, processor: &mut Processor, memory: &mut Memory, rng: &mut SmallRng) {
         match self {
-            Instruction::N0 => {
-                processor.push(0);
-            }
             Instruction::N1 => {
                 processor.push(1);
             }
@@ -123,16 +125,64 @@ impl Instruction {
                 let popped = processor.pop_address(memory);
                 let value = match popped {
                     Some(address) => memory.values[address],
-                    None => u64::MAX,
+                    None => u8::MAX,
                 };
-                processor.push(value);
+                processor.push(value as u64);
             }
+            _ => panic!("unsupported instruction"),
         }
     }
 }
 
 struct Memory {
-    values: Vec<u64>,
+    values: Vec<u8>,
+}
+
+impl Memory {
+    pub fn new(size: usize) -> Memory {
+        let values: Vec<u8> = vec![0; size];
+        return Memory { values };
+    }
+
+    pub fn write(&mut self, index: usize, value: u8) -> bool {
+        if index >= self.values.len() {
+            return false;
+        }
+        self.values[index] = value;
+        return true;
+    }
+}
+
+struct Assembler {
+    instructions: HashMap<String, Instruction>,
+}
+
+impl Assembler {
+    pub fn new() -> Assembler {
+        let mut instructions = HashMap::new();
+        for instruction in Instruction::iter() {
+            instructions.insert(instruction.to_string(), instruction);
+        }
+        return Assembler { instructions };
+    }
+
+    pub fn assemble(&self, text: &str, memory: &mut Memory, index: usize) {
+        let mut i = index;
+        for word in text.split_whitespace() {
+            match self.instructions.get(word) {
+                Some(instruction) => {
+                    let v = num::ToPrimitive::to_u8(instruction);
+                    if let Some(value) = v {
+                        memory.write(i, value);
+                    }
+                }
+                None => {
+                    panic!("Unknown instruction: {}", word);
+                }
+            };
+            i += 1;
+        }
+    }
 }
 
 struct Processor {
@@ -145,14 +195,14 @@ impl Processor {
     pub fn new(ip: usize) -> Processor {
         return Processor {
             ip,
-            stack: [0; 64],
+            stack: [0; STACK_SIZE],
             stack_pointer: 0,
         };
     }
 
     pub fn execute(&mut self, memory: &mut Memory, rng: &mut SmallRng) {
         let value = memory.values[self.ip];
-        let instruction: Option<Instruction> = num::FromPrimitive::from_u64(value);
+        let instruction: Option<Instruction> = num::FromPrimitive::from_u8(value);
         match instruction {
             Some(instruction) => instruction.execute(self, memory, rng),
             None => {
@@ -161,7 +211,7 @@ impl Processor {
         }
     }
 
-    pub fn push(&mut self, value: u64) {
+    fn push(&mut self, value: u64) {
         if self.stack_pointer >= (STACK_SIZE - 1) {
             self.compact_stack();
         }
@@ -169,7 +219,7 @@ impl Processor {
         self.stack_pointer += 1;
     }
 
-    pub fn pop(&mut self) -> u64 {
+    fn pop(&mut self) -> u64 {
         if self.stack_pointer == 0 {
             return u64::MAX;
         }
@@ -178,7 +228,7 @@ impl Processor {
         return result;
     }
 
-    pub fn pop_address(&mut self, memory: &Memory) -> Option<usize> {
+    fn pop_address(&mut self, memory: &Memory) -> Option<usize> {
         if self.stack_pointer == 0 {
             return None;
         }
@@ -189,18 +239,18 @@ impl Processor {
         return Some(result);
     }
 
-    pub fn top(&self) -> u64 {
+    fn top(&self) -> u64 {
         self.stack[self.stack_pointer]
     }
 
-    pub fn drop(&mut self) {
+    fn drop(&mut self) {
         if self.stack_pointer == 0 {
             return;
         }
         self.stack_pointer -= 1;
     }
 
-    pub fn swap(&mut self) {
+    fn swap(&mut self) {
         if self.stack_pointer <= 1 {
             return;
         }
@@ -211,7 +261,7 @@ impl Processor {
         self.stack[first] = temp;
     }
 
-    pub fn compact_stack(&mut self) {
+    fn compact_stack(&mut self) {
         self.stack_pointer = STACK_SIZE / 2;
         self.stack.moveslice(usize::from(self.stack_pointer).., 0);
     }
@@ -219,4 +269,19 @@ impl Processor {
 
 fn main() {
     println!("Hello, world!");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_assemble() {
+        let mut memory = Memory::new(10);
+        let assembler = Assembler::new();
+        assembler.assemble("N1 N2", &mut memory, 0);
+        assert_eq!(memory.values[0..2], [1, 2]);
+        // assert_eq!(memory.values[0], 1);
+        // assert_eq!(memory.values[1], 2);
+    }
 }
