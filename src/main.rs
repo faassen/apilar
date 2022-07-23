@@ -59,7 +59,7 @@ fn main() {
         ";
     let words = text_to_words(text);
 
-    let mut computer = Computer::new(1024 * 1024, 100);
+    let mut computer = Computer::new(1024 * 1024 * 1024, 1000);
     assembler.assemble_words(words.clone(), &mut computer.memory, 0);
     let mut small_rng = SmallRng::from_seed([0; 32]);
 
