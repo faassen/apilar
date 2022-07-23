@@ -91,7 +91,7 @@ impl Processor {
         self.stack[first] = temp;
     }
 
-    pub fn compact_stack(&mut self) {
+    fn compact_stack(&mut self) {
         self.stack_pointer = STACK_SIZE / 2;
         self.stack.moveslice(usize::from(self.stack_pointer).., 0);
     }
@@ -167,5 +167,14 @@ mod tests {
         let mut processor = Processor::new(ADDRESS_DISTANCE * 2);
         processor.push(0); // cannot address this
         assert_eq!(processor.pop_address(&mut memory), None);
+    }
+
+    #[test]
+    fn test_drop() {
+        let mut processor = Processor::new(0);
+        processor.push(10);
+        processor.push(100);
+        processor.drop();
+        assert_eq!(processor.pop(), 10);
     }
 }
