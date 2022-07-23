@@ -17,9 +17,9 @@ impl Assembler {
         return Assembler { instructions };
     }
 
-    pub fn assemble(&self, text: &str, memory: &mut Memory, index: usize) -> usize {
+    fn assemble_words(&self, words: Vec<&str>, memory: &mut Memory, index: usize) -> usize {
         let mut i = index;
-        for word in text.split_whitespace() {
+        for word in words {
             match self.instructions.get(word) {
                 Some(instruction) => {
                     let v = num::ToPrimitive::to_u8(instruction);
@@ -35,6 +35,19 @@ impl Assembler {
         }
         return i - index;
     }
+
+    pub fn assemble(&self, text: &str, memory: &mut Memory, index: usize) -> usize {
+        return self.assemble_words(text.split_whitespace().collect(), memory, index);
+    }
+
+    pub fn line_assemble(&self, text: &str, memory: &mut Memory, index: usize) -> usize {
+        let words = text
+            .split("\n")
+            .map(|line| line.split("#").collect::<Vec<&str>>()[0].trim())
+            .filter(|line| !line.is_empty())
+            .collect();
+        return self.assemble_words(words, memory, index);
+    }
 }
 
 #[cfg(test)]
@@ -46,6 +59,23 @@ mod tests {
         let mut memory = Memory::new(10);
         let assembler = Assembler::new();
         let amount = assembler.assemble("N1 N2", &mut memory, 0);
+        assert_eq!(amount, 2);
+        assert_eq!(memory.values[0..2], [1, 2]);
+    }
+
+    #[test]
+    fn test_line_assemble() {
+        let mut memory = Memory::new(10);
+        let assembler = Assembler::new();
+        let amount = assembler.line_assemble(
+            "
+        N1 # 1
+
+        # explanatory comment
+        N2 # 2",
+            &mut memory,
+            0,
+        );
         assert_eq!(amount, 2);
         assert_eq!(memory.values[0..2], [1, 2]);
     }
