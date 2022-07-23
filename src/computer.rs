@@ -6,7 +6,7 @@ use crate::processor::Processor;
 pub struct Computer {
     pub memory: Memory,
     max_processors: usize,
-    processors: Vec<Processor>,
+    pub processors: Vec<Processor>,
 }
 
 impl Computer {
