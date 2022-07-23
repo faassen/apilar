@@ -292,10 +292,10 @@ impl Instruction {
 
 #[cfg(test)]
 mod tests {
-    use rand::SeedableRng;
 
     use super::*;
-    use crate::assembler::{text_to_words, Assembler};
+    use crate::assembler::text_to_words;
+    use crate::testutil::{execute, execute_lines};
 
     #[test]
     fn test_decode_success() {
@@ -305,43 +305,6 @@ mod tests {
     #[test]
     fn test_decode_failure() {
         assert_eq!(Instruction::decode(u8::MAX), None);
-    }
-
-    struct Exec {
-        assembler: Assembler,
-        processor: Processor,
-        memory: Memory,
-        small_rng: SmallRng,
-    }
-
-    fn execute(text: &str) -> Exec {
-        let assembler = Assembler::new();
-        let mut memory = Memory::new(1000);
-        let amount = assembler.assemble(text, &mut memory, 0);
-        let mut processor = Processor::new(0);
-        let mut small_rng = SmallRng::from_seed([0; 32]);
-        processor.execute_amount(&mut memory, &mut small_rng, amount);
-        return Exec {
-            assembler,
-            processor,
-            memory,
-            small_rng,
-        };
-    }
-
-    fn execute_lines(text: &str) -> Exec {
-        let assembler = Assembler::new();
-        let mut memory = Memory::new(1000);
-        let amount = assembler.line_assemble(text, &mut memory, 0);
-        let mut processor = Processor::new(0);
-        let mut small_rng = SmallRng::from_seed([0; 32]);
-        processor.execute_amount(&mut memory, &mut small_rng, amount);
-        return Exec {
-            assembler,
-            processor,
-            memory,
-            small_rng,
-        };
     }
 
     #[test]
