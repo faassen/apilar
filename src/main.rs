@@ -4,9 +4,12 @@ extern crate num_derive;
 
 pub mod assembler;
 pub mod computer;
+pub mod direction;
 pub mod instruction;
 pub mod memory;
 pub mod processor;
+pub mod render;
+pub mod world;
 
 #[cfg(test)]
 pub mod testutil;
@@ -19,7 +22,12 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufWriter;
 
+use crate::render::run;
+
 fn main() -> std::io::Result<()> {
+    run();
+    return Ok(());
+
     let assembler = Assembler::new();
 
     let text = "
@@ -68,7 +76,7 @@ fn main() -> std::io::Result<()> {
         ";
     let words = text_to_words(text);
 
-    let mut computer = Computer::new(1024 * 1024, 100);
+    let mut computer = Computer::new(1024 * 1024, 100, 100);
     assembler.assemble_words(words.clone(), &mut computer.memory, 0);
     // let mut small_rng = SmallRng::from_seed([0; 32]);
     let mut small_rng = SmallRng::from_entropy();

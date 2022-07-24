@@ -2,19 +2,22 @@ use rand::rngs::SmallRng;
 use rand::seq::SliceRandom;
 use rand::Rng;
 
+use crate::direction::Direction;
 use crate::memory::Memory;
 use crate::processor::Processor;
 
 pub struct Computer {
     max_processors: usize,
+    pub resources: u64,
     pub memory: Memory,
     pub processors: Vec<Processor>,
 }
 
 impl Computer {
-    pub fn new(size: usize, max_processors: usize) -> Computer {
+    pub fn new(size: usize, max_processors: usize, resources: u64) -> Computer {
         Computer {
             max_processors,
+            resources,
             memory: Memory::new(size),
             processors: Vec::new(),
         }
@@ -36,10 +39,15 @@ impl Computer {
             }
         }
 
+        let child_resources = self.resources / 2;
+        let parent_resources = self.resources - child_resources;
+
+        self.resources = parent_resources;
         self.processors = parent_processors;
         self.memory = Memory::from_values(parent_memory_values);
 
         Computer {
+            resources: child_resources,
             max_processors: self.max_processors,
             memory: Memory::from_values(child_memory_values),
             processors: child_processors,
@@ -58,6 +66,7 @@ impl Computer {
             // for predation
             self.processors = self.processors[0..self.max_processors].to_vec();
         }
+        self.resources += other.resources;
     }
 
     pub fn add_processor(&mut self, index: usize) {
@@ -74,7 +83,7 @@ impl Computer {
         // obtain any start instructions
         let mut to_start: Vec<usize> = Vec::new();
         for processor in &self.processors {
-            if let Some(address) = processor.get_start() {
+            if let Some(address) = processor.want_start {
                 to_start.push(address);
             }
         }
@@ -118,6 +127,24 @@ impl Computer {
                 }
             }
         }
+    }
+
+    pub fn want_split(&self) -> Option<(Direction, usize)> {
+        for processor in &self.processors {
+            if let Some(want_split) = processor.want_split {
+                return Some(want_split);
+            }
+        }
+        return None;
+    }
+
+    pub fn want_eat(&self) -> bool {
+        for processor in &self.processors {
+            if processor.want_eat {
+                return true;
+            }
+        }
+        return false;
     }
 }
 
@@ -173,7 +200,7 @@ mod tests {
         let words = text_to_words(text);
         let words_amount = words.len();
 
-        let mut computer = Computer::new(1024, 10);
+        let mut computer = Computer::new(1024, 10, 100);
         assembler.assemble_words(words.clone(), &mut computer.memory, 0);
         let mut small_rng = SmallRng::from_seed([0; 32]);
 
@@ -201,16 +228,18 @@ mod tests {
         ";
         let words = text_to_words(text);
 
-        let mut computer = Computer::new(4, 10);
+        let mut computer = Computer::new(4, 10, 100);
         assembler.assemble_words(words.clone(), &mut computer.memory, 0);
         computer.add_processor(0);
         computer.add_processor(2);
 
         let splitted = computer.split(2);
         assert_eq!(computer.memory.values, [1, 2]);
+        assert_eq!(computer.resources, 50);
         assert_eq!(computer.processors.len(), 1);
         assert_eq!(computer.processors[0].ip, 0);
         assert_eq!(splitted.memory.values, [3, 4]);
+        assert_eq!(splitted.resources, 50);
         assert_eq!(splitted.processors.len(), 1);
         assert_eq!(splitted.processors[0].ip, 0);
     }
@@ -227,7 +256,7 @@ mod tests {
         ";
         let words = text_to_words(text);
 
-        let mut computer = Computer::new(4, 10);
+        let mut computer = Computer::new(4, 10, 100);
         assembler.assemble_words(words.clone(), &mut computer.memory, 0);
         computer.add_processor(0);
         computer.add_processor(2);
@@ -236,6 +265,7 @@ mod tests {
         computer.merge(splitted);
 
         assert_eq!(computer.memory.values, [1, 2, 3, 4]);
+        assert_eq!(computer.resources, 100);
         assert_eq!(computer.processors.len(), 2);
         assert_eq!(computer.processors[0].ip, 0);
         assert_eq!(computer.processors[1].ip, 2);
@@ -253,7 +283,7 @@ mod tests {
         ";
         let words = text_to_words(text);
 
-        let mut computer = Computer::new(4, 3);
+        let mut computer = Computer::new(4, 3, 100);
         assembler.assemble_words(words.clone(), &mut computer.memory, 0);
         computer.add_processor(0);
         computer.add_processor(1);
@@ -264,6 +294,7 @@ mod tests {
         computer.merge(splitted);
 
         assert_eq!(computer.memory.values, [1, 2, 3, 4]);
+        assert_eq!(computer.resources, 100);
         assert_eq!(computer.processors.len(), 3);
         assert_eq!(computer.processors[0].ip, 0);
         assert_eq!(computer.processors[1].ip, 1);

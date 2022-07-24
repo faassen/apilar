@@ -1,6 +1,7 @@
 use moveslice::Moveslice;
 use rand::rngs::SmallRng;
 
+use crate::direction::Direction;
 use crate::instruction::Instruction;
 use crate::memory::Memory;
 
@@ -13,7 +14,11 @@ pub struct Processor {
     stack_pointer: usize,
     jumped: bool,
     pub alive: bool,
-    start: Option<usize>,
+    pub want_start: Option<usize>,
+    pub want_split: Option<(Direction, usize)>,
+    pub want_merge: Option<Direction>,
+    pub want_eat: bool,
+    pub want_grow: bool,
     stack: [u64; STACK_SIZE],
 }
 
@@ -24,7 +29,11 @@ impl Processor {
             stack: [0; STACK_SIZE],
             jumped: false,
             alive: true,
-            start: None,
+            want_start: None,
+            want_split: None,
+            want_merge: None,
+            want_eat: false,
+            want_grow: false,
             stack_pointer: 0,
         };
     }
@@ -63,7 +72,7 @@ impl Processor {
         rng: &mut SmallRng,
         amount: usize,
     ) -> usize {
-        self.start = None;
+        self.want_start = None;
         let mut total = 0;
         for _ in 0..amount {
             if self.execute(memory, rng) {
@@ -74,15 +83,11 @@ impl Processor {
     }
 
     pub fn start(&mut self, address: usize) {
-        self.start = Some(address);
+        self.want_start = Some(address);
     }
 
     pub fn end(&mut self) {
         self.alive = false;
-    }
-
-    pub fn get_start(&self) -> Option<usize> {
-        return self.start;
     }
 
     pub fn jump(&mut self, address: usize) {
