@@ -66,11 +66,11 @@ pub fn run() {
     let assembler = Assembler::new();
     let words = text_to_words(PROGRAM_TEXT);
 
-    let mut computer = Computer::new(3000, 10, 500);
+    let mut computer = Computer::new(300, 10, 500);
     assembler.assemble_words(words, &mut computer.memory, 0);
     computer.add_processor(0);
 
-    let mut world = World::new(60, 40, 5000);
+    let mut world = World::new(70, 40, 400);
     world.set((30, 20), computer);
 
     let mut small_rng = SmallRng::from_entropy();
@@ -78,7 +78,7 @@ pub fn run() {
     render_start();
     let mut i = 0;
     loop {
-        let redraw = i % 10000 == 0;
+        let redraw = i % 100000 == 0;
         let mutate = i % 100000 == 0;
 
         world.update(&mut small_rng, 10);

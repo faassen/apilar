@@ -166,6 +166,30 @@ impl World {
             location.resources -= amount;
         }
     }
+
+    pub fn computers_amount(&self) -> u64 {
+        let mut total = 0;
+        for row in &self.rows {
+            for location in row {
+                if location.computer.is_some() {
+                    total += 1;
+                }
+            }
+        }
+        return total;
+    }
+
+    pub fn processors_amount(&self) -> u64 {
+        let mut total = 0;
+        for row in &self.rows {
+            for location in row {
+                if let Some(computer) = &location.computer {
+                    total += computer.processors.len() as u64;
+                }
+            }
+        }
+        return total;
+    }
 }
 
 impl Location {

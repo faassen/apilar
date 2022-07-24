@@ -24,7 +24,8 @@ impl fmt::Display for World {
 
             write!(f, "\n")?;
         }
-
+        write!(f, "Computers : {}\n", self.computers_amount())?;
+        write!(f, "Processors: {}\n", self.processors_amount())?;
         Ok(())
     }
 }
