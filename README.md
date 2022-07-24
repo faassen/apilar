@@ -2,10 +2,7 @@
 
 ## About Apilar
 
-Apilar is a language and alife system. It was created for [langjam
-3](https://github.com/langjam/jam0003).
-
-The theme for langjam 3 is "Beautiful Assembly".
+Apilar is a language and alife system.
 
 Apilar is an stack-machine assembly language that supports self-assembly: a
 replicator Apilar program can be written that makes copies of itself in memory
@@ -74,6 +71,10 @@ This creates a world, seeds it with a single hard-coded replicator, and then
 lets it run. You can see the world evolve in the terminal, so you please make
 your terminal window big enough.
 
+The `#` on the map are computers. Anything else doesn't contain a computer
+and contains an indicator of the amount of free resources available there:
+nothing, '.', a little, 'x' or 'X' for a lot.
+
 Sometimes the worlds are duds and growth stops. Sometimes growth is slow.
 Sometimes growth accelerates; it all depends on what mutations occurred. I did
 one longer run run for a few hours, and I came back to a world somehow filled
@@ -103,10 +104,11 @@ cargo run -- disassemble apilar-dump2.cbor 35 10
 
 ## sample code
 
-You can find a few sample programs in the `sample_code` directory.
+You can find a few sample programs in the `sample_code` directory. You can run
+them or your own code by passing a file argument to the `run` command.
 
-## langjam 3 documentation link
+## langjam 3
 
-More documentation may appear here in the next few days:
-
-https://github.com/faassen/apilar
+Apilar was originally created for [langjam
+3](https://github.com/langjam/jam0003). The theme for this jam was "Beautiful
+Assembly".
