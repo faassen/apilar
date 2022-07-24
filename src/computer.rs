@@ -54,12 +54,12 @@ impl Computer {
         }
     }
 
-    pub fn merge(&mut self, other: Computer) {
-        for mut processor in other.processors {
+    pub fn merge(&mut self, other: &Computer) {
+        for mut processor in other.processors.clone() {
             processor.ip += self.memory.values.len();
             self.processors.push(processor);
         }
-        self.memory.values.extend(other.memory.values);
+        self.memory.values.extend(other.memory.values.clone());
         if self.processors.len() > self.max_processors {
             // throw away any excess processors
             // this may lead to a strategy where being near max processors is good
@@ -133,6 +133,15 @@ impl Computer {
         for processor in &self.processors {
             if let Some(want_split) = processor.want_split {
                 return Some(want_split);
+            }
+        }
+        return None;
+    }
+
+    pub fn want_merge(&self) -> Option<Direction> {
+        for processor in &self.processors {
+            if let Some(want_merge) = processor.want_merge {
+                return Some(want_merge);
             }
         }
         return None;
@@ -262,7 +271,7 @@ mod tests {
         computer.add_processor(2);
 
         let splitted = computer.split(2);
-        computer.merge(splitted);
+        computer.merge(&splitted);
 
         assert_eq!(computer.memory.values, [1, 2, 3, 4]);
         assert_eq!(computer.resources, 100);
@@ -291,7 +300,7 @@ mod tests {
 
         let mut splitted = computer.split(2);
         splitted.add_processor(2);
-        computer.merge(splitted);
+        computer.merge(&splitted);
 
         assert_eq!(computer.memory.values, [1, 2, 3, 4]);
         assert_eq!(computer.resources, 100);

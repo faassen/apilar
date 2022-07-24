@@ -76,6 +76,13 @@ impl World {
         if let Some((neighbor_coords, address)) = self.want_split(coords) {
             self.split(coords, neighbor_coords, address);
         }
+
+        // if let Some(neighbor_coords) = self.want_merge(coords) {
+        //     let neighbor_computer = &self.get(neighbor_coords).computer;
+        //     if let Some(neighbor_computer) = neighbor_computer {
+        //         self.merge(coords, neighbor_coords, neighbor_computer);
+        //     }
+        // }
         if self.want_eat(coords) {
             self.eat(coords);
         }
@@ -87,6 +94,18 @@ impl World {
                 let neighbor_coords = self.neighbor_coords(coords, direction);
                 if self.is_empty(neighbor_coords) {
                     return Some((neighbor_coords, address));
+                }
+            }
+        }
+        return None;
+    }
+
+    fn want_merge(&self, coords: Coords) -> Option<Coords> {
+        if let Some(computer) = &self.get(coords).computer {
+            if let Some(direction) = computer.want_merge() {
+                let neighbor_coords = self.neighbor_coords(coords, direction);
+                if !self.is_empty(neighbor_coords) {
+                    return Some(neighbor_coords);
                 }
             }
         }
@@ -111,6 +130,15 @@ impl World {
         neighbor_location.computer = splitted;
     }
 
+    fn merge(&mut self, coords: Coords, neighbor_coords: Coords, neighbor_computer: &Computer) {
+        let computer = &mut self.get_mut(coords).computer;
+        if let Some(computer) = computer {
+            computer.merge(neighbor_computer);
+        }
+        let neighbor_location = self.get_mut(neighbor_coords);
+        neighbor_location.computer = None;
+    }
+
     fn eat(&mut self, coords: Coords) {
         let location = self.get_mut(coords);
         if let Some(computer) = &mut location.computer {
@@ -133,5 +161,18 @@ impl Location {
         if let Some(computer) = &mut self.computer {
             computer.execute(rng, amount_per_processor);
         }
+    }
+
+    fn merge(&mut self, other: &mut Location) {
+        if let Some(computer) = &mut self.computer {
+            if let Some(neighbor_computer) = &other.computer {
+                computer.merge(&neighbor_computer);
+            }
+        }
+        other.computer = None;
+    }
+
+    fn is_empty(&self) -> bool {
+        !self.computer.is_some()
     }
 }
