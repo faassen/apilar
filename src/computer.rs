@@ -46,6 +46,20 @@ impl Computer {
         }
     }
 
+    pub fn merge(&mut self, other: Computer) {
+        for mut processor in other.processors {
+            processor.ip += self.memory.values.len();
+            self.processors.push(processor);
+        }
+        self.memory.values.extend(other.memory.values);
+        if self.processors.len() > self.max_processors {
+            // throw away any excess processors
+            // this may lead to a strategy where being near max processors is good
+            // for predation
+            self.processors = self.processors[0..self.max_processors].to_vec();
+        }
+    }
+
     pub fn add_processor(&mut self, index: usize) {
         self.processors.push(Processor::new(index));
     }
@@ -199,5 +213,61 @@ mod tests {
         assert_eq!(splitted.memory.values, [3, 4]);
         assert_eq!(splitted.processors.len(), 1);
         assert_eq!(splitted.processors[0].ip, 0);
+    }
+
+    #[test]
+    fn test_merge() {
+        let assembler = Assembler::new();
+
+        let text = "
+        N1
+        N2
+        N3
+        N4
+        ";
+        let words = text_to_words(text);
+
+        let mut computer = Computer::new(4, 10);
+        assembler.assemble_words(words.clone(), &mut computer.memory, 0);
+        computer.add_processor(0);
+        computer.add_processor(2);
+
+        let splitted = computer.split(2);
+        computer.merge(splitted);
+
+        assert_eq!(computer.memory.values, [1, 2, 3, 4]);
+        assert_eq!(computer.processors.len(), 2);
+        assert_eq!(computer.processors[0].ip, 0);
+        assert_eq!(computer.processors[1].ip, 2);
+    }
+
+    #[test]
+    fn test_merge_too_many_processors() {
+        let assembler = Assembler::new();
+
+        let text = "
+        N1
+        N2
+        N3
+        N4
+        ";
+        let words = text_to_words(text);
+
+        let mut computer = Computer::new(4, 3);
+        assembler.assemble_words(words.clone(), &mut computer.memory, 0);
+        computer.add_processor(0);
+        computer.add_processor(1);
+        computer.add_processor(2);
+
+        let mut splitted = computer.split(2);
+        splitted.add_processor(2);
+        computer.merge(splitted);
+
+        assert_eq!(computer.memory.values, [1, 2, 3, 4]);
+        assert_eq!(computer.processors.len(), 3);
+        assert_eq!(computer.processors[0].ip, 0);
+        assert_eq!(computer.processors[1].ip, 1);
+        assert_eq!(computer.processors[2].ip, 2);
+        // fourth one is eliminated
     }
 }
