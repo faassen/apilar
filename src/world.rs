@@ -77,12 +77,13 @@ impl World {
             self.split(coords, neighbor_coords, address);
         }
 
-        // if let Some(neighbor_coords) = self.want_merge(coords) {
-        //     let neighbor_computer = &self.get(neighbor_coords).computer;
-        //     if let Some(neighbor_computer) = neighbor_computer {
-        //         self.merge(coords, neighbor_coords, neighbor_computer);
-        //     }
-        // }
+        if let Some(neighbor_coords) = self.want_merge(coords) {
+            let neighbor_computer = self.get(neighbor_coords).computer.clone();
+            if let Some(neighbor_computer) = neighbor_computer {
+                self.merge(coords, neighbor_coords, &neighbor_computer);
+            }
+        }
+
         if self.want_eat(coords) {
             self.eat(coords);
         }
@@ -142,9 +143,14 @@ impl World {
     fn eat(&mut self, coords: Coords) {
         let location = self.get_mut(coords);
         if let Some(computer) = &mut location.computer {
-            // XXX over eating
-            computer.resources += EAT_AMOUNT;
-            location.resources -= EAT_AMOUNT;
+            let amount = if location.resources >= EAT_AMOUNT {
+                EAT_AMOUNT
+            } else {
+                location.resources
+            };
+
+            computer.resources += amount;
+            location.resources -= amount;
         }
     }
 }
@@ -161,15 +167,6 @@ impl Location {
         if let Some(computer) = &mut self.computer {
             computer.execute(rng, amount_per_processor);
         }
-    }
-
-    fn merge(&mut self, other: &mut Location) {
-        if let Some(computer) = &mut self.computer {
-            if let Some(neighbor_computer) = &other.computer {
-                computer.merge(&neighbor_computer);
-            }
-        }
-        other.computer = None;
     }
 
     fn is_empty(&self) -> bool {

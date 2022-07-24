@@ -73,6 +73,10 @@ impl Processor {
         amount: usize,
     ) -> usize {
         self.want_start = None;
+        self.want_eat = false;
+        self.want_grow = false;
+        self.want_split = None;
+        self.want_merge = None;
         let mut total = 0;
         for _ in 0..amount {
             if self.execute(memory, rng) {

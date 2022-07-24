@@ -25,9 +25,6 @@ use std::io::BufWriter;
 use crate::render::run;
 
 fn main() -> std::io::Result<()> {
-    run();
-    return Ok(());
-
     let assembler = Assembler::new();
 
     let text = "

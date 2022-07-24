@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct Memory {
     pub values: Vec<u8>,
 }

@@ -6,6 +6,7 @@ use crate::direction::Direction;
 use crate::memory::Memory;
 use crate::processor::Processor;
 
+#[derive(Clone)]
 pub struct Computer {
     max_processors: usize,
     pub resources: u64,
@@ -106,6 +107,12 @@ impl Computer {
             }
         }
 
+        // grow memory if we want to grow
+        if self.want_grow() && self.resources > 0 {
+            self.memory.values.push(0);
+            self.resources -= 1;
+        }
+
         return total;
     }
 
@@ -150,6 +157,15 @@ impl Computer {
     pub fn want_eat(&self) -> bool {
         for processor in &self.processors {
             if processor.want_eat {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    pub fn want_grow(&self) -> bool {
+        for processor in &self.processors {
+            if processor.want_grow {
                 return true;
             }
         }

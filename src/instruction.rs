@@ -2,6 +2,7 @@ use rand::rngs::SmallRng;
 use rand::Rng;
 use strum_macros::{Display, EnumIter};
 
+use crate::direction::Direction;
 use crate::memory::Memory;
 use crate::processor::Processor;
 
@@ -63,6 +64,14 @@ pub enum Instruction {
     // processors
     START = 80, // start a new processor given a starting point (only 1 can started in execution block)
     END,        // end this processor's existence
+
+    // resources
+    EAT = 90,
+    GROW,
+
+    // split and merge
+    SPLIT = 100,
+    MERGE,
 }
 
 impl Instruction {
@@ -301,6 +310,43 @@ impl Instruction {
 
             Instruction::END => {
                 processor.end();
+            }
+
+            // resources
+            Instruction::EAT => {
+                processor.want_eat = true;
+            }
+            Instruction::GROW => {
+                processor.want_grow = true;
+            }
+
+            // split and merge
+            Instruction::SPLIT => {
+                let popped = processor.pop_address(memory);
+                let direction = processor.pop();
+                if let Some(address) = popped {
+                    let direction = if let Some(direction) =
+                        num::FromPrimitive::from_u8((direction % 4) as u8)
+                    {
+                        direction
+                    } else {
+                        // XXX random instead. but shouldn't happen...
+                        Direction::North
+                    };
+                    processor.want_split = Some((direction, address));
+                }
+            }
+
+            Instruction::MERGE => {
+                let direction = processor.pop();
+                let direction =
+                    if let Some(direction) = num::FromPrimitive::from_u8((direction % 4) as u8) {
+                        direction
+                    } else {
+                        // XXX random instead. but shouldn't happen...
+                        Direction::North
+                    };
+                processor.want_merge = Some(direction);
             }
         }
     }
