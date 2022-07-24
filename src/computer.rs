@@ -6,17 +6,43 @@ use crate::memory::Memory;
 use crate::processor::Processor;
 
 pub struct Computer {
-    pub memory: Memory,
     max_processors: usize,
+    pub memory: Memory,
     pub processors: Vec<Processor>,
 }
 
 impl Computer {
     pub fn new(size: usize, max_processors: usize) -> Computer {
         Computer {
-            memory: Memory::new(size),
             max_processors,
+            memory: Memory::new(size),
             processors: Vec::new(),
+        }
+    }
+
+    pub fn split(&mut self, address: usize) -> Computer {
+        let parent_memory_values = self.memory.values[..address].to_vec();
+        let child_memory_values = self.memory.values[address..].to_vec();
+
+        let mut parent_processors: Vec<Processor> = Vec::new();
+        let mut child_processors: Vec<Processor> = Vec::new();
+
+        for mut processor in self.processors.clone() {
+            if processor.ip < address {
+                parent_processors.push(processor);
+            } else {
+                processor.ip -= address;
+                child_processors.push(processor);
+            }
+        }
+
+        self.processors = parent_processors;
+        self.memory = Memory::from_values(parent_memory_values);
+
+        Computer {
+            max_processors: self.max_processors,
+            memory: Memory::from_values(child_memory_values),
+            processors: child_processors,
         }
     }
 
@@ -147,5 +173,31 @@ mod tests {
         // a new processor was spawned
         assert_eq!(computer.processors.len(), 2);
         assert_eq!(computer.processors[1].address(), 64);
+    }
+
+    #[test]
+    fn test_split() {
+        let assembler = Assembler::new();
+
+        let text = "
+        N1
+        N2
+        N3
+        N4
+        ";
+        let words = text_to_words(text);
+
+        let mut computer = Computer::new(4, 10);
+        assembler.assemble_words(words.clone(), &mut computer.memory, 0);
+        computer.add_processor(0);
+        computer.add_processor(2);
+
+        let splitted = computer.split(2);
+        assert_eq!(computer.memory.values, [1, 2]);
+        assert_eq!(computer.processors.len(), 1);
+        assert_eq!(computer.processors[0].ip, 0);
+        assert_eq!(splitted.memory.values, [3, 4]);
+        assert_eq!(splitted.processors.len(), 1);
+        assert_eq!(splitted.processors[0].ip, 0);
     }
 }

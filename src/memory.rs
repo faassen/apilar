@@ -8,6 +8,10 @@ impl Memory {
         return Memory { values };
     }
 
+    pub fn from_values(values: Vec<u8>) -> Memory {
+        return Memory { values };
+    }
+
     pub fn read(&self, index: usize) -> Option<u8> {
         if index >= self.values.len() {
             return None;

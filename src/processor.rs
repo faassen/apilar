@@ -7,9 +7,9 @@ use crate::memory::Memory;
 const STACK_SIZE: usize = 64;
 const ADDRESS_DISTANCE: usize = 1024;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Processor {
-    ip: usize,
+    pub ip: usize,
     stack_pointer: usize,
     jumped: bool,
     pub alive: bool,
