@@ -322,8 +322,8 @@ impl Instruction {
 
             // split and merge
             Instruction::SPLIT => {
-                let popped = processor.pop_address(memory);
                 let direction = processor.pop();
+                let popped = processor.pop_address(memory);
                 if let Some(address) = popped {
                     let direction = if let Some(direction) =
                         num::FromPrimitive::from_u8((direction % 4) as u8)

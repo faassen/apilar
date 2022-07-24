@@ -117,6 +117,9 @@ impl Computer {
     }
 
     pub fn mutate_memory(&mut self, rng: &mut SmallRng, amount: u64) {
+        if self.memory.values.len() == 0 {
+            return;
+        }
         for _ in 0..amount {
             let address = rng.gen_range(0..self.memory.values.len());
             self.memory.values[address] = rng.gen::<u8>();

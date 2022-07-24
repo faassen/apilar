@@ -3,17 +3,17 @@ use crate::direction::Direction;
 use rand::rngs::SmallRng;
 use rand::Rng;
 
-const EAT_AMOUNT: u64 = 1;
+const EAT_AMOUNT: u64 = 100;
 
-struct Location {
-    resources: u64,
-    computer: Option<Computer>,
+pub struct Location {
+    pub resources: u64,
+    pub computer: Option<Computer>,
 }
 
-struct World {
+pub struct World {
     width: usize,
     height: usize,
-    rows: Vec<Vec<Location>>,
+    pub rows: Vec<Vec<Location>>,
 }
 
 type Coords = (usize, usize);
@@ -44,6 +44,10 @@ impl World {
             Direction::West => (x - 1, y),
         };
         return (nx % self.width, ny % self.height);
+    }
+
+    pub fn set(&mut self, (x, y): Coords, computer: Computer) {
+        self.rows[y][x].computer = Some(computer);
     }
 
     pub fn get(&self, (x, y): Coords) -> &Location {
@@ -86,6 +90,15 @@ impl World {
 
         if self.want_eat(coords) {
             self.eat(coords);
+        }
+    }
+
+    pub fn mutate(&mut self, rng: &mut SmallRng, amount_memory: u64, amount_processors: u64) {
+        let coords = self.get_random_coords(rng);
+        let location = self.get_mut(coords);
+        if let Some(computer) = &mut location.computer {
+            computer.mutate_memory(rng, amount_memory);
+            computer.mutate_processors(rng, amount_processors);
         }
     }
 
@@ -164,12 +177,18 @@ impl Location {
     }
 
     pub fn update(&mut self, rng: &mut SmallRng, amount_per_processor: usize) {
-        if let Some(computer) = &mut self.computer {
-            computer.execute(rng, amount_per_processor);
-        }
-    }
+        let mut eliminate_computer: bool = false;
 
-    fn is_empty(&self) -> bool {
-        !self.computer.is_some()
+        if let Some(computer) = &mut self.computer {
+            if computer.processors.len() == 0 {
+                self.resources += computer.resources + computer.memory.values.len() as u64;
+                eliminate_computer = true;
+            } else {
+                computer.execute(rng, amount_per_processor);
+            }
+        }
+        if eliminate_computer {
+            self.computer = None;
+        }
     }
 }
