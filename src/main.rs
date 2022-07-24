@@ -17,6 +17,7 @@ use rand::rngs::SmallRng;
 use rand::SeedableRng;
 use std::fs::File;
 use std::io::prelude::*;
+use std::io::BufWriter;
 
 fn main() -> std::io::Result<()> {
     let assembler = Assembler::new();
@@ -67,7 +68,7 @@ fn main() -> std::io::Result<()> {
         ";
     let words = text_to_words(text);
 
-    let mut computer = Computer::new(1024 * 1024 * 1024, 1024);
+    let mut computer = Computer::new(1024 * 1024, 100);
     assembler.assemble_words(words.clone(), &mut computer.memory, 0);
     // let mut small_rng = SmallRng::from_seed([0; 32]);
     let mut small_rng = SmallRng::from_entropy();
@@ -76,10 +77,22 @@ fn main() -> std::io::Result<()> {
 
     let mut i = 0;
     let mut total = 0;
+    let mut dump_count = 0;
     loop {
         total += computer.execute(&mut small_rng, 100);
-        if total > 10000 {
+        if total > 5000 {
             println!("Processors {}", computer.processors.len());
+            let words = assembler.disassemble_to_words(&computer.memory.values);
+
+            let file = File::create(format!("dump{}.apil", dump_count))?;
+            let mut stream = BufWriter::new(file);
+            dump_count += 1;
+            for word in words {
+                stream.write(word.as_bytes())?;
+                stream.write("\n".as_bytes())?;
+            }
+            stream.flush()?;
+            println!("Written");
             computer.mutate_memory(&mut small_rng, 1);
             computer.mutate_processors(&mut small_rng, 1);
             total = 0;
