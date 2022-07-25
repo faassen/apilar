@@ -369,7 +369,95 @@ address that initiated the call and the code continues from there.
 Take the address of this instruction and put it on the top of the stack. This
 can then be used as a jump destination.
 
-#### READ
+#### READ - read from memory
 
-Interpret the top of the stack as an address. If it's out of range, this
-operation is a no op.
+Interpret the top of the stack as an address and read from it, putting the
+result on top of the stack. If the address is out of range, this operation puts
+`255` on top of the stack. A stack underflow puts `256` on the stack too.
+
+#### WRITE - write to memory
+
+Take a value of the top of the stack and the second value is interpreted as an
+address. If the address is in range, write the value there. Stack values are 64
+bit unsigned numbers, so can be too large for memory, which is unsigned bytes.
+If the value is greater than `255`, put `255` on instead. If the address is
+out of bounds, no write occurs.
+
+### Processors
+
+These operations only operate once per cycle of instructions in which they were
+initiated. The length of the cycle of instructions is configured by
+`instructions_per_update`.
+
+#### START - spawn new processor
+
+Spawns a new processor in the address given by the top of the stack. If the
+top of the stack is out of range, this is a no op.
+
+Starting a lot of processors in a single cycle of instructions results in only
+a a single processor to spawn. The last `START` instruction determines the
+address.
+
+#### END - end this processor
+
+Destroys this processor after the cycle of instructions is finished.
+
+### Resources
+
+These operations only operate once per cycle of instructions in which they were
+initiated. The length of the cycle of instructions is configured by
+`instructions_per_update`.
+
+#### EAT - take resources from location
+
+Take the amount of resources configured by `eat_amount` at the end of this
+cycle of instructions from the location into the computer's resources.
+
+#### GROW - use resource to grow memory
+
+Take 1 resource from the computer's resource pool and grow memory 1 position at
+the end. Executed only once per cycle of instructions.
+
+### Split and merge
+
+These operations only operate once per cycle of instructions in which they were
+initiated. The length of the cycle of instructions is configured by
+`instructions_per_update`.
+
+#### SPLIT - split this computer into two parts
+
+Take a direction off the top of the stack. A direction is either 0 (north), 1
+(east), 2 (south) or 3 (west) from this computer's location. Any numbers
+greater than 3 are taken as the remainder of 4, so are interpreted as a
+direction as well.
+
+The second value on the stack is interpreted as an address. This address is the
+split point - just before this address the computer's memory is split into two.
+The first half remains in place. The second half goes into the neighboring
+location in the direction given, unless that is full, in which case nothing
+happens.
+
+Processors remain in their parts. The processors on the second parts will have
+all the addresses they may have on the stack screwed up, which is a problem for
+them.
+
+Computer resources are divided equally between the two halves.
+
+If the address is out of range, nothing happens besides the values being
+popped.
+
+#### Merge - merge this computer with neighboring computer
+
+Take a direction off the top of the stack. A direction is either 0 (north), 1
+(east), 2 (south) or 3 (west) from this computer's location. Any numbers
+greater than 3 are taken as the remainder of 4, so are interpreted as a
+direction as well.
+
+This computer is then merged with the neighboring computer indicated by that
+direction, if there is one. The memory of the merged computer is added to the
+bottom of the computer that initiated the merging. The neighboring location is
+now empty. The resources are added together and the processors all run on the
+same computer.
+
+The processors on the merged part will have all the addresses they may have on
+the stack screwed up, which is a problem for them.
