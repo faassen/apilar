@@ -13,8 +13,8 @@ Head management:
 - source COPY - copy source head address into current head
 - READ - read at current head
 - value WRITE - write value to current head
-- amount BACK - move current head back
-- amount FORWARD - movecurrent head forward
+- amount BACK - move current head back by amount
+- amount FORWARD - move current head forward by amount
 
 JMP, CALL is defined at going to the current head
 
