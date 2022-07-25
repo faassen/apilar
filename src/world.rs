@@ -75,7 +75,7 @@ impl World {
         self.get(coords).computer.is_none()
     }
 
-    pub fn update(&mut self, rng: &mut SmallRng, amount_per_processor: usize) {
+    pub fn update(&mut self, rng: &mut SmallRng, amount_per_processor: usize, death_rate: u32) {
         let coords = self.get_random_coords(rng);
 
         let location = self.get_mut(coords);
@@ -94,6 +94,7 @@ impl World {
         if self.want_eat(coords) {
             self.eat(coords);
         }
+        self.death(rng, coords, death_rate);
     }
 
     pub fn mutate(&mut self, rng: &mut SmallRng, amount_memory: u64, amount_processors: u64) {
@@ -102,6 +103,16 @@ impl World {
         if let Some(computer) = &mut location.computer {
             computer.mutate_memory(rng, amount_memory);
             computer.mutate_processors(rng, amount_processors);
+        }
+    }
+
+    pub fn death(&mut self, rng: &mut SmallRng, coords: Coords, death_rate: u32) {
+        let location = self.get_mut(coords);
+        if let Some(computer) = &mut location.computer {
+            if rng.gen_ratio(1, death_rate) {
+                location.resources += computer.resources + computer.memory.values.len() as u64;
+                location.computer = None;
+            }
         }
     }
 

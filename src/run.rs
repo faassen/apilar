@@ -21,6 +21,7 @@ pub fn run(
     memory_mutation_amount: u64,
     processor_stack_mutation_amount: u64,
     eat_amount: u64,
+    death_rate: u32,
     dump: bool,
     words: Vec<&str>,
 ) -> Result<(), Box<dyn Error>> {
@@ -44,7 +45,7 @@ pub fn run(
         let mutate = i % mutation_frequency == 0;
         let save = i % save_frequency == 0;
 
-        world.update(&mut small_rng, instructions_per_update);
+        world.update(&mut small_rng, instructions_per_update, death_rate);
         if mutate {
             world.mutate(
                 &mut small_rng,

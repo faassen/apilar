@@ -93,6 +93,9 @@ struct Run {
     eat_amount: Option<u64>,
 
     #[clap(long, value_parser)]
+    death_rate: Option<u32>,
+
+    #[clap(long, value_parser)]
     dump: Option<bool>,
 }
 
@@ -125,6 +128,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 cli.memory_mutation_amount.unwrap_or(5),
                 cli.processor_stack_mutation_amount.unwrap_or(0),
                 cli.eat_amount.unwrap_or(100),
+                cli.death_rate.unwrap_or(20000),
                 cli.dump.unwrap_or(false),
                 words,
             )?;

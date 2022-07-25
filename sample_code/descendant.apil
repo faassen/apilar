@@ -1,0 +1,67 @@
+# a descendant of world-replicator found in running machine
+
+# startup delay maintained, though some neutral mutations to noop
+NOOP
+NOOP
+NOOP
+NOOP
+NOOP
+NOOP
+
+# take the address at the start
+ADDR
+# adjust for the startup delay
+N6
+SUB
+
+DUP 
+NOOP  # only a single copy is made of the start address
+
+
+N8
+N8
+MUL
+NOOP   # no more target is calculated
+
+SWAP       # s 64 c should be on stack
+
+# start of copy loop
+ADDR       
+EAT
+GROW
+SWAP
+ROT
+DUP2
+ADD
+ROT
+DUP
+READ
+ROT
+SWAP
+WRITE
+N1
+ADD
+ROT
+SWAP
+DUP
+ADDR # until here it's highly preserved
+
+RND  # the end point calculated using a random number * 3
+N3
+MUL  
+ADD
+LT
+ROT
+SWAP
+JMPIF # jump back, but sometimes if RND is low, it will not jump back before copy is complete
+# it will then launch incomplete offspring here
+DROP
+OVER
+NOOP   # the target isn't added anymore
+DUP        # 
+START      # spawn new processor (where?)
+N2
+START      # spawn another new processor in position 2 absolute
+RND        # random direction
+SPLIT      # split at around c
+# the old processor keeps running, no more loop
