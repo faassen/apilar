@@ -26,11 +26,15 @@ impl fmt::Display for World {
         }
         let (resources_free, resources_bound, resources_memory) = self.resources_amounts();
         let resources_total = resources_free + resources_bound + resources_memory;
-        write!(f, "Computers : {:>8}\n", self.computers_amount())?;
-        write!(f, "Processors: {:>8}\n", self.processors_amount())?;
+        let computers_amount = self.computers_amount();
+        let processors_amount = self.processors_amount();
+        let processors_per_computer: f64 = processors_amount as f64 / computers_amount as f64;
+        write!(f, "Computers : {:>8}\n", computers_amount)?;
+        write!(f, "Processors: {:>8}\n", processors_amount)?;
+        write!(f, "Proc per computer: {:>6.3}\n", processors_per_computer)?;
         write!(
             f,
-            "Resources Free {:>12} Bound {:>10} Memory {:>10} Total {:>12}\n",
+            "Resources Free: {:>10} Bound: {:>8} Memory: {:>8} Total {:>10}\n",
             resources_free, resources_bound, resources_memory, resources_total
         )?;
         Ok(())
