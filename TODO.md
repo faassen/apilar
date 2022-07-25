@@ -1,5 +1,15 @@
 # TODO
 
+# Save & load
+
+- Load from dump file
+
+- Save compressed dump file
+
+- See whether saving to a buffer is faster than direct to file
+
+## Addresses
+
 Splitting and merging (or any future insert or delete mutation) screws up all
 addresses on the stack of a processor that happens to be beyond the split or
 merge point. To make things more resilient we could switch to a number of
