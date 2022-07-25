@@ -446,7 +446,7 @@ Computer resources are divided equally between the two halves.
 If the address is out of range, nothing happens besides the values being
 popped.
 
-#### Merge - merge this computer with neighboring computer
+#### MERGE - merge this computer with neighboring computer
 
 Take a direction off the top of the stack. A direction is either 0 (north), 1
 (east), 2 (south) or 3 (west) from this computer's location. Any numbers
