@@ -352,15 +352,17 @@ that's the second value of the stack.
 
 Take the top of the stack and jump to its address. Before the jump, put
 the return address on the top of the stack. This is the address that
-initiated the call and the code continues from there.
+initiated the call plus 1, and the code continues from there.
+
+You can return from a call using `JMP` with that return address on the top of
+the stack.
 
 #### CALLIF - conditional call
 
 If the top of the stack is `0`, this is a no op. Otherwise, jump to the address
 that's the second value of the stack.
 
-Before the jump, put the return address on the top of the stack. This is the
-address that initiated the call and the code continues from there.
+Before the jump, put the return address on the top of the stack, like with `CALL`.
 
 ### Memory
 
