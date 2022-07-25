@@ -9,7 +9,7 @@ use crate::processor::Processor;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Computer {
-    max_processors: usize,
+    pub max_processors: usize,
     pub resources: u64,
     pub memory: Memory,
     pub processors: Vec<Processor>,
