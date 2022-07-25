@@ -274,6 +274,35 @@ mod tests {
     }
 
     #[test]
+    fn test_split_uneven() {
+        let assembler = Assembler::new();
+
+        let text = "
+        N1
+        N2
+        N3
+        N4
+        N5
+        ";
+        let words = text_to_words(text);
+
+        let mut computer = Computer::new(5, 10, 107);
+        assembler.assemble_words(words.clone(), &mut computer.memory, 0);
+        computer.add_processor(0);
+        computer.add_processor(2);
+
+        let splitted = computer.split(2);
+        assert_eq!(computer.memory.values, [1, 2]);
+        assert_eq!(computer.resources, 54);
+        assert_eq!(computer.processors.len(), 1);
+        assert_eq!(computer.processors[0].ip, 0);
+        assert_eq!(splitted.memory.values, [3, 4, 5]);
+        assert_eq!(splitted.resources, 53);
+        assert_eq!(splitted.processors.len(), 1);
+        assert_eq!(splitted.processors[0].ip, 0);
+    }
+
+    #[test]
     fn test_merge() {
         let assembler = Assembler::new();
 
