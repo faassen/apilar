@@ -6,7 +6,7 @@ Apilar is a language and alife system.
 
 Apilar is an stack-machine assembly language that supports self-assembly: a
 replicator Apilar program can be written that makes copies of itself in memory
-and in space. New programs then evolve.q
+and in space. New programs then evolve.
 
 The Apilar language is a stack-based assembly language. There's a virtual
 machine implementation of this.
@@ -20,7 +20,8 @@ ADD
 ```
 
 This adds two numbers to the stack, `2` and `3`, and then adds them together.
-In the end the stack contains `5`.
+In the end the stack contains `5`. See the [Apilar language
+reference](doc/language.md) for more information.
 
 A computer has memory and one or more processors. Each processor has its own
 stack.
@@ -54,7 +55,7 @@ To introduce a process of evolution, once every while a random address in a
 random computer's memory is mutated.
 
 This is usually not very useful, but sometimes a mutation may help a replicator
-grow.
+survive or replicate better.
 
 Apilar is inspired by the famous alife simulation
 [Tierra](<https://en.wikipedia.org/wiki/Tierra_(computer_simulation)>).
