@@ -72,10 +72,7 @@ impl World {
     }
 
     pub fn is_empty(&self, coords: Coords) -> bool {
-        match &self.get(coords).computer {
-            Some(_) => false,
-            None => true,
-        }
+        self.get(coords).computer.is_none()
     }
 
     pub fn update(&mut self, rng: &mut SmallRng, amount_per_processor: usize) {
@@ -87,7 +84,6 @@ impl World {
         if let Some((neighbor_coords, address)) = self.want_split(coords) {
             self.split(coords, neighbor_coords, address);
         }
-
         if let Some(neighbor_coords) = self.want_merge(coords) {
             let neighbor_computer = self.get(neighbor_coords).computer.clone();
             if let Some(neighbor_computer) = neighbor_computer {
@@ -197,6 +193,22 @@ impl World {
             }
         }
         return total;
+    }
+
+    pub fn resources_amounts(&self) -> (u64, u64, u64) {
+        let mut free: u64 = 0;
+        let mut bound: u64 = 0;
+        let mut memory: u64 = 0;
+        for row in &self.rows {
+            for location in row {
+                free += location.resources;
+                if let Some(computer) = &location.computer {
+                    bound += computer.resources;
+                    memory += computer.memory.values.len() as u64;
+                }
+            }
+        }
+        return (free, bound, memory);
     }
 }
 

@@ -24,8 +24,15 @@ impl fmt::Display for World {
 
             write!(f, "\n")?;
         }
-        write!(f, "Computers : {}\n", self.computers_amount())?;
-        write!(f, "Processors: {}\n", self.processors_amount())?;
+        let (resources_free, resources_bound, resources_memory) = self.resources_amounts();
+        let resources_total = resources_free + resources_bound + resources_memory;
+        write!(f, "Computers : {:>8}\n", self.computers_amount())?;
+        write!(f, "Processors: {:>8}\n", self.processors_amount())?;
+        write!(
+            f,
+            "Resources Free {:>12} Bound {:>10} Memory {:>10} Total {:>12}\n",
+            resources_free, resources_bound, resources_memory, resources_total
+        )?;
         Ok(())
     }
 }
