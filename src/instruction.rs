@@ -487,6 +487,13 @@ mod tests {
     }
 
     #[test]
+    fn test_call() {
+        let exec = execute("ADDR N5 ADD CALL N3 JMP");
+        assert_eq!(exec.processor.current_stack(), [3]);
+        assert_eq!(exec.processor.address(), 5);
+    }
+
+    #[test]
     fn test_die_if_out_of_bounds() {
         let mut exec = execute("N1 N2");
         assert_eq!(exec.processor.current_stack(), [1, 2]);

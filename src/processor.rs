@@ -103,7 +103,7 @@ impl Processor {
     }
 
     pub fn call(&mut self, address: usize) {
-        self.push(self.ip as u64);
+        self.push(self.ip as u64 + 1);
         self.jump(address);
     }
 
