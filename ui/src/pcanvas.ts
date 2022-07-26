@@ -2,11 +2,12 @@ import * as pixi from "pixi.js";
 
 import { World, Location } from "./world";
 import { Viewport } from "pixi-viewport";
+import { Sprite } from "pixi.js";
 
 export const BOX_SIZE = 20;
 
 export type WorldShapes = {
-  shapes: pixi.Graphics[][];
+  shapes: pixi.Sprite[][];
 };
 
 const DIM_GREY = 0x696969;
@@ -31,32 +32,30 @@ export function getFill(location: Location): number {
 }
 
 function drawBox(
-  graphics: pixi.Graphics,
+  sprite: pixi.Sprite,
   x: number,
   y: number,
   size: number,
   fill: number
 ) {
-  // black outline box
-  graphics.beginFill(BLACK);
-  graphics.drawRect(x * size, y * size, size, size);
-  // inner box
-  graphics.beginFill(fill);
-  graphics.drawRect(x * size + 1, y * size + 1, size - 1, size - 1);
+  sprite.tint = fill;
+  sprite.position.set(x * size, y * size);
+  sprite.width = size;
+  sprite.height = size;
 }
 
 export function renderWorld(viewport: Viewport, world: World): WorldShapes {
   const shapes: WorldShapes = { shapes: [] };
   for (let iy = 0; iy < world.locations.length; iy++) {
     const row = world.locations[iy];
-    const shapesRow: pixi.Graphics[] = [];
+    const shapesRow: pixi.Sprite[] = [];
     for (let ix = 0; ix < row.length; ix++) {
       const location = row[ix];
       const fill = getFill(location);
-      const graphics = new pixi.Graphics();
-      drawBox(graphics, ix, iy, BOX_SIZE, fill);
-      shapesRow.push(graphics);
-      viewport.addChild(graphics);
+      const sprite = new pixi.Sprite(pixi.Texture.WHITE);
+      drawBox(sprite, ix, iy, BOX_SIZE, fill);
+      shapesRow.push(sprite);
+      viewport.addChild(sprite);
     }
     shapes.shapes.push(shapesRow);
   }
@@ -70,8 +69,7 @@ export function updateWorld(world: World, shapes: WorldShapes) {
       const location = row[ix];
       const graphics = shapes.shapes[iy][ix];
       const fill = getFill(location);
-      graphics.clear();
-      drawBox(graphics, ix, iy, BOX_SIZE, fill);
+      graphics.tint = fill;
     }
   }
 }
