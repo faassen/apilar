@@ -54,6 +54,10 @@ export function renderWorld(viewport: Viewport, world: World): WorldShapes {
       const fill = getFill(location);
       const sprite = new pixi.Sprite(pixi.Texture.WHITE);
       drawBox(sprite, ix, iy, BOX_SIZE, fill);
+      sprite.interactive = true;
+      sprite.on("pointerdown", () => {
+        console.log("clicked on ", ix, iy);
+      });
       shapesRow.push(sprite);
       viewport.addChild(sprite);
     }

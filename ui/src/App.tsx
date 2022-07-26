@@ -32,7 +32,11 @@ const App: Component = () => {
   }
 
   const handleUpdate = () => {
-    console.log("updating world");
+    for (let y = 0; y < world.height; y++) {
+      for (let x = 0; x < world.width; x++) {
+        world.locations[y][x].computer = null;
+      }
+    }
     for (let i = 0; i < 1000; i++) {
       world.locations[random.range(0, world.height)][
         random.range(0, world.width)
@@ -42,17 +46,27 @@ const App: Component = () => {
         processors: 5,
       };
     }
+
     updateWorld(world, worldShapes);
   };
 
+  // setInterval(() => {
+  //   handleUpdate();
+  // }, 500);
   let pixiContainer: HTMLDivElement | undefined;
 
+  // application width & height needs to be the same as viewport
+  // width and height otherwise we can't fully scroll to the right somehow
   let app = new pixi.Application({
-    width: 800,
+    width: 900,
     height: 800,
+    backgroundAlpha: 0,
+    resolution: window.devicePixelRatio,
   });
 
   const viewport = new Viewport({
+    screenWidth: 900,
+    screenHeight: 800,
     // screenWidth: 600,
     // screenHeight: 600,
     // screenWidth: app.view.offsetWidth,
@@ -70,34 +84,36 @@ const App: Component = () => {
   viewport.clamp({
     left: true,
     top: true,
-    right: viewport.worldWidth * 1.2,
-    bottom: viewport.worldHeight * 1.2,
-    underflow: "center",
+    right: viewport.worldWidth,
+    bottom: true, // viewport.worldHeight,
+    underflow: "topleft",
   });
+
+  viewport.bounce({});
   viewport.drag();
 
-  // const cull = new Simple();
-  // cull.addList(viewport.children);
-  // cull.cull(viewport.getVisibleBounds());
+  const cull = new Simple();
+  cull.addList(viewport.children);
+  cull.cull(viewport.getVisibleBounds());
 
-  // pixi.Ticker.shared.add(() => {
-  //   if (viewport.dirty) {
-  //     cull.cull(viewport.getVisibleBounds());
-  //     viewport.dirty = false;
-  //   }
-  // });
-
-  let elapsed = 0.0;
-  let i = 0;
-  app.ticker.add((delta) => {
-    elapsed += delta;
-
-    i++;
+  pixi.Ticker.shared.add(() => {
+    if (viewport.dirty) {
+      cull.cull(viewport.getVisibleBounds());
+      viewport.dirty = false;
+    }
   });
+
+  // let elapsed = 0.0;
+  // let i = 0;
+  // app.ticker.add((delta) => {
+  //   elapsed += delta;
+
+  //   i++;
+  // });
 
   onMount(() => {
     pixiContainer?.appendChild(app.view);
-    // cull.cull(viewport.getVisibleBounds());
+    cull.cull(viewport.getVisibleBounds());
   });
 
   return (
