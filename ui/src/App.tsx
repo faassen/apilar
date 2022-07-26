@@ -1,19 +1,17 @@
 import { Component, onCleanup, onMount } from "solid-js";
-import Konva from "konva";
 
-import {
-  render,
-  World,
-  Location,
-  updateWorldLayer,
-  WorldShapes,
-  BOX_SIZE,
-} from "./canvas";
+import * as pixi from "pixi.js";
+import { Viewport } from "pixi-viewport";
+import { Simple, SpatialHash } from "pixi-cull";
+
+import { World, Location } from "./world";
+import { renderWorld, updateWorld, BOX_SIZE } from "./pcanvas";
+// https://stackoverflow.com/questions/71743027/how-to-use-vite-hmr-api-with-pixi-js
 
 const App: Component = () => {
   const world: World = {
-    width: 200,
-    height: 200,
+    width: 40,
+    height: 40,
     locations: [],
   };
 
@@ -28,41 +26,6 @@ const App: Component = () => {
     world.locations.push(row);
   }
 
-  let stage: Konva.Stage;
-  let layer: Konva.Layer;
-  let worldShapes: WorldShapes;
-
-  // padding will increase the size of stage
-  // so scrolling will look smoother
-  const PADDING = 1000;
-
-  let scrollContainer: HTMLDivElement | undefined;
-  const repositionStage = () => {
-    if (scrollContainer == null) {
-      return;
-    }
-    var dx = scrollContainer.scrollLeft - PADDING;
-    var dy = scrollContainer.scrollTop - PADDING;
-    stage.container().style.transform = "translate(" + dx + "px, " + dy + "px)";
-    stage.x(-dx);
-    stage.y(-dy);
-  };
-
-  onMount(() => {
-    stage = new Konva.Stage({
-      container: "canvas",
-      width: world.width * BOX_SIZE,
-      height: world.height * BOX_SIZE,
-    });
-    [layer, worldShapes] = render(stage, world);
-    scrollContainer?.addEventListener("scroll", repositionStage);
-    repositionStage();
-  });
-
-  onCleanup(() => {
-    scrollContainer?.removeEventListener("scroll", repositionStage);
-  });
-
   const handleUpdate = () => {
     console.log("updating world");
     for (let iy = 10; iy < 20; iy++) {
@@ -74,24 +37,53 @@ const App: Component = () => {
         };
       }
     }
-    updateWorldLayer(layer, world, worldShapes);
+    updateWorld(world, worldShapes);
   };
+
+  let pixiContainer: HTMLDivElement | undefined;
+
+  let app = new pixi.Application();
+
+  const viewport = new Viewport({
+    // screenWidth: app.view.offsetWidth,
+    // screenHeight: app.view.offsetHeight,
+    worldWidth: world.width * BOX_SIZE,
+    worldHeight: world.height * BOX_SIZE,
+    interaction: app.renderer.plugins.interaction,
+  });
+  let worldShapes = renderWorld(viewport, world);
+  app.stage.addChild(viewport);
+
+  viewport.drag();
+
+  const cull = new Simple();
+  cull.addList(viewport.children);
+  cull.cull(viewport.getVisibleBounds());
+
+  let elapsed = 0.0;
+  let i = 0;
+
+  pixi.Ticker.shared.add(() => {
+    if (viewport.dirty) {
+      cull.cull(viewport.getVisibleBounds());
+      viewport.dirty = false;
+    }
+  });
+  app.ticker.add((delta) => {
+    elapsed += delta;
+
+    i++;
+  });
+
+  onMount(() => {
+    pixiContainer?.appendChild(app.view);
+    // cull.cull(viewport.getVisibleBounds());
+  });
 
   return (
     <>
       <button onClick={handleUpdate}>Update</button>
-      <div id="scroll-container" ref={scrollContainer}>
-        <div
-          id="large-container"
-          class="overflow-hidden"
-          style={{
-            width: `${world.width * BOX_SIZE}px`,
-            height: `${world.height * BOX_SIZE}px`,
-          }}
-        >
-          <div id="canvas"></div>
-        </div>
-      </div>
+      <div ref={pixiContainer}></div>
     </>
   );
 };

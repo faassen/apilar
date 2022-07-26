@@ -18,7 +18,9 @@
     "vite-plugin-solid": "^2.3.0"
   },
   "dependencies": {
-    "konva": "^8.3.10",
+    "pixi-cull": "^2.2.0",
+    "pixi-viewport": "^4.34.4",
+    "pixi.js": "^6.5.1",
     "solid-js": "^1.4.7"
   }
 }
