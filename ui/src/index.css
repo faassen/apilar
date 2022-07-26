@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-#large-container {
-  overflow: hidden;
-}
-
 #scroll-container {
   width: calc(100% - 22px);
   height: calc(100vh - 100px);

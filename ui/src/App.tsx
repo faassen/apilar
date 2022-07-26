@@ -9,12 +9,11 @@ import {
   WorldShapes,
   BOX_SIZE,
 } from "./canvas";
-import { debounce } from "./debounce";
 
 const App: Component = () => {
   const world: World = {
-    width: 100,
-    height: 100,
+    width: 200,
+    height: 200,
     locations: [],
   };
 
@@ -78,13 +77,13 @@ const App: Component = () => {
     updateWorldLayer(layer, world, worldShapes);
   };
 
-  console.log(world.width * BOX_SIZE);
   return (
     <>
       <button onClick={handleUpdate}>Update</button>
       <div id="scroll-container" ref={scrollContainer}>
         <div
           id="large-container"
+          class="overflow-hidden"
           style={{
             width: `${world.width * BOX_SIZE}px`,
             height: `${world.height * BOX_SIZE}px`,
