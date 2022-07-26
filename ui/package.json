@@ -18,6 +18,7 @@
     "vite-plugin-solid": "^2.3.0"
   },
   "dependencies": {
+    "konva": "^8.3.10",
     "solid-js": "^1.4.7"
   }
 }

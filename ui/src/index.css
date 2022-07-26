@@ -1,3 +1,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+#large-container {
+  /* width: 2000px;
+  height: 2000px; */
+  overflow: hidden;
+}
+
+#scroll-container {
+  width: calc(100% - 22px);
+  height: calc(100vh - 100px);
+  overflow: auto;
+  margin: 10px;
+  border: 1px solid grey;
+}
