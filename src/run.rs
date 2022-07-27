@@ -46,7 +46,7 @@ pub async fn run(
     });
 
     // tokio::spawn(async move {
-    match simulation(
+    simulation(
         &mut world,
         &mut small_rng,
         tx,
@@ -60,10 +60,12 @@ pub async fn run(
         dump,
     )
     .await
-    {
-        Ok(v) => Ok(v),
-        Err(v) => Err(v),
-    }
+
+    // .await
+    // {
+    //     Ok(v) => Ok(v),
+    //     Err(v) => Err(v),
+    // }
     // });
     // Ok(())
 }

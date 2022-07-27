@@ -9,6 +9,8 @@ import { renderWorld, updateWorld, BOX_SIZE } from "./pcanvas";
 import * as random from "./random";
 // https://stackoverflow.com/questions/71743027/how-to-use-vite-hmr-api-with-pixi-js
 
+const socket = new WebSocket("ws://localhost:3000/ws");
+
 const App: Component = () => {
   // the problem is with big worlds - it creates so many pixi sprites,
   // pixi doesn't like it anymore, even with culling in place
@@ -104,6 +106,11 @@ const App: Component = () => {
   onMount(() => {
     pixiContainer?.appendChild(app.view);
     cull.cull(viewport.getVisibleBounds());
+
+    socket.addEventListener("message", (event) => {
+      const world: World = JSON.parse(event.data);
+      updateWorld(world, worldShapes);
+    });
   });
 
   return (
