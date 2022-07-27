@@ -462,7 +462,7 @@ mod tests {
     #[test]
     fn test_jmp() {
         let exec = execute("ADDR JMP");
-        assert_eq!(exec.processor.current_stack(), []);
+        assert_eq!(exec.processor.current_stack(), &[] as &[u64]);
         assert_eq!(exec.processor.address(), 0);
     }
 
@@ -475,14 +475,14 @@ mod tests {
     #[test]
     fn test_jmpif_true() {
         let exec = execute("ADDR N1 JMPIF");
-        assert_eq!(exec.processor.current_stack(), []);
+        assert_eq!(exec.processor.current_stack(), &[] as &[u64]);
         assert_eq!(exec.processor.address(), 0);
     }
 
     #[test]
     fn test_jmpif_false() {
         let exec = execute("ADDR N1 N1 SUB JMPIF");
-        assert_eq!(exec.processor.current_stack(), []);
+        assert_eq!(exec.processor.current_stack(), &[] as &[u64]);
         assert_eq!(exec.processor.address(), 5);
     }
 
