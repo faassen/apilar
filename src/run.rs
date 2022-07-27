@@ -45,6 +45,8 @@ pub async fn run(
         serve(rx).await;
     });
 
+    // tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
+
     // tokio::spawn(async move {
     simulation(
         &mut world,
@@ -101,6 +103,7 @@ async fn simulation(
         }
         if redraw {
             tx.send(WorldInfo::new(&world)).await?;
+            // tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
             render_update();
             println!("{}", world);
         }
