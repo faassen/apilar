@@ -12,8 +12,7 @@ import * as random from "./random";
 const App: Component = () => {
   // the problem is with big worlds - it creates so many pixi sprites,
   // pixi doesn't like it anymore, even with culling in place
-  // we need to actually create show only a fraction of the world that's
-  // visible
+  // but let's not worry about them for now
   const world: World = {
     width: 100,
     height: 100,
@@ -50,9 +49,6 @@ const App: Component = () => {
     updateWorld(world, worldShapes);
   };
 
-  // setInterval(() => {
-  //   handleUpdate();
-  // }, 500);
   let pixiContainer: HTMLDivElement | undefined;
 
   // application width & height needs to be the same as viewport
@@ -67,25 +63,19 @@ const App: Component = () => {
   const viewport = new Viewport({
     screenWidth: 900,
     screenHeight: 800,
-    // screenWidth: 600,
-    // screenHeight: 600,
-    // screenWidth: app.view.offsetWidth,
-    // screenHeight: app.view.offsetHeight,
     worldWidth: world.width * BOX_SIZE,
     worldHeight: world.height * BOX_SIZE,
     interaction: app.renderer.plugins.interaction,
   });
-  viewport.on("moved", ({ viewport }) => {
-    // console.log("moved", viewport.left, viewport.top);
-  });
+
   let worldShapes = renderWorld(viewport, world);
   app.stage.addChild(viewport);
 
   viewport.clamp({
     left: true,
     top: true,
-    right: viewport.worldWidth,
-    bottom: true, // viewport.worldHeight,
+    right: true,
+    bottom: true,
     underflow: "topleft",
   });
 
