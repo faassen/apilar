@@ -6,11 +6,13 @@ extern crate serde_big_array;
 pub mod assembler;
 pub mod computer;
 pub mod direction;
+pub mod info;
 pub mod instruction;
 pub mod memory;
 pub mod processor;
 pub mod render;
 pub mod run;
+pub mod serve;
 pub mod single;
 pub mod starter;
 pub mod world;
@@ -99,7 +101,8 @@ struct Run {
     dump: Option<bool>,
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
 
     match &cli.command {
@@ -131,7 +134,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                 cli.death_rate.unwrap_or(20000),
                 cli.dump.unwrap_or(false),
                 words,
-            )?;
+            )
+            .await?;
         }
         Commands::Disassemble { filename, x, y } => {
             let file = File::open(filename)?;
@@ -156,7 +160,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                     println!("No computer at this location")
                 }
             }
-        }
+        } // Commands::Serve => {
+          //     serve();
+          // }
     }
 
     Ok(())

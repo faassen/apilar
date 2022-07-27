@@ -1,13 +1,16 @@
 use crate::assembler::Assembler;
 use crate::computer::Computer;
+use crate::info::WorldInfo;
 use crate::render::{render_start, render_update};
+use crate::serve::serve;
 use crate::world::World;
 use rand::rngs::SmallRng;
 use rand::SeedableRng;
 use std::error::Error;
 use std::fs::File;
+use tokio::sync::mpsc;
 
-pub fn run(
+pub async fn run(
     width: usize,
     height: usize,
     starting_memory_size: usize,
@@ -36,24 +39,66 @@ pub fn run(
 
     let mut small_rng = SmallRng::from_entropy();
 
+    let (tx, rx) = mpsc::channel(32);
+
+    tokio::spawn(async move {
+        serve(rx).await;
+    });
+
+    // tokio::spawn(async move {
+    match simulation(
+        &mut world,
+        &mut small_rng,
+        tx,
+        instructions_per_update,
+        mutation_frequency,
+        redraw_frequency,
+        save_frequency,
+        memory_mutation_amount,
+        processor_stack_mutation_amount,
+        death_rate,
+        dump,
+    )
+    .await
+    {
+        Ok(v) => Ok(v),
+        Err(v) => Err(v),
+    }
+    // });
+    // Ok(())
+}
+
+async fn simulation(
+    world: &mut World,
+    small_rng: &mut SmallRng,
+    tx: mpsc::Sender<WorldInfo>,
+    instructions_per_update: usize,
+    mutation_frequency: u64,
+    redraw_frequency: u64,
+    save_frequency: u64,
+    memory_mutation_amount: u64,
+    processor_stack_mutation_amount: u64,
+    death_rate: u32,
+    dump: bool,
+) -> Result<(), Box<dyn Error>> {
     render_start();
     let mut i: u64 = 0;
     let mut save_nr = 0;
-
     loop {
         let redraw = i % redraw_frequency == 0;
         let mutate = i % mutation_frequency == 0;
         let save = i % save_frequency == 0;
 
-        world.update(&mut small_rng, instructions_per_update, death_rate);
+        world.update(small_rng, instructions_per_update, death_rate);
         if mutate {
             world.mutate(
-                &mut small_rng,
+                small_rng,
                 memory_mutation_amount,
                 processor_stack_mutation_amount,
             );
         }
         if redraw {
+            tx.send(WorldInfo::new(&world)).await?;
             render_update();
             println!("{}", world);
         }
