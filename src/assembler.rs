@@ -54,7 +54,7 @@ impl Assembler {
                     words.push(instruction.to_string());
                 }
                 None => {
-                    words.push(format!("noop {}", value));
+                    words.push(format!("NOOP # {}", value));
                 }
             }
         }
