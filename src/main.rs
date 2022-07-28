@@ -39,7 +39,7 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
-    Run(Run),
+    Run(Box<Run>),
     Disassemble {
         #[clap(value_parser)]
         filename: String,

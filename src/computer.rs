@@ -114,11 +114,11 @@ impl Computer {
             self.resources -= 1;
         }
 
-        return total;
+        total
     }
 
     pub fn mutate_memory(&mut self, rng: &mut SmallRng, amount: u64) {
-        if self.memory.values.len() == 0 {
+        if self.memory.values.is_empty() {
             return;
         }
         for _ in 0..amount {
@@ -146,7 +146,7 @@ impl Computer {
                 return Some(want_split);
             }
         }
-        return None;
+        None
     }
 
     pub fn want_merge(&self) -> Option<Direction> {
@@ -155,7 +155,7 @@ impl Computer {
                 return Some(want_merge);
             }
         }
-        return None;
+        None
     }
 
     pub fn want_eat(&self) -> bool {
@@ -164,7 +164,7 @@ impl Computer {
                 return true;
             }
         }
-        return false;
+        false
     }
 
     pub fn want_grow(&self) -> bool {
@@ -173,7 +173,7 @@ impl Computer {
                 return true;
             }
         }
-        return false;
+        false
     }
 }
 

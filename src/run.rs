@@ -102,8 +102,9 @@ async fn simulation(
             );
         }
         if redraw {
-            tx.send(WorldInfo::new(&world)).await?;
-            // tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+            // XXX does try send work?
+            let _ = tx.try_send(WorldInfo::new(world)); // .await?;
+                                                        // tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
             render_update();
             println!("{}", world);
         }

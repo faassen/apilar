@@ -50,7 +50,7 @@ impl World {
         };
         let rx = nx.rem_euclid(self.width as i32);
         let ry = ny.rem_euclid(self.height as i32);
-        return (rx as usize, ry as usize);
+        (rx as usize, ry as usize)
     }
 
     pub fn set(&mut self, (x, y): Coords, computer: Computer) {
@@ -61,7 +61,7 @@ impl World {
         &self.rows[y][x]
     }
 
-    pub fn get_mut<'a>(&'a mut self, (x, y): Coords) -> &'a mut Location {
+    pub fn get_mut(&mut self, (x, y): Coords) -> &mut Location {
         &mut self.rows[y][x]
     }
 
@@ -125,7 +125,7 @@ impl World {
                 }
             }
         }
-        return None;
+        None
     }
 
     fn want_merge(&self, coords: Coords) -> Option<Coords> {
@@ -137,23 +137,19 @@ impl World {
                 }
             }
         }
-        return None;
+        None
     }
 
     fn want_eat(&self, coords: Coords) -> bool {
         if let Some(computer) = &self.get(coords).computer {
             return computer.want_eat();
         }
-        return false;
+        false
     }
 
     fn split(&mut self, coords: Coords, neighbor_coords: Coords, address: usize) {
         let computer = &mut self.get_mut(coords).computer;
-        let splitted: Option<Computer> = if let Some(computer) = computer {
-            Some(computer.split(address))
-        } else {
-            None
-        };
+        let splitted: Option<Computer> = computer.as_mut().map(|computer| computer.split(address));
         let neighbor_location = self.get_mut(neighbor_coords);
         neighbor_location.computer = splitted;
     }
@@ -191,7 +187,7 @@ impl World {
                 }
             }
         }
-        return total;
+        total
     }
 
     pub fn processors_amount(&self) -> u64 {
@@ -203,7 +199,7 @@ impl World {
                 }
             }
         }
-        return total;
+        total
     }
 
     pub fn resources_amounts(&self) -> (u64, u64, u64) {
@@ -219,7 +215,7 @@ impl World {
                 }
             }
         }
-        return (free, bound, memory);
+        (free, bound, memory)
     }
 }
 
@@ -235,7 +231,7 @@ impl Location {
         let mut eliminate_computer: bool = false;
 
         if let Some(computer) = &mut self.computer {
-            if computer.processors.len() == 0 {
+            if computer.processors.is_empty() {
                 self.resources += computer.resources + computer.memory.values.len() as u64;
                 eliminate_computer = true;
             } else {

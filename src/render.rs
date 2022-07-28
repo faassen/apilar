@@ -22,7 +22,7 @@ impl fmt::Display for World {
                 write!(f, "{}", ch)?;
             }
 
-            write!(f, "\n")?;
+            writeln!(f)?;
         }
         let (resources_free, resources_bound, resources_memory) = self.resources_amounts();
         let resources_total = resources_free + resources_bound + resources_memory;
@@ -31,14 +31,14 @@ impl fmt::Display for World {
         let processors_per_computer: f64 = processors_amount as f64 / computers_amount as f64;
         let resources_per_computer: f64 = resources_bound as f64 / computers_amount as f64;
         let memory_per_computer: f64 = resources_memory as f64 / computers_amount as f64;
-        write!(f, "Computers : {:>8}\n", computers_amount)?;
-        write!(f, "Processors: {:>8}\n", processors_amount)?;
-        write!(f, "Proc per computer  : {:>8.3}\n", processors_per_computer)?;
-        write!(f, "Bound per computer : {:>8.3}\n", resources_per_computer)?;
-        write!(f, "Memory per computer: {:>8.3}\n", memory_per_computer)?;
-        write!(
+        writeln!(f, "Computers : {:>8}", computers_amount)?;
+        writeln!(f, "Processors: {:>8}", processors_amount)?;
+        writeln!(f, "Proc per computer  : {:>8.3}", processors_per_computer)?;
+        writeln!(f, "Bound per computer : {:>8.3}", resources_per_computer)?;
+        writeln!(f, "Memory per computer: {:>8.3}", memory_per_computer)?;
+        writeln!(
             f,
-            "Resources Free: {:>10} Bound: {:>8} Memory: {:>8} Total {:>10}\n",
+            "Resources Free: {:>10} Bound: {:>8} Memory: {:>8} Total {:>10}",
             resources_free, resources_bound, resources_memory, resources_total
         )?;
         Ok(())

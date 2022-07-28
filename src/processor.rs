@@ -27,7 +27,7 @@ pub struct Processor {
 
 impl Processor {
     pub fn new(ip: usize) -> Processor {
-        return Processor {
+        Processor {
             ip,
             stack: [0; STACK_SIZE],
             jumped: false,
@@ -38,7 +38,7 @@ impl Processor {
             want_eat: false,
             want_grow: false,
             stack_pointer: 0,
-        };
+        }
     }
 
     pub fn current_stack(&self) -> &[u64] {
@@ -66,7 +66,7 @@ impl Processor {
         } else {
             self.jumped = false;
         }
-        return true;
+        true
     }
 
     pub fn execute_amount(
@@ -86,7 +86,7 @@ impl Processor {
                 total += 1;
             }
         }
-        return total;
+        total
     }
 
     pub fn start(&mut self, address: usize) {
@@ -121,7 +121,7 @@ impl Processor {
 
     fn compact_stack(&mut self) {
         self.stack_pointer = STACK_SIZE / 2;
-        self.stack.moveslice(usize::from(self.stack_pointer).., 0);
+        self.stack.moveslice(self.stack_pointer.., 0);
     }
 
     pub fn dup(&mut self) {
@@ -146,7 +146,7 @@ impl Processor {
             return u64::MAX;
         }
         self.stack_pointer -= 1;
-        return self.stack[self.stack_pointer];
+        self.stack[self.stack_pointer]
     }
 
     pub fn pop_address(&mut self, memory: &Memory) -> Option<usize> {
@@ -166,14 +166,14 @@ impl Processor {
         if distance > ADDRESS_DISTANCE {
             return None;
         }
-        return Some(result);
+        Some(result)
     }
 
     fn top(&self) -> u64 {
         self.stack[self.stack_pointer - 1]
     }
 
-    pub fn drop(&mut self) {
+    pub fn drop_top(&mut self) {
         if self.stack_pointer == 0 {
             return;
         }
@@ -186,9 +186,7 @@ impl Processor {
         }
         let under = self.stack_pointer - 2;
         let over = self.stack_pointer - 1;
-        let temp = self.stack[over];
-        self.stack[over] = self.stack[under];
-        self.stack[under] = temp;
+        self.stack.swap(over, under);
     }
 
     pub fn over(&mut self) {
@@ -253,36 +251,36 @@ mod tests {
 
     #[test]
     fn test_pop_address() {
-        let mut memory = Memory::new(100);
+        let memory = Memory::new(100);
         let mut processor = Processor::new(0);
         processor.push(10);
-        assert_eq!(processor.pop_address(&mut memory), Some(10));
-        assert_eq!(processor.pop_address(&mut memory), None);
+        assert_eq!(processor.pop_address(&memory), Some(10));
+        assert_eq!(processor.pop_address(&memory), None);
     }
 
     #[test]
     fn test_pop_address_out_of_bounds_of_memory() {
-        let mut memory = Memory::new(100);
+        let memory = Memory::new(100);
         let mut processor = Processor::new(0);
         processor.push(1000);
-        assert_eq!(processor.pop_address(&mut memory), None);
+        assert_eq!(processor.pop_address(&memory), None);
     }
 
     #[test]
     fn test_pop_address_beyond_address_distance() {
-        let mut memory = Memory::new(ADDRESS_DISTANCE * 10);
+        let memory = Memory::new(ADDRESS_DISTANCE * 10);
         let mut processor = Processor::new(0);
         let address_distance: u64 = ADDRESS_DISTANCE.try_into().unwrap();
         processor.push(address_distance + 1); // cannot address this
-        assert_eq!(processor.pop_address(&mut memory), None);
+        assert_eq!(processor.pop_address(&memory), None);
     }
 
     #[test]
     fn test_pop_address_beyond_address_distance_other_direction() {
-        let mut memory = Memory::new(ADDRESS_DISTANCE * 10);
+        let memory = Memory::new(ADDRESS_DISTANCE * 10);
         let mut processor = Processor::new(ADDRESS_DISTANCE * 2);
         processor.push(0); // cannot address this
-        assert_eq!(processor.pop_address(&mut memory), None);
+        assert_eq!(processor.pop_address(&memory), None);
     }
 
     #[test]
@@ -290,7 +288,7 @@ mod tests {
         let mut processor = Processor::new(0);
         processor.push(10);
         processor.push(100);
-        processor.drop();
+        processor.drop_top();
         assert_eq!(processor.pop(), 10);
     }
 

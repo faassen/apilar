@@ -14,7 +14,7 @@ impl Assembler {
         for instruction in Instruction::iter() {
             instructions.insert(instruction.to_string(), instruction);
         }
-        return Assembler { instructions };
+        Assembler { instructions }
     }
 
     pub fn assemble_words(&self, words: Vec<&str>, memory: &mut Memory, index: usize) -> usize {
@@ -33,16 +33,16 @@ impl Assembler {
             };
             i += 1;
         }
-        return i - index;
+        i - index
     }
 
     pub fn assemble(&self, text: &str, memory: &mut Memory, index: usize) -> usize {
-        return self.assemble_words(text.split_whitespace().collect(), memory, index);
+        self.assemble_words(text.split_whitespace().collect(), memory, index)
     }
 
     pub fn line_assemble(&self, text: &str, memory: &mut Memory, index: usize) -> usize {
         let words = text_to_words(text);
-        return self.assemble_words(words, memory, index);
+        self.assemble_words(words, memory, index)
     }
 
     pub fn disassemble_to_words(&self, values: &[u8]) -> Vec<String> {
@@ -58,17 +58,23 @@ impl Assembler {
                 }
             }
         }
-        return words;
+        words
     }
 
     pub fn line_disassemble(&self, values: &[u8]) -> String {
-        return self.disassemble_to_words(values).join("\n");
+        self.disassemble_to_words(values).join("\n")
+    }
+}
+
+impl Default for Assembler {
+    fn default() -> Self {
+        Assembler::new()
     }
 }
 
 pub fn text_to_words(text: &str) -> Vec<&str> {
-    text.split("\n")
-        .map(|line| line.split("#").collect::<Vec<&str>>()[0].trim())
+    text.split('\n')
+        .map(|line| line.split('#').collect::<Vec<&str>>()[0].trim())
         .filter(|line| !line.is_empty())
         .collect()
 }

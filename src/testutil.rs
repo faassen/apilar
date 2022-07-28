@@ -18,12 +18,12 @@ pub fn execute(text: &str) -> Exec {
     let mut processor = Processor::new(0);
     let mut small_rng = SmallRng::from_seed([0; 32]);
     processor.execute_amount(&mut memory, &mut small_rng, amount);
-    return Exec {
+    Exec {
         assembler,
         processor,
         memory,
         small_rng,
-    };
+    }
 }
 
 pub fn execute_lines(text: &str) -> Exec {
@@ -33,10 +33,10 @@ pub fn execute_lines(text: &str) -> Exec {
     let mut processor = Processor::new(0);
     let mut small_rng = SmallRng::from_seed([0; 32]);
     processor.execute_amount(&mut memory, &mut small_rng, amount);
-    return Exec {
+    Exec {
         assembler,
         processor,
         memory,
         small_rng,
-    };
+    }
 }

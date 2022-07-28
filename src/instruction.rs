@@ -130,7 +130,7 @@ impl Instruction {
                 processor.dup2();
             }
             Instruction::DROP => {
-                processor.drop();
+                processor.drop_top();
             }
             Instruction::SWAP => {
                 processor.swap();
@@ -501,7 +501,7 @@ mod tests {
         exec.processor
             .execute_amount(&mut exec.memory, &mut exec.small_rng, 1002);
         assert_eq!(exec.processor.current_stack(), [1, 2]);
-        assert_eq!(exec.processor.alive, false);
+        assert!(!exec.processor.alive);
     }
 
     #[test]

@@ -64,10 +64,7 @@ impl WorldInfo {
 
 impl LocationInfo {
     pub fn new(location: &Location) -> LocationInfo {
-        let computer: Option<ComputerInfo> = match &location.computer {
-            Some(computer) => Some(ComputerInfo::new(&computer)),
-            None => None,
-        };
+        let computer: Option<ComputerInfo> = location.computer.as_ref().map(ComputerInfo::new);
         LocationInfo {
             free_resources: location.resources,
             computer,

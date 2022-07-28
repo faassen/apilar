@@ -76,8 +76,8 @@ pub fn main() -> std::io::Result<()> {
             let mut stream = BufWriter::new(file);
             dump_count += 1;
             for word in words {
-                stream.write(word.as_bytes())?;
-                stream.write("\n".as_bytes())?;
+                stream.write_all(word.as_bytes())?;
+                stream.write_all("\n".as_bytes())?;
             }
             stream.flush()?;
             println!("Written");
