@@ -39,23 +39,6 @@ function RenderCanvas<T, R>(props: {
     return viewport;
   };
 
-  let renderData: R | undefined;
-
-  // let handleWorldUpdate = (event: MessageEvent) => {
-  //   const world: World = JSON.parse(event.data);
-
-  //   if (renderData == null) {
-  //     const viewport = createViewport(world.width, world.height);
-
-  //     renderData = props.renderUpdate.render(viewport, world);
-
-  //     // worldShapes = renderWorld(viewport, world);
-  //   } else {
-  //     props.renderUpdate.update(world, renderData);
-  //     // updateWorld(world, worldShapes);
-  //   }
-  // };
-
   onMount(() => {
     if (!pixiContainer) {
       return;
@@ -68,6 +51,8 @@ function RenderCanvas<T, R>(props: {
     });
 
     pixiContainer.appendChild(app.view);
+
+    let renderData: R | undefined;
 
     createEffect(() => {
       let data = props.data();
