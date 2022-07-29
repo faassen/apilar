@@ -25,26 +25,24 @@ const App: Component = () => {
 
   let pixiContainer: HTMLDivElement | undefined;
 
-  const width = window.innerWidth;
-  const height = window.innerHeight - 100;
+  const screenWidth = window.innerWidth;
+  const screenHeight = window.innerHeight - 100;
 
   // application width & height needs to be the same as viewport
   // width and height otherwise we can't fully scroll to the right somehow
   let app = new pixi.Application({
-    width: width,
-    height: height,
+    width: screenWidth,
+    height: screenHeight,
     backgroundAlpha: 0,
     resolution: window.devicePixelRatio,
   });
 
-  const createViewport = () => {
+  const createViewport = (width: number, height: number) => {
     const viewport = new Viewport({
-      screenWidth: width,
-      screenHeight: height,
-      worldWidth: 70 * BOX_SIZE,
-      worldHeight: 40 * BOX_SIZE,
-      // worldWidth: world.width * BOX_SIZE,
-      // worldHeight: world.height * BOX_SIZE,
+      screenWidth: screenWidth,
+      screenHeight: screenHeight,
+      worldWidth: width * BOX_SIZE,
+      worldHeight: height * BOX_SIZE,
       interaction: app.renderer.plugins.interaction,
     });
 
@@ -88,7 +86,7 @@ const App: Component = () => {
     const world: World = JSON.parse(event.data);
 
     if (worldShapes == null) {
-      const viewport = createViewport();
+      const viewport = createViewport(world.width, world.height);
       worldShapes = renderWorld(viewport, world);
     } else {
       updateWorld(world, worldShapes);
