@@ -6,10 +6,6 @@ import RenderCanvas from "./RenderCanvas";
 
 const socket = new WebSocket("ws://localhost:3000/ws");
 
-// socket.addEventListener("open", (event) => {
-//   socket.send("hello server!");
-// });
-
 const App: Component = () => {
   const [world, setWorld] = createSignal<World | undefined>();
 
