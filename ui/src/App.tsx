@@ -1,7 +1,7 @@
 import { Component, onCleanup, onMount, createSignal } from "solid-js";
 
 import { World } from "./world";
-import { renderWorld, updateWorld, getWorldDimensions } from "./canvas";
+import { renderWorld, updateWorld, getWorldDimensions } from "./renderWorld";
 import RenderCanvas from "./RenderCanvas";
 
 const socket = new WebSocket("ws://localhost:3000/ws");
