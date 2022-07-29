@@ -1,5 +1,4 @@
 import { Accessor, Show } from "solid-js";
-import { getWorldDimensions } from "./renderWorld";
 
 import { World } from "./world";
 
