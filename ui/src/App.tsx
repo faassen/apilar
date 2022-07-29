@@ -15,49 +15,13 @@ socket.addEventListener("open", (event) => {
   socket.send("hello server!");
 });
 
-// socket.addEventListener("message", (event) => {
-//   const world: World = JSON.parse(event.data);
-//   console.log("Got data", world);
-// });
-
 const App: Component = () => {
-  // the problem is with big worlds - it creates so many pixi sprites,
-  // pixi doesn't like it anymore, even with culling in place
-  // but let's not worry about them for now
-  // const world: World = {
-  //   width: 100,
-  //   height: 100,
-  //   locations: [],
-  // };
+  const handleStop = () => {
+    socket.send("stop");
+  };
 
-  // for (let y = 0; y < world.height; y++) {
-  //   let row: Location[] = [];
-  //   for (let x = 0; x < world.width; x++) {
-  //     row.push({
-  //       freeResources: 100,
-  //       computer: null,
-  //     });
-  //   }
-  //   world.locations.push(row);
-  // }
-
-  const handleUpdate = () => {
-    socket.send("Hello world");
-    // for (let y = 0; y < world.height; y++) {
-    //   for (let x = 0; x < world.width; x++) {
-    //     world.locations[y][x].computer = null;
-    //   }
-    // }
-    // for (let i = 0; i < 1000; i++) {
-    //   world.locations[random.range(0, world.height)][
-    //     random.range(0, world.width)
-    //   ].computer = {
-    //     memorySize: 3,
-    //     boundResources: 10,
-    //     processors: 5,
-    //   };
-    // }
-    // updateWorld(world, worldShapes);
+  const handleStart = () => {
+    socket.send("start");
   };
 
   let pixiContainer: HTMLDivElement | undefined;
@@ -134,7 +98,10 @@ const App: Component = () => {
 
   return (
     <>
-      <button onClick={handleUpdate}>Update</button>
+      <div class="flex gap-3">
+        <button onClick={handleStop}>Stop</button>
+        <button onClick={handleStart}>Start</button>
+      </div>
       <div ref={pixiContainer}></div>
     </>
   );

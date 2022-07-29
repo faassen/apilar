@@ -1,3 +1,4 @@
+use crate::client_command::ClientCommand;
 use crate::info::WorldInfo;
 use axum::{
     extract::ws::{Message, WebSocket, WebSocketUpgrade},
@@ -18,10 +19,12 @@ use tower_http::{
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-type State = mpsc::Receiver<WorldInfo>;
-type SharedState = Arc<Mutex<State>>;
+type WorldInfoReceiver = mpsc::Receiver<WorldInfo>;
+type WorldInfoSharedReceiver = Arc<Mutex<WorldInfoReceiver>>;
 
-pub async fn serve(rx: State, serve_tx: mpsc::Sender<String>) {
+type ClientCommandSender = mpsc::Sender<ClientCommand>;
+
+pub async fn serve(world_info_rx: WorldInfoReceiver, client_command_tx: ClientCommandSender) {
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(
             std::env::var("RUST_LOG")
@@ -51,8 +54,8 @@ pub async fn serve(rx: State, serve_tx: mpsc::Sender<String>) {
         //     TraceLayer::new_for_http()
         //         .make_span_with(DefaultMakeSpan::default().include_headers(true)),
         // )
-        .layer(Extension(Arc::new(Mutex::new(rx))))
-        .layer(Extension(serve_tx));
+        .layer(Extension(Arc::new(Mutex::new(world_info_rx))))
+        .layer(Extension(client_command_tx));
 
     // run it with hyper
     let addr = SocketAddr::from(([127, 0, 0, 1], 4000));
@@ -65,27 +68,35 @@ pub async fn serve(rx: State, serve_tx: mpsc::Sender<String>) {
 
 async fn ws_handler(
     ws: WebSocketUpgrade,
-    Extension(rx): Extension<SharedState>,
-    Extension(serve_tx): Extension<mpsc::Sender<String>>,
+    Extension(world_info_rx): Extension<WorldInfoSharedReceiver>,
+    Extension(client_command_tx): Extension<ClientCommandSender>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(|socket| handle_socket(socket, rx, serve_tx))
+    ws.on_upgrade(|socket| handle_socket(socket, world_info_rx, client_command_tx))
 }
 
-async fn handle_socket<'a>(socket: WebSocket, rx: SharedState, serve_tx: mpsc::Sender<String>) {
+async fn handle_socket<'a>(
+    socket: WebSocket,
+    world_info_rx: WorldInfoSharedReceiver,
+    client_command_tx: ClientCommandSender,
+) {
     let (mut sender, mut receiver) = socket.split();
 
     tokio::spawn(async move {
         loop {
             if let Some(Ok(Message::Text(msg))) = receiver.next().await {
                 // XXX another unwrap
-                serve_tx.send(msg).await.unwrap();
+                if msg == "stop" {
+                    client_command_tx.send(ClientCommand::Stop).await.unwrap();
+                } else if msg == "start" {
+                    client_command_tx.send(ClientCommand::Start).await.unwrap();
+                }
                 // println!("client sent str: {:?}", msg);
             }
         }
     });
 
     loop {
-        if let Some(value) = rx.lock().await.recv().await {
+        if let Some(value) = world_info_rx.lock().await.recv().await {
             // XXX unwrap here, what if this fails?
             let json = serde_json::to_string(&value).unwrap();
 

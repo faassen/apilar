@@ -4,6 +4,7 @@ extern crate num_derive;
 extern crate serde_big_array;
 
 pub mod assembler;
+pub mod client_command;
 pub mod computer;
 pub mod direction;
 pub mod info;

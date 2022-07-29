@@ -1,4 +1,5 @@
 use crate::assembler::Assembler;
+use crate::client_command::ClientCommand;
 use crate::computer::Computer;
 use crate::info::WorldInfo;
 use crate::render::{render_start, render_update};
@@ -9,6 +10,7 @@ use rand::SeedableRng;
 use std::error::Error;
 use std::fs::File;
 use tokio::sync::mpsc;
+use tokio::time::{sleep, Duration};
 
 pub async fn run(
     width: usize,
@@ -39,17 +41,17 @@ pub async fn run(
 
     let mut small_rng = SmallRng::from_entropy();
 
-    let (tx, rx) = mpsc::channel(32);
-    let (serve_tx, mut serve_rx) = mpsc::channel(32);
+    let (world_info_tx, world_info_rx) = mpsc::channel(32);
+    let (client_command_tx, mut client_command_rx) = mpsc::channel(32);
     tokio::spawn(async move {
-        serve(rx, serve_tx).await;
+        serve(world_info_rx, client_command_tx).await;
     });
 
     simulation(
         &mut world,
         &mut small_rng,
-        tx,
-        &mut serve_rx,
+        world_info_tx,
+        &mut client_command_rx,
         instructions_per_update,
         mutation_frequency,
         redraw_frequency,
@@ -65,8 +67,8 @@ pub async fn run(
 async fn simulation(
     world: &mut World,
     small_rng: &mut SmallRng,
-    tx: mpsc::Sender<WorldInfo>,
-    serve_rx: &mut mpsc::Receiver<String>,
+    world_info_tx: mpsc::Sender<WorldInfo>,
+    client_command_rx: &mut mpsc::Receiver<ClientCommand>,
     instructions_per_update: usize,
     mutation_frequency: u64,
     redraw_frequency: u64,
@@ -79,34 +81,57 @@ async fn simulation(
     render_start();
     let mut i: u64 = 0;
     let mut save_nr = 0;
+    let mut started = true;
+
     loop {
         let redraw = i % redraw_frequency == 0;
         let mutate = i % mutation_frequency == 0;
         let save = i % save_frequency == 0;
+        let receive_command = i % redraw_frequency == 0;
 
-        world.update(small_rng, instructions_per_update, death_rate);
-        if mutate {
-            world.mutate(
-                small_rng,
-                memory_mutation_amount,
-                processor_stack_mutation_amount,
-            );
-        }
-        if redraw {
-            // XXX does try send work?
-            let _ = tx.try_send(WorldInfo::new(world)); // .await?;
-
-            if let Ok(result) = serve_rx.try_recv() {
-                println!("We got result from browser: {}", result);
+        if started {
+            world.update(small_rng, instructions_per_update, death_rate);
+            if mutate {
+                world.mutate(
+                    small_rng,
+                    memory_mutation_amount,
+                    processor_stack_mutation_amount,
+                );
+            }
+            if save && dump {
+                let file = File::create(format!("apilar-dump{}.cbor", save_nr))?;
+                serde_cbor::to_writer(file, &world)?;
+                save_nr += 1;
             }
 
-            render_update();
-            println!("{}", world);
+            if redraw {
+                // XXX does try send work?
+                let _ = world_info_tx.try_send(WorldInfo::new(world)); // .await?;
+
+                render_update();
+                println!("{}", world);
+            }
         }
-        if save && dump {
-            let file = File::create(format!("apilar-dump{}.cbor", save_nr))?;
-            serde_cbor::to_writer(file, &world)?;
-            save_nr += 1;
+        if receive_command {
+            if let Ok(result) = client_command_rx.try_recv() {
+                match result {
+                    ClientCommand::Stop => loop {
+                        if let Some(result) = client_command_rx.recv().await {
+                            match result {
+                                ClientCommand::Start => {
+                                    started = true;
+                                    break;
+                                }
+                                _ => {}
+                            }
+                        }
+                    },
+                    ClientCommand::Start => {
+                        // started = true;
+                    }
+                }
+                sleep(Duration::from_millis(100)).await;
+            }
         }
         i = i.wrapping_add(1);
     }
