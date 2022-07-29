@@ -2,7 +2,6 @@ import { Component, onCleanup, onMount } from "solid-js";
 
 import * as pixi from "pixi.js";
 import { Viewport } from "pixi-viewport";
-import { Simple, SpatialHash } from "pixi-cull";
 
 import { World, Location } from "./world";
 import { renderWorld, updateWorld, BOX_SIZE, WorldShapes } from "./canvas";
@@ -61,25 +60,6 @@ const App: Component = () => {
     return viewport;
   };
 
-  // // const cull = new Simple();
-  // cull.addList(viewport.children);
-  // cull.cull(viewport.getVisibleBounds());
-
-  // pixi.Ticker.shared.add(() => {
-  //   if (viewport.dirty) {
-  //     cull.cull(viewport.getVisibleBounds());
-  //     viewport.dirty = false;
-  //   }
-  // });
-
-  // let elapsed = 0.0;
-  // let i = 0;
-  // app.ticker.add((delta) => {
-  //   elapsed += delta;
-
-  //   i++;
-  // });
-
   let worldShapes: WorldShapes | undefined;
 
   let handleWorldUpdate = (event: MessageEvent) => {
@@ -95,7 +75,6 @@ const App: Component = () => {
 
   onMount(() => {
     pixiContainer?.appendChild(app.view);
-    // cull.cull(viewport.getVisibleBounds());
 
     socket.addEventListener("message", handleWorldUpdate);
   });
