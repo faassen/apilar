@@ -14,6 +14,7 @@ pub mod processor;
 pub mod render;
 pub mod run;
 pub mod serve;
+pub mod simulation;
 pub mod single;
 pub mod starter;
 pub mod world;
