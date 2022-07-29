@@ -81,7 +81,6 @@ async fn simulation(
     render_start();
     let mut i: u64 = 0;
     let mut save_nr = 0;
-    let mut started = true;
 
     loop {
         let redraw = i % redraw_frequency == 0;
@@ -89,34 +88,32 @@ async fn simulation(
         let save = i % save_frequency == 0;
         let receive_command = i % redraw_frequency == 0;
 
-        if started {
-            world.update(small_rng, instructions_per_update, death_rate);
-            if mutate {
-                world.mutate(
-                    small_rng,
-                    memory_mutation_amount,
-                    processor_stack_mutation_amount,
-                );
-            }
-            if save && dump {
-                let file = File::create(format!("apilar-dump{}.cbor", save_nr))?;
-                serde_cbor::to_writer(file, &world)?;
-                save_nr += 1;
-            }
-
-            if redraw {
-                // XXX does try send work?
-                let _ = world_info_tx.try_send(WorldInfo::new(world)); // .await?;
-
-                render_update();
-                println!("{}", world);
-            }
+        world.update(small_rng, instructions_per_update, death_rate);
+        if mutate {
+            world.mutate(
+                small_rng,
+                memory_mutation_amount,
+                processor_stack_mutation_amount,
+            );
         }
+        if save && dump {
+            let file = File::create(format!("apilar-dump{}.cbor", save_nr))?;
+            serde_cbor::to_writer(file, &world)?;
+            save_nr += 1;
+        }
+
+        if redraw {
+            // XXX does try send work?
+            let _ = world_info_tx.try_send(WorldInfo::new(world)); // .await?;
+
+            render_update();
+            println!("{}", world);
+        }
+
         if receive_command {
             if let Ok(ClientCommand::Stop) = client_command_rx.try_recv() {
                 loop {
                     if let Some(ClientCommand::Start) = client_command_rx.recv().await {
-                        started = true;
                         break;
                     }
                 }
