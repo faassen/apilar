@@ -53,54 +53,54 @@ enum Commands {
 }
 
 #[derive(Debug, Args)]
-struct Run {
+pub struct Run {
     #[clap(value_parser)]
     filename: Option<String>,
 
-    #[clap(long, value_parser)]
-    width: Option<usize>,
+    #[clap(long, default_value_t = 70, value_parser)]
+    width: usize,
 
-    #[clap(long, value_parser)]
-    height: Option<usize>,
+    #[clap(long, default_value_t = 40, value_parser)]
+    height: usize,
 
-    #[clap(long, value_parser)]
-    starting_memory_size: Option<usize>,
+    #[clap(long, default_value_t = 300, value_parser)]
+    starting_memory_size: usize,
 
-    #[clap(long, value_parser)]
-    starting_resources: Option<u64>,
+    #[clap(long, default_value_t = 500, value_parser)]
+    starting_resources: u64,
 
-    #[clap(long, value_parser)]
-    max_processors: Option<usize>,
+    #[clap(long, default_value_t = 10, value_parser)]
+    max_processors: usize,
 
-    #[clap(long, value_parser)]
-    world_resources: Option<u64>,
+    #[clap(long, default_value_t = 400, value_parser)]
+    world_resources: u64,
 
-    #[clap(long, value_parser)]
-    instructions_per_update: Option<usize>,
+    #[clap(long, default_value_t = 10, value_parser)]
+    instructions_per_update: usize,
 
-    #[clap(long, value_parser)]
-    mutation_frequency: Option<u64>,
+    #[clap(long, default_value_t = 100000, value_parser)]
+    mutation_frequency: u64,
 
-    #[clap(long, value_parser)]
-    redraw_frequency: Option<u64>,
+    #[clap(long, default_value_t = 100000, value_parser)]
+    redraw_frequency: u64,
 
-    #[clap(long, value_parser)]
-    save_frequency: Option<u64>,
+    #[clap(long, default_value_t = 100000000, value_parser)]
+    save_frequency: u64,
 
-    #[clap(long, value_parser)]
-    memory_mutation_amount: Option<u64>,
+    #[clap(long, default_value_t = 5, value_parser)]
+    memory_mutation_amount: u64,
 
-    #[clap(long, value_parser)]
-    processor_stack_mutation_amount: Option<u64>,
+    #[clap(long, default_value_t = 0, value_parser)]
+    processor_stack_mutation_amount: u64,
 
-    #[clap(long, value_parser)]
-    eat_amount: Option<u64>,
+    #[clap(long, default_value_t = 100, value_parser)]
+    eat_amount: u64,
 
-    #[clap(long, value_parser)]
-    death_rate: Option<u32>,
+    #[clap(long, default_value_t = 20000, value_parser)]
+    death_rate: u32,
 
-    #[clap(long, value_parser)]
-    dump: Option<bool>,
+    #[clap(long, default_value_t = false, value_parser)]
+    dump: bool,
 }
 
 #[tokio::main]
@@ -119,25 +119,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 None => PROGRAM_TEXT.to_string(),
             };
             let words = text_to_words(&contents);
-            run(
-                cli.width.unwrap_or(70),
-                cli.height.unwrap_or(40),
-                cli.starting_memory_size.unwrap_or(300),
-                cli.starting_resources.unwrap_or(500),
-                cli.max_processors.unwrap_or(10),
-                cli.world_resources.unwrap_or(400),
-                cli.instructions_per_update.unwrap_or(10),
-                cli.mutation_frequency.unwrap_or(100000),
-                cli.redraw_frequency.unwrap_or(100000),
-                cli.save_frequency.unwrap_or(100000000),
-                cli.memory_mutation_amount.unwrap_or(5),
-                cli.processor_stack_mutation_amount.unwrap_or(0),
-                cli.eat_amount.unwrap_or(100),
-                cli.death_rate.unwrap_or(20000),
-                cli.dump.unwrap_or(false),
-                words,
-            )
-            .await?;
+            run(cli, words).await?;
         }
         Commands::Disassemble { filename, x, y } => {
             let file = File::open(filename)?;
@@ -162,9 +144,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     println!("No computer at this location")
                 }
             }
-        } // Commands::Serve => {
-          //     serve();
-          // }
+        }
     }
 
     Ok(())
