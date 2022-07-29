@@ -6,7 +6,6 @@ import { Simple, SpatialHash } from "pixi-cull";
 
 import { World, Location } from "./world";
 import { renderWorld, updateWorld, BOX_SIZE, WorldShapes } from "./pcanvas";
-import * as random from "./random";
 // https://stackoverflow.com/questions/71743027/how-to-use-vite-hmr-api-with-pixi-js
 
 const socket = new WebSocket("ws://localhost:3000/ws");
@@ -35,29 +34,31 @@ const App: Component = () => {
     resolution: window.devicePixelRatio,
   });
 
-  const viewport = new Viewport({
-    screenWidth: 900,
-    screenHeight: 800,
-    worldWidth: 70 * BOX_SIZE,
-    worldHeight: 40 * BOX_SIZE,
-    // worldWidth: world.width * BOX_SIZE,
-    // worldHeight: world.height * BOX_SIZE,
-    interaction: app.renderer.plugins.interaction,
-  });
+  const createViewport = () => {
+    const viewport = new Viewport({
+      screenWidth: 900,
+      screenHeight: 800,
+      worldWidth: 70 * BOX_SIZE,
+      worldHeight: 40 * BOX_SIZE,
+      // worldWidth: world.width * BOX_SIZE,
+      // worldHeight: world.height * BOX_SIZE,
+      interaction: app.renderer.plugins.interaction,
+    });
 
-  let worldShapes: WorldShapes | undefined;
-  app.stage.addChild(viewport);
+    app.stage.addChild(viewport);
 
-  viewport.clamp({
-    left: true,
-    top: true,
-    right: true,
-    bottom: true,
-    underflow: "topleft",
-  });
+    viewport.clamp({
+      left: true,
+      top: true,
+      right: true,
+      bottom: true,
+      underflow: "topleft",
+    });
 
-  viewport.bounce({});
-  viewport.drag();
+    viewport.bounce({});
+    viewport.drag();
+    return viewport;
+  };
 
   // // const cull = new Simple();
   // cull.addList(viewport.children);
@@ -78,22 +79,28 @@ const App: Component = () => {
   //   i++;
   // });
 
+  let worldShapes: WorldShapes | undefined;
+
+  let handleWorldUpdate = (event: MessageEvent) => {
+    const world: World = JSON.parse(event.data);
+
+    if (worldShapes == null) {
+      const viewport = createViewport();
+      worldShapes = renderWorld(viewport, world);
+    } else {
+      updateWorld(world, worldShapes);
+    }
+  };
+
   onMount(() => {
     pixiContainer?.appendChild(app.view);
     // cull.cull(viewport.getVisibleBounds());
 
-    let worldShapes: WorldShapes | undefined;
+    socket.addEventListener("message", handleWorldUpdate);
+  });
 
-    socket.addEventListener("message", (event) => {
-      const world: World = JSON.parse(event.data);
-      // console.log("Got data", world);
-
-      if (worldShapes == null) {
-        worldShapes = renderWorld(viewport, world);
-      } else {
-        updateWorld(world, worldShapes);
-      }
-    });
+  onCleanup(() => {
+    socket.removeEventListener("message", handleWorldUpdate);
   });
 
   return (
