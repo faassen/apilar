@@ -2,7 +2,6 @@ import * as pixi from "pixi.js";
 
 import { World, Location } from "./world";
 import { Viewport } from "pixi-viewport";
-import { Sprite } from "pixi.js";
 
 export const BOX_SIZE = 20;
 
