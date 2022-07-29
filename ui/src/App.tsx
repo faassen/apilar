@@ -5,7 +5,7 @@ import { Viewport } from "pixi-viewport";
 import { Simple, SpatialHash } from "pixi-cull";
 
 import { World, Location } from "./world";
-import { renderWorld, updateWorld, BOX_SIZE, WorldShapes } from "./pcanvas";
+import { renderWorld, updateWorld, BOX_SIZE, WorldShapes } from "./canvas";
 // https://stackoverflow.com/questions/71743027/how-to-use-vite-hmr-api-with-pixi-js
 
 const socket = new WebSocket("ws://localhost:3000/ws");
@@ -25,19 +25,22 @@ const App: Component = () => {
 
   let pixiContainer: HTMLDivElement | undefined;
 
+  const width = window.innerWidth;
+  const height = window.innerHeight - 100;
+
   // application width & height needs to be the same as viewport
   // width and height otherwise we can't fully scroll to the right somehow
   let app = new pixi.Application({
-    width: 900,
-    height: 800,
+    width: width,
+    height: height,
     backgroundAlpha: 0,
     resolution: window.devicePixelRatio,
   });
 
   const createViewport = () => {
     const viewport = new Viewport({
-      screenWidth: 900,
-      screenHeight: 800,
+      screenWidth: width,
+      screenHeight: height,
       worldWidth: 70 * BOX_SIZE,
       worldHeight: 40 * BOX_SIZE,
       // worldWidth: world.width * BOX_SIZE,
