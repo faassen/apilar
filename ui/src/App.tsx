@@ -42,6 +42,7 @@ const App: Component = () => {
   // }
 
   const handleUpdate = () => {
+    socket.send("Hello world");
     // for (let y = 0; y < world.height; y++) {
     //   for (let x = 0; x < world.width; x++) {
     //     world.locations[y][x].computer = null;

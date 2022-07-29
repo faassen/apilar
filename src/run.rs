@@ -40,18 +40,16 @@ pub async fn run(
     let mut small_rng = SmallRng::from_entropy();
 
     let (tx, rx) = mpsc::channel(32);
-
+    let (serve_tx, mut serve_rx) = mpsc::channel(32);
     tokio::spawn(async move {
-        serve(rx).await;
+        serve(rx, serve_tx).await;
     });
 
-    // tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
-
-    // tokio::spawn(async move {
     simulation(
         &mut world,
         &mut small_rng,
         tx,
+        &mut serve_rx,
         instructions_per_update,
         mutation_frequency,
         redraw_frequency,
@@ -62,20 +60,13 @@ pub async fn run(
         dump,
     )
     .await
-
-    // .await
-    // {
-    //     Ok(v) => Ok(v),
-    //     Err(v) => Err(v),
-    // }
-    // });
-    // Ok(())
 }
 
 async fn simulation(
     world: &mut World,
     small_rng: &mut SmallRng,
     tx: mpsc::Sender<WorldInfo>,
+    serve_rx: &mut mpsc::Receiver<String>,
     instructions_per_update: usize,
     mutation_frequency: u64,
     redraw_frequency: u64,
@@ -104,7 +95,11 @@ async fn simulation(
         if redraw {
             // XXX does try send work?
             let _ = tx.try_send(WorldInfo::new(world)); // .await?;
-                                                        // tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+            if let Ok(result) = serve_rx.try_recv() {
+                println!("We got result from browser: {}", result);
+            }
+
             render_update();
             println!("{}", world);
         }

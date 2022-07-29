@@ -7,6 +7,7 @@ use axum::{
     routing::{get, get_service},
     Router,
 };
+use futures::{sink::SinkExt, stream::StreamExt};
 use std::sync::Arc;
 use std::{net::SocketAddr, path::PathBuf};
 use tokio::sync::mpsc;
@@ -20,7 +21,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 type State = mpsc::Receiver<WorldInfo>;
 type SharedState = Arc<Mutex<State>>;
 
-pub async fn serve(rx: State) {
+pub async fn serve(rx: State, serve_tx: mpsc::Sender<String>) {
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(
             std::env::var("RUST_LOG")
@@ -46,11 +47,12 @@ pub async fn serve(rx: State) {
         // top since it matches all routes
         .route("/ws", get(ws_handler))
         // logging so we can see whats going on
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(DefaultMakeSpan::default().include_headers(true)),
-        )
-        .layer(Extension(Arc::new(Mutex::new(rx))));
+        // .layer(
+        //     TraceLayer::new_for_http()
+        //         .make_span_with(DefaultMakeSpan::default().include_headers(true)),
+        // )
+        .layer(Extension(Arc::new(Mutex::new(rx))))
+        .layer(Extension(serve_tx));
 
     // run it with hyper
     let addr = SocketAddr::from(([127, 0, 0, 1], 4000));
@@ -64,46 +66,40 @@ pub async fn serve(rx: State) {
 async fn ws_handler(
     ws: WebSocketUpgrade,
     Extension(rx): Extension<SharedState>,
+    Extension(serve_tx): Extension<mpsc::Sender<String>>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(|socket| handle_socket(socket, rx))
+    ws.on_upgrade(|socket| handle_socket(socket, rx, serve_tx))
 }
 
-async fn handle_socket<'a>(mut socket: WebSocket, rx: SharedState) {
-    if let Some(msg) = socket.recv().await {
-        if let Ok(msg) = msg {
-            match msg {
-                Message::Text(t) => {
-                    println!("client sent str: {:?}", t);
-                }
-                Message::Binary(_) => {
-                    println!("client sent binary data");
-                }
-                Message::Ping(_) => {
-                    println!("socket ping");
-                }
-                Message::Pong(_) => {
-                    println!("socket pong");
-                }
-                Message::Close(_) => {
-                    println!("client disconnected");
-                    return;
-                }
+async fn handle_socket<'a>(socket: WebSocket, rx: SharedState, serve_tx: mpsc::Sender<String>) {
+    let (mut sender, mut receiver) = socket.split();
+
+    tokio::spawn(async move {
+        loop {
+            if let Some(Ok(Message::Text(msg))) = receiver.next().await {
+                // XXX another unwrap
+                serve_tx.send(msg).await.unwrap();
+                // println!("client sent str: {:?}", msg);
             }
-        } else {
-            println!("client disconnected");
-            return;
         }
-    }
+    });
 
     loop {
         if let Some(value) = rx.lock().await.recv().await {
             // XXX unwrap here, what if this fails?
             let json = serde_json::to_string(&value).unwrap();
-            if socket.send(Message::Text(json)).await.is_err() {
+
+            if sender.send(Message::Text(json)).await.is_err() {
                 // XXX this isn't the world's best error handling either
                 println!("client disconnected");
                 return;
             }
+
+            // if socket.send(Message::Text(json)).await.is_err() {
+            //     // XXX this isn't the world's best error handling either
+            //     println!("client disconnected");
+            //     return;
+            // }
         }
     }
 }
