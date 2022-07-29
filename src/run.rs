@@ -10,7 +10,6 @@ use rand::SeedableRng;
 use std::error::Error;
 use std::fs::File;
 use tokio::sync::mpsc;
-use tokio::time::{sleep, Duration};
 
 pub async fn run(
     width: usize,
