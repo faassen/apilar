@@ -76,3 +76,7 @@ export function updateWorld(world: World, shapes: WorldShapes) {
     }
   }
 }
+
+export function getWorldDimensions(world: World): [number, number] {
+  return [world.width * BOX_SIZE, world.height * BOX_SIZE];
+}
