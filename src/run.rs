@@ -113,24 +113,13 @@ async fn simulation(
             }
         }
         if receive_command {
-            if let Ok(result) = client_command_rx.try_recv() {
-                match result {
-                    ClientCommand::Stop => loop {
-                        if let Some(result) = client_command_rx.recv().await {
-                            match result {
-                                ClientCommand::Start => {
-                                    started = true;
-                                    break;
-                                }
-                                _ => {}
-                            }
-                        }
-                    },
-                    ClientCommand::Start => {
-                        // started = true;
+            if let Ok(ClientCommand::Stop) = client_command_rx.try_recv() {
+                loop {
+                    if let Some(ClientCommand::Start) = client_command_rx.recv().await {
+                        started = true;
+                        break;
                     }
                 }
-                sleep(Duration::from_millis(100)).await;
             }
         }
         i = i.wrapping_add(1);
