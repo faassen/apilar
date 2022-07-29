@@ -20,6 +20,7 @@ pub struct Simulation {
     death_rate: u32,
     frequencies: Frequencies,
     dump: bool,
+    text_ui: bool,
 }
 
 impl Simulation {
@@ -30,6 +31,7 @@ impl Simulation {
         death_rate: u32,
         frequencies: Frequencies,
         dump: bool,
+        text_ui: bool,
     ) -> Simulation {
         Simulation {
             instructions_per_update,
@@ -38,6 +40,7 @@ impl Simulation {
             death_rate,
             frequencies,
             dump,
+            text_ui,
         }
     }
 
@@ -48,7 +51,9 @@ impl Simulation {
         world_info_tx: mpsc::Sender<WorldInfo>,
         client_command_rx: &mut mpsc::Receiver<ClientCommand>,
     ) -> Result<(), Box<dyn Error>> {
-        render_start();
+        if self.text_ui {
+            render_start();
+        }
         let mut i: u64 = 0;
         let mut save_nr = 0;
 
@@ -74,12 +79,14 @@ impl Simulation {
                 save_nr += 1;
             }
 
+            if self.text_ui && redraw {
+                render_update();
+                println!("{}", world);
+            }
+
             if redraw {
                 // XXX does try send work?
                 let _ = world_info_tx.try_send(WorldInfo::new(world)); // .await?;
-
-                render_update();
-                println!("{}", world);
             }
 
             if receive_command {

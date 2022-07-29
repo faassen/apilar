@@ -19,8 +19,7 @@ const App: Component = () => {
   };
 
   let handleWorldUpdate = (event: MessageEvent) => {
-    const world: World = JSON.parse(event.data);
-    setWorld(world);
+    setWorld(JSON.parse(event.data));
   };
 
   onMount(() => {

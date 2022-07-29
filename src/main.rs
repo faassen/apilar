@@ -101,6 +101,9 @@ pub struct Run {
 
     #[clap(long, default_value_t = false, value_parser)]
     dump: bool,
+
+    #[clap(long, default_value_t = false, value_parser)]
+    text_ui: bool,
 }
 
 #[tokio::main]

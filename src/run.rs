@@ -44,6 +44,7 @@ pub async fn run(run: &Run, words: Vec<&str>) -> Result<(), Box<dyn Error>> {
         run.death_rate,
         frequencies,
         run.dump,
+        run.text_ui,
     );
 
     simulation

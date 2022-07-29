@@ -5,7 +5,7 @@ import { World } from "./world";
 
 function Sidebar(props: { world: Accessor<World | undefined> }) {
   return (
-    <Show when={props.world()}>
+    <Show when={props.world() != null}>
       <Info world={props.world as Accessor<World>} />
     </Show>
   );
