@@ -34,6 +34,8 @@ const App: Component = () => {
     socket.removeEventListener("message", handleWorldUpdate);
   });
 
+  // browser resize handlers
+
   return (
     <div class="h-screen">
       <div class="flex gap-3">
