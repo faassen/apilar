@@ -84,13 +84,11 @@ async fn handle_socket<'a>(
     tokio::spawn(async move {
         loop {
             if let Some(Ok(Message::Text(msg))) = receiver.next().await {
-                // XXX another unwrap
                 if msg == "stop" {
                     client_command_tx.send(ClientCommand::Stop).await.unwrap();
                 } else if msg == "start" {
                     client_command_tx.send(ClientCommand::Start).await.unwrap();
                 }
-                // println!("client sent str: {:?}", msg);
             }
         }
     });
@@ -105,12 +103,6 @@ async fn handle_socket<'a>(
                 println!("client disconnected");
                 return;
             }
-
-            // if socket.send(Message::Text(json)).await.is_err() {
-            //     // XXX this isn't the world's best error handling either
-            //     println!("client disconnected");
-            //     return;
-            // }
         }
     }
 }
