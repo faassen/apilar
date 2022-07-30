@@ -70,13 +70,7 @@ function getFill(location: Location): number {
   if (location.computer != null) {
     return RED;
   }
-  if (location.freeResources > 5000) {
-    return DIM_GREY;
-  } else if (location.freeResources > 2000) {
-    return GREY;
-  } else if (location.freeResources > 0) {
-    return LIGHT_GREY;
-  } else {
-    return BLACK;
-  }
+  const max = 1000;
+  const resources = location.freeResources > max ? max : location.freeResources;
+  return (resources / max) * 50 + (1 - resources / max) * 219;
 }
