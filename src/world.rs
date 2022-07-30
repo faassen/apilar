@@ -4,6 +4,8 @@ use rand::rngs::SmallRng;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 
+const MAX_MEMORY_SIZE: usize = 5120;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Location {
     pub resources: u64,
@@ -109,7 +111,7 @@ impl World {
     pub fn death(&mut self, rng: &mut SmallRng, coords: Coords, death_rate: u32) {
         let location = self.get_mut(coords);
         if let Some(computer) = &mut location.computer {
-            if rng.gen_ratio(1, death_rate) {
+            if rng.gen_ratio(1, death_rate) || computer.memory.values.len() > MAX_MEMORY_SIZE {
                 location.resources += computer.resources + computer.memory.values.len() as u64;
                 location.computer = None;
             }
