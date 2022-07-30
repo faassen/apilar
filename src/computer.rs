@@ -294,8 +294,48 @@ mod tests {
         assert_eq!(splitted.processors[0].get_current_head_value(), Some(0));
     }
 
-    // XXX add tests for out of bounds head, head in wrong half because < 0 in
-    // split
+    #[test]
+    fn test_split_out_of_bounds() {
+        let assembler = Assembler::new();
+
+        let text = "
+        N1
+        N2
+        N3
+        N4
+        ";
+        let words = text_to_words(text);
+
+        let mut computer = Computer::new(4, 10, 100);
+        assembler.assemble_words(words.clone(), &mut computer.memory, 0);
+        computer.add_processor(0);
+        computer.add_processor(0);
+        computer.add_processor(2);
+        computer.add_processor(2);
+
+        computer.processors[0].set_current_head_value(0);
+        computer.processors[1].set_current_head_value(2); // oob
+
+        computer.processors[2].set_current_head_value(0); // oob
+        computer.processors[3].set_current_head_value(2);
+
+        let splitted = computer.split(2);
+        assert_eq!(computer.memory.values, [1, 2]);
+        assert_eq!(computer.resources, 50);
+        assert_eq!(computer.processors.len(), 2);
+        assert_eq!(computer.processors[0].ip, 0);
+        assert_eq!(computer.processors[0].get_current_head_value(), Some(0));
+        // oob gets reset to 0
+        assert_eq!(computer.processors[1].get_current_head_value(), Some(0));
+
+        assert_eq!(splitted.memory.values, [3, 4]);
+        assert_eq!(splitted.resources, 50);
+        assert_eq!(splitted.processors.len(), 2);
+        assert_eq!(splitted.processors[0].ip, 0);
+        // oob gets reset to 0
+        assert_eq!(splitted.processors[0].get_current_head_value(), Some(0));
+        assert_eq!(splitted.processors[1].get_current_head_value(), Some(0));
+    }
 
     #[test]
     fn test_split_uneven() {
