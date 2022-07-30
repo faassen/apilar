@@ -34,6 +34,8 @@ impl Computer {
 
         for mut processor in self.processors.clone() {
             if processor.ip < address {
+                // reset heads that happen to be in the other half
+                processor.fix_out_of_bounds_heads(address);
                 parent_processors.push(processor);
             } else {
                 processor.ip -= address;
@@ -291,6 +293,9 @@ mod tests {
         assert_eq!(splitted.processors[0].ip, 0);
         assert_eq!(splitted.processors[0].get_current_head_value(), Some(0));
     }
+
+    // XXX add tests for out of bounds head, head in wrong half because < 0 in
+    // split
 
     #[test]
     fn test_split_uneven() {

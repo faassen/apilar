@@ -3,65 +3,56 @@ pub const PROGRAM_TEXT: &str = "
 # to see the simulation. It replicates itself, 
 # tries to grow memory, splits into two
 
-# startup delay, because the stack of the copy
-# will have the wrong start address without it
-NOOP  
-NOOP
-NOOP
-NOOP
-NOOP
-NOOP  # delay so we take the right address after SPLIT
-
-# take the address of the start, adjusting it for the delay
-ADDR  # s
-N6
-SUB   # adjust s for delay
-DUP   # s c
-DUP   # s c c
+ADDR  # h0 = start
+N1
+HEAD
+N0
+COPY  # h1 = reader
+N2
+HEAD
+N0    
+COPY  # h2 = writer
 N8
 N8
 MUL
-ADD   # s c t target is 64 positions below start
-SWAP  # s t c
-
-# start copy loop
-ADDR  # s t c l
-EAT   # do some eating and growing while we can
-GROW
-SWAP  # s t l c
-ROT   # s l c t
-DUP2
-ADD   # s l c t c+t
-ROT   # s l t c+t c
-DUP   # s l t c+t c c
-READ  # s l t c+t c inst
-ROT   # s l t c inst c+t
-SWAP  # s l t c c+t inst
-WRITE # s l t c
-N1
-ADD   # s l t c+1
-ROT   # s t c+1 l
-SWAP  # s t l c+1
-DUP   # s t l c+1 c+1
-ADDR  # end
-N7
+DUP
+FORWARD # h2 forward 64
+DUP
+ADD # 128 on stack
 N3
-MUL   # 21
-ADD   # s t l c+1 c+1 end
-LT    # s t l c+1 b
-ROT   # s t c+1 b l
-SWAP  # s t c+1 l b
-JMPIF # s t c+1
-
-# done with copy loop
-DROP  # s t
-OVER  # s t s
-ADD   # s s+t
-DUP   # s s+t s+t
-START # s s+t spawn processor into copy
-# now split memory just before it
-N2    
-SUB   # s s+t-2 split_addr
+HEAD
+N2
+COPY  # h3 = h2, start offspring
+N4
+HEAD  
+ADDR  # h4 = loop
+EAT
+GROW
+N1
+HEAD
+READ  # read from h1
+N1
+FORWARD
+N2
+HEAD
+WRITE # write to h2
+N1
+FORWARD
+DUP   # duplicate 128 
+N3
+DISTANCE # distance h2 and h3
+SWAP
+LT    # if distance < 128
+N4
+HEAD
+JMPIF # jump to h4, loop
+N3
+HEAD
+START # start offspring at h3
+N2
+BACKWARD
 RND   # random direction
-SPLIT # split from s+t-2
+SPLIT # split 2 positions earlier
+N0
+HEAD
 JMP   # jump to first addr";

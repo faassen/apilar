@@ -163,11 +163,28 @@ impl Processor {
         self.ip as u64
     }
 
+    pub fn fix_out_of_bounds_heads(&mut self, split_address: usize) {
+        for i in 0..HEADS_AMOUNT {
+            let head = self.heads[i];
+            if let Some(address) = head {
+                if address >= split_address {
+                    self.heads[i] = Some(0);
+                }
+            }
+        }
+    }
+
     pub fn shift_heads_backward(&mut self, distance: usize) {
         for i in 0..HEADS_AMOUNT {
             let head = self.heads[i];
             if let Some(address) = head {
-                self.heads[i] = Some(address - distance);
+                let new_value = if address > distance {
+                    address - distance
+                } else {
+                    // if the head is in the other half, make it 0
+                    0
+                };
+                self.heads[i] = Some(new_value);
             }
         }
     }

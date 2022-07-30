@@ -289,12 +289,10 @@ impl Instruction {
                             processor.push(distance as u64);
                         }
                         None => {
-                            println!("No other addr");
                             processor.push(0);
                         }
                     },
                     None => {
-                        println!("No current addr");
                         processor.push(0);
                     }
                 }
