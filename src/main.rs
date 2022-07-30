@@ -30,6 +30,7 @@ use clap::{Args, Parser, Subcommand};
 use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
+use std::io::{BufReader, Read};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -125,7 +126,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             run(cli, words).await?;
         }
         Commands::Disassemble { filename, x, y } => {
-            let file = File::open(filename)?;
+            let file = BufReader::new(File::open(filename)?);
             let world: World = serde_cbor::from_reader(file)?;
             if *x >= world.width {
                 println!("x out of range");
