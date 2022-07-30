@@ -18,13 +18,14 @@ mutation occurs. Heads are essentially variables.
 
 Head management:
 
-- nr HEAD - switch current head. Head may not be initialized, if so it's insert
+- nr HEAD - switch current head. Head may not be initialized, if so it's inert until its initialized
 - ADDR - set current head to address of instruction
 - source COPY - copy source head address into current head
 - READ - read at current head
 - value WRITE - write value to current head
-- amount BACK - move current head back by amount
+- amount BACKWARD - move current head back by amount
 - amount FORWARD - move current head forward by amount
+- head DISTANCE - distance between given and current head, absolute value
 
 JMP, CALL is defined at going to the current head
 

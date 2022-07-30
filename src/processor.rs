@@ -8,7 +8,8 @@ use serde_big_array::BigArray;
 use serde_derive::{Deserialize, Serialize};
 
 const STACK_SIZE: usize = 64;
-const ADDRESS_DISTANCE: usize = 1024;
+pub const HEADS_AMOUNT: usize = 10;
+const MAX_ADDRESS_DISTANCE: usize = 1024;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Processor {
@@ -21,6 +22,8 @@ pub struct Processor {
     pub want_merge: Option<Direction>,
     pub want_eat: bool,
     pub want_grow: bool,
+    pub current_head: usize,
+    heads: [Option<usize>; HEADS_AMOUNT],
     #[serde(with = "BigArray")]
     stack: [u64; STACK_SIZE],
 }
@@ -29,6 +32,8 @@ impl Processor {
     pub fn new(ip: usize) -> Processor {
         Processor {
             ip,
+            current_head: 0,
+            heads: [None; HEADS_AMOUNT],
             stack: [0; STACK_SIZE],
             jumped: false,
             alive: true,
@@ -54,13 +59,9 @@ impl Processor {
             return false;
         }
         let value = memory.values[self.ip];
-        let instruction: Option<Instruction> = Instruction::decode(value);
-        match instruction {
-            Some(instruction) => instruction.execute(self, memory, rng),
-            None => {
-                // no op, we cannot interpret this as a valid instruction
-            }
-        }
+        if let Some(instruction) = Instruction::decode(value) {
+            instruction.execute(self, memory, rng);
+        } // any other instruction is a noop
         if !self.jumped {
             self.ip += 1;
         } else {
@@ -107,6 +108,57 @@ impl Processor {
         self.jump(address);
     }
 
+    pub fn set_current_head(&mut self, value: usize) {
+        self.heads[self.current_head] = Some(value);
+    }
+
+    pub fn get_current_head(&self) -> Option<usize> {
+        self.heads[self.current_head]
+    }
+
+    pub fn pop_head_nr(&mut self) -> usize {
+        let value = self.pop_clamped(HEADS_AMOUNT as u64);
+        value as usize
+    }
+
+    pub fn get_head(&self, head_nr: usize) -> Option<usize> {
+        self.heads[head_nr]
+    }
+
+    pub fn forward_current_head(&mut self, amount: usize, memory: &Memory) {
+        if let Some(value) = self.heads[self.current_head] {
+            let new_value = value + amount;
+            if new_value >= memory.values.len() {
+                return;
+            }
+            if self.address_distance(new_value) > MAX_ADDRESS_DISTANCE {
+                return;
+            }
+            self.heads[self.current_head] = Some(new_value);
+        }
+    }
+
+    pub fn backward_current_head(&mut self, amount: usize) {
+        if let Some(value) = self.heads[self.current_head] {
+            if amount > value {
+                return;
+            }
+            let new_value = value - amount;
+            if self.address_distance(new_value) > MAX_ADDRESS_DISTANCE {
+                return;
+            }
+            self.heads[self.current_head] = Some(new_value);
+        }
+    }
+
+    fn address_distance(&self, address: usize) -> usize {
+        if address > self.ip {
+            address - self.ip
+        } else {
+            self.ip - address
+        }
+    }
+
     pub fn address(&self) -> u64 {
         self.ip as u64
     }
@@ -149,6 +201,11 @@ impl Processor {
         self.stack[self.stack_pointer]
     }
 
+    pub fn pop_clamped(&mut self, amount: u64) -> u64 {
+        let value = self.pop();
+        value % amount
+    }
+
     pub fn pop_address(&mut self, memory: &Memory) -> Option<usize> {
         if self.stack_pointer == 0 {
             return None;
@@ -163,7 +220,7 @@ impl Processor {
         } else {
             self.ip - result
         };
-        if distance > ADDRESS_DISTANCE {
+        if distance > MAX_ADDRESS_DISTANCE {
             return None;
         }
         Some(result)
@@ -250,6 +307,85 @@ mod tests {
     }
 
     #[test]
+    fn test_pop_clamped() {
+        let mut processor = Processor::new(0);
+        processor.push(5);
+        assert_eq!(processor.pop_clamped(6), 5);
+        processor.push(10);
+        assert_eq!(processor.pop_clamped(6), 4);
+        assert_eq!(processor.pop_clamped(6), 3);
+    }
+
+    #[test]
+    fn test_pop_head_nr() {
+        let mut processor = Processor::new(0);
+        processor.push(5);
+        assert_eq!(processor.pop_head_nr(), 5);
+        processor.push(10);
+        assert_eq!(processor.pop_head_nr(), 0);
+        assert_eq!(processor.pop_head_nr(), 5);
+    }
+
+    #[test]
+    fn test_get_current_head_not_yet_set() {
+        let processor = Processor::new(0);
+        assert_eq!(processor.get_current_head(), None);
+    }
+
+    #[test]
+    fn test_get_current_head_after_set() {
+        let mut processor = Processor::new(0);
+        processor.set_current_head(10);
+        assert_eq!(processor.get_current_head(), Some(10));
+    }
+
+    #[test]
+    fn test_forward_current_head() {
+        let memory = Memory::new(100);
+        let mut processor = Processor::new(0);
+        processor.set_current_head(10);
+        processor.forward_current_head(14, &memory);
+        assert_eq!(processor.get_current_head(), Some(24));
+    }
+
+    #[test]
+    fn test_forward_current_head_out_of_bounds_memory() {
+        let memory = Memory::new(100);
+        let mut processor = Processor::new(0);
+        processor.set_current_head(10);
+        processor.forward_current_head(100, &memory);
+        assert_eq!(processor.get_current_head(), Some(10));
+    }
+
+    #[test]
+    fn test_forward_current_head_out_of_bounds_address_distance() {
+        let memory = Memory::new(MAX_ADDRESS_DISTANCE * 2);
+        let mut processor = Processor::new(0);
+        processor.set_current_head(10);
+        processor.forward_current_head(MAX_ADDRESS_DISTANCE + 1, &memory);
+        assert_eq!(processor.get_current_head(), Some(10));
+    }
+
+    #[test]
+    fn test_backward_current_head() {
+        let mut processor = Processor::new(0);
+        processor.set_current_head(50);
+        processor.backward_current_head(10);
+        assert_eq!(processor.get_current_head(), Some(40));
+    }
+
+    #[test]
+    fn test_backward_current_head_out_of_bounds_address_distance() {
+        let mut processor = Processor::new(MAX_ADDRESS_DISTANCE * 2);
+        processor.set_current_head(MAX_ADDRESS_DISTANCE + 10);
+        processor.backward_current_head(MAX_ADDRESS_DISTANCE + 1);
+        assert_eq!(
+            processor.get_current_head(),
+            Some(MAX_ADDRESS_DISTANCE + 10)
+        );
+    }
+
+    #[test]
     fn test_pop_address() {
         let memory = Memory::new(100);
         let mut processor = Processor::new(0);
@@ -268,17 +404,17 @@ mod tests {
 
     #[test]
     fn test_pop_address_beyond_address_distance() {
-        let memory = Memory::new(ADDRESS_DISTANCE * 10);
+        let memory = Memory::new(MAX_ADDRESS_DISTANCE * 10);
         let mut processor = Processor::new(0);
-        let address_distance: u64 = ADDRESS_DISTANCE.try_into().unwrap();
+        let address_distance: u64 = MAX_ADDRESS_DISTANCE.try_into().unwrap();
         processor.push(address_distance + 1); // cannot address this
         assert_eq!(processor.pop_address(&memory), None);
     }
 
     #[test]
     fn test_pop_address_beyond_address_distance_other_direction() {
-        let memory = Memory::new(ADDRESS_DISTANCE * 10);
-        let mut processor = Processor::new(ADDRESS_DISTANCE * 2);
+        let memory = Memory::new(MAX_ADDRESS_DISTANCE * 10);
+        let mut processor = Processor::new(MAX_ADDRESS_DISTANCE * 2);
         processor.push(0); // cannot address this
         assert_eq!(processor.pop_address(&memory), None);
     }

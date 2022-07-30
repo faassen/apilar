@@ -6,12 +6,15 @@ use crate::direction::Direction;
 use crate::memory::Memory;
 use crate::processor::Processor;
 
+const MAX_MOVE_HEAD_AMOUNT: usize = 1024;
+
 #[derive(EnumIter, Debug, PartialEq, Display, FromPrimitive, ToPrimitive)]
 pub enum Instruction {
     // Noop
     NOOP = 0,
     // Numbers
-    N1 = 1,
+    N0,
+    N1,
     N2,
     N3,
     N4,
@@ -22,7 +25,7 @@ pub enum Instruction {
     RND, // Random number
 
     // stack operators
-    DUP = 20,
+    DUP,
     DUP2,
     DROP,
     SWAP,
@@ -30,48 +33,51 @@ pub enum Instruction {
     ROT,
 
     // Arithmetic
-    ADD = 30,
+    ADD,
     SUB,
     MUL,
     DIV,
     MOD,
 
     // Comparison
-    EQ = 40,
+    EQ,
     GT,
     LT,
 
     // Logic
-    NOT = 50,
+    NOT,
     AND,
     OR,
 
-    // control
-    JMP = 60, // also serves as return
-    JMPIF,    // jump if boolean true,
-    CALL,     // put return address on stack before jumping,
-    CALLIF,   // call if boolean true
-
-    // memory
-    ADDR = 70,
+    // adresssing and memory
+    HEAD,
+    ADDR,
+    COPY,
+    FORWARD,
+    BACKWARD,
+    DISTANCE,
     READ,
     WRITE,
+
+    // control
+    JMP,   // also serves as return
+    JMPIF, // jump if boolean true,
 
     // PRINT0,
     // PRINT1,
     // PRINT2,
 
     // processors
-    START = 80, // start a new processor given a starting point (only 1 can started in execution block)
-    END,        // end this processor's existence
-
-    // resources
-    EAT = 90,
-    GROW,
+    START, // start a new processor given a starting point (only 1 can started in execution block)
+    END,   // end this processor's existence
 
     // split and merge
-    SPLIT = 100,
+    SPLIT,
     MERGE,
+
+    // resources
+    EAT,
+    GROW,
 }
 
 impl Instruction {
@@ -94,6 +100,9 @@ impl Instruction {
                 // nothing
             }
             // Numbers
+            Instruction::N0 => {
+                processor.push(0);
+            }
             Instruction::N1 => {
                 processor.push(1);
             }
@@ -234,46 +243,62 @@ impl Instruction {
                 }
             }
 
-            // Control
-            Instruction::JMP => {
-                let popped = processor.pop_address(memory);
-                if let Some(address) = popped {
-                    processor.jump(address);
-                }
+            // Heads
+            Instruction::HEAD => {
+                let head_nr = processor.pop_head_nr();
+                processor.current_head = head_nr as usize;
             }
-            Instruction::JMPIF => {
-                let condition = processor.pop();
-                let popped = processor.pop_address(memory);
-                if condition == 0 {
-                    return;
-                }
-                if let Some(address) = popped {
-                    processor.jump(address);
-                }
-            }
-            Instruction::CALL => {
-                let popped = processor.pop_address(memory);
-                if let Some(address) = popped {
-                    processor.call(address);
-                }
-            }
-            Instruction::CALLIF => {
-                let condition = processor.pop();
-                let popped = processor.pop_address(memory);
-                if condition == 0 {
-                    return;
-                }
-                if let Some(address) = popped {
-                    processor.call(address);
-                }
-            }
-
-            // Memory
             Instruction::ADDR => {
-                processor.push(processor.address());
+                processor.set_current_head(processor.ip);
+            }
+            Instruction::COPY => {
+                let head_nr = processor.pop_head_nr();
+
+                let value = processor.get_head(head_nr);
+
+                if let Some(value) = value {
+                    processor.set_current_head(value)
+                }
+            }
+            Instruction::FORWARD => {
+                let amount = processor.pop() as usize;
+                if amount > MAX_MOVE_HEAD_AMOUNT {
+                    return;
+                }
+                processor.forward_current_head(amount, memory);
+            }
+            Instruction::BACKWARD => {
+                let amount = processor.pop() as usize;
+                if amount > MAX_MOVE_HEAD_AMOUNT {
+                    return;
+                }
+                processor.backward_current_head(amount);
+            }
+            Instruction::DISTANCE => {
+                let head_nr = processor.pop_head_nr();
+
+                let current_address = processor.get_current_head();
+                match current_address {
+                    Some(address) => match processor.get_head(head_nr) {
+                        Some(other_address) => {
+                            let distance = if address > other_address {
+                                address - other_address
+                            } else {
+                                other_address - address
+                            };
+                            processor.push(distance as u64);
+                        }
+                        None => {
+                            processor.push(0);
+                        }
+                    },
+                    None => {
+                        processor.push(0);
+                    }
+                }
             }
             Instruction::READ => {
-                let popped = processor.pop_address(memory);
+                let popped = processor.get_current_head();
                 let value = match popped {
                     Some(address) => memory.values[address],
                     // out of bounds address
@@ -283,7 +308,7 @@ impl Instruction {
             }
             Instruction::WRITE => {
                 let value = processor.pop();
-                let popped = processor.pop_address(memory);
+                let popped = processor.get_current_head();
                 match popped {
                     Some(address) => {
                         let constrained_value = if value >= u8::MAX as u64 {
@@ -300,9 +325,27 @@ impl Instruction {
                 }
             }
 
+            // Control
+            Instruction::JMP => {
+                let popped = processor.get_current_head();
+                if let Some(address) = popped {
+                    processor.jump(address);
+                }
+            }
+            Instruction::JMPIF => {
+                let condition = processor.pop();
+                let popped = processor.get_current_head();
+                if condition == 0 {
+                    return;
+                }
+                if let Some(address) = popped {
+                    processor.jump(address);
+                }
+            }
+
             // Processors
             Instruction::START => {
-                let popped = processor.pop_address(memory);
+                let popped = processor.get_current_head();
                 if let Some(address) = popped {
                     processor.start(address);
                 }
@@ -322,11 +365,10 @@ impl Instruction {
 
             // split and merge
             Instruction::SPLIT => {
-                let direction = processor.pop();
-                let popped = processor.pop_address(memory);
+                let direction = processor.pop_clamped(4);
+                let popped = processor.get_current_head();
                 if let Some(address) = popped {
-                    let direction = if let Some(direction) =
-                        num::FromPrimitive::from_u8((direction % 4) as u8)
+                    let direction = if let Some(direction) = num::FromPrimitive::from_u64(direction)
                     {
                         direction
                     } else {
@@ -450,13 +492,78 @@ mod tests {
     #[test]
     fn test_addr() {
         let exec = execute("ADDR");
-        assert_eq!(exec.processor.current_stack(), [0]);
+        assert_eq!(exec.processor.get_current_head(), Some(0));
     }
 
     #[test]
     fn test_addr_further() {
         let exec = execute("N1 N2 N4 ADDR");
-        assert_eq!(exec.processor.current_stack(), [1, 2, 4, 3]);
+        assert_eq!(exec.processor.get_current_head(), Some(3));
+    }
+
+    #[test]
+    fn test_change_current_head() {
+        let exec = execute("N1 HEAD ADDR");
+        assert_eq!(exec.processor.get_current_head(), Some(2));
+        assert_eq!(exec.processor.current_head, 1);
+    }
+
+    #[test]
+    fn test_change_current_head_clamped() {
+        let exec = execute("N7 N3 MUL HEAD ADDR");
+        assert_eq!(exec.processor.current_head, 1);
+        assert_eq!(exec.processor.get_current_head(), Some(4));
+    }
+
+    #[test]
+    fn test_copy_head() {
+        let exec = execute("N1 HEAD ADDR N0 HEAD N1 COPY");
+        assert_eq!(exec.processor.get_current_head(), Some(2));
+        assert_eq!(exec.processor.get_head(1), Some(2));
+        assert_eq!(exec.processor.current_head, 0);
+    }
+
+    #[test]
+    fn test_forward() {
+        let exec = execute("N0 HEAD ADDR N2 FORWARD");
+        assert_eq!(exec.processor.get_current_head(), Some(4));
+        assert_eq!(exec.processor.current_stack(), &[] as &[u64])
+    }
+
+    #[test]
+    fn test_forward_out_of_bounds() {
+        let exec = execute("N0 HEAD ADDR N8 N8 MUL N8 MUL N8 MUL FORWARD");
+        assert_eq!(exec.processor.get_current_head(), Some(2));
+    }
+
+    #[test]
+    fn test_backward() {
+        let exec = execute("N0 HEAD ADDR N1 BACKWARD");
+        assert_eq!(exec.processor.get_current_head(), Some(1));
+    }
+
+    #[test]
+    fn test_backward_out_of_bounds() {
+        let exec = execute("N0 HEAD ADDR N3 BACKWARD");
+        assert_eq!(exec.processor.get_current_head(), Some(2));
+    }
+
+    #[test]
+    fn test_distance() {
+        let exec = execute("N0 HEAD ADDR N1 HEAD ADDR N0 DISTANCE");
+        assert_eq!(exec.processor.current_stack(), [3]);
+    }
+
+    #[test]
+    fn test_distance_with_self() {
+        let exec = execute("N0 HEAD ADDR N1 HEAD ADDR N1 DISTANCE");
+        assert_eq!(exec.processor.current_stack(), [0]);
+    }
+
+    #[test]
+    fn test_distance_with_reverse() {
+        let exec = execute("N0 HEAD ADDR N1 HEAD ADDR N0 HEAD N1 DISTANCE");
+        assert_eq!(exec.processor.current_stack(), [3]);
     }
 
     #[test]
@@ -468,8 +575,8 @@ mod tests {
 
     #[test]
     fn test_jump_further() {
-        let exec = execute("N2 JMP NOOP NOOP N1 N2");
-        assert_eq!(exec.processor.current_stack(), [1, 2]);
+        let exec = execute("ADDR N6 FORWARD JMP N1 N2 N3 N4");
+        assert_eq!(exec.processor.current_stack(), [3, 4]);
     }
 
     #[test]
@@ -481,16 +588,9 @@ mod tests {
 
     #[test]
     fn test_jmpif_false() {
-        let exec = execute("ADDR N1 N1 SUB JMPIF");
+        let exec = execute("ADDR N0 JMPIF");
         assert_eq!(exec.processor.current_stack(), &[] as &[u64]);
-        assert_eq!(exec.processor.address(), 5);
-    }
-
-    #[test]
-    fn test_call() {
-        let exec = execute("ADDR N5 ADD CALL N3 JMP");
-        assert_eq!(exec.processor.current_stack(), [3]);
-        assert_eq!(exec.processor.address(), 5);
+        assert_eq!(exec.processor.address(), 3);
     }
 
     #[test]
@@ -507,23 +607,31 @@ mod tests {
     #[test]
     fn test_copy_self() {
         let text = "
-            ADDR  # c
-            ADDR  # c loop
-            SWAP  # loop c
-            DUP   # loop c c
-            READ  # loop c inst
-            SWAP  # loop inst c
-            DUP   # loop inst c c
+            ADDR  # h0 = start
+            N1
+            HEAD   
+            ADDR  # h1 = loop
+            N2
+            HEAD
+            N0
+            COPY  # h2 = h0
             N8
             N8
             MUL
-            ADD   # loop inst c c+64
-            ROT   # loop c c+64 inst
-            WRITE # loop c
+            FORWARD # h2 forward 64
+            N0
+            HEAD 
+            READ  # inst from position 0
             N1
-            ADD   # loop c+1
-            SWAP  # c+1 loop
-            JMP";
+            FORWARD # h0 forward 
+            N2
+            HEAD
+            WRITE # write inst to h2
+            N1
+            FORWARD  # move h2 forward
+            N1
+            HEAD
+            JMP   # jump back to h1, loop";
 
         let mut exec = execute_lines(text);
         let words = text_to_words(text);
