@@ -5,6 +5,7 @@ use crate::world::World;
 use rand::rngs::SmallRng;
 use std::error::Error;
 use std::fs::File;
+use std::io::{BufWriter, Write};
 use tokio::sync::mpsc;
 
 pub struct Frequencies {
@@ -74,7 +75,7 @@ impl Simulation {
                 );
             }
             if save && self.dump {
-                let file = File::create(format!("apilar-dump{}.cbor", save_nr))?;
+                let file = BufWriter::new(File::create(format!("apilar-dump{}.cbor", save_nr))?);
                 serde_cbor::to_writer(file, &world)?;
                 save_nr += 1;
             }
