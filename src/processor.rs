@@ -8,7 +8,7 @@ use serde_big_array::BigArray;
 use serde_derive::{Deserialize, Serialize};
 
 const STACK_SIZE: usize = 64;
-pub const HEADS_AMOUNT: usize = 10;
+pub const HEADS_AMOUNT: usize = 8;
 const MAX_ADDRESS_DISTANCE: usize = 1024;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -108,11 +108,11 @@ impl Processor {
         self.jump(address);
     }
 
-    pub fn set_current_head(&mut self, value: usize) {
+    pub fn set_current_head_value(&mut self, value: usize) {
         self.heads[self.current_head] = Some(value);
     }
 
-    pub fn get_current_head(&self) -> Option<usize> {
+    pub fn get_current_head_value(&self) -> Option<usize> {
         self.heads[self.current_head]
     }
 
@@ -161,6 +161,24 @@ impl Processor {
 
     pub fn address(&self) -> u64 {
         self.ip as u64
+    }
+
+    pub fn shift_heads_backward(&mut self, distance: usize) {
+        for i in 0..HEADS_AMOUNT {
+            let head = self.heads[i];
+            if let Some(address) = head {
+                self.heads[i] = Some(address - distance);
+            }
+        }
+    }
+
+    pub fn shift_heads_forward(&mut self, distance: usize) {
+        for i in 0..HEADS_AMOUNT {
+            let head = self.heads[i];
+            if let Some(address) = head {
+                self.heads[i] = Some(address + distance);
+            }
+        }
     }
 
     pub fn push(&mut self, value: u64) {
@@ -322,65 +340,65 @@ mod tests {
         processor.push(5);
         assert_eq!(processor.pop_head_nr(), 5);
         processor.push(10);
-        assert_eq!(processor.pop_head_nr(), 0);
-        assert_eq!(processor.pop_head_nr(), 5);
+        assert_eq!(processor.pop_head_nr(), 2);
+        assert_eq!(processor.pop_head_nr(), 7);
     }
 
     #[test]
     fn test_get_current_head_not_yet_set() {
         let processor = Processor::new(0);
-        assert_eq!(processor.get_current_head(), None);
+        assert_eq!(processor.get_current_head_value(), None);
     }
 
     #[test]
     fn test_get_current_head_after_set() {
         let mut processor = Processor::new(0);
-        processor.set_current_head(10);
-        assert_eq!(processor.get_current_head(), Some(10));
+        processor.set_current_head_value(10);
+        assert_eq!(processor.get_current_head_value(), Some(10));
     }
 
     #[test]
     fn test_forward_current_head() {
         let memory = Memory::new(100);
         let mut processor = Processor::new(0);
-        processor.set_current_head(10);
+        processor.set_current_head_value(10);
         processor.forward_current_head(14, &memory);
-        assert_eq!(processor.get_current_head(), Some(24));
+        assert_eq!(processor.get_current_head_value(), Some(24));
     }
 
     #[test]
     fn test_forward_current_head_out_of_bounds_memory() {
         let memory = Memory::new(100);
         let mut processor = Processor::new(0);
-        processor.set_current_head(10);
+        processor.set_current_head_value(10);
         processor.forward_current_head(100, &memory);
-        assert_eq!(processor.get_current_head(), Some(10));
+        assert_eq!(processor.get_current_head_value(), Some(10));
     }
 
     #[test]
     fn test_forward_current_head_out_of_bounds_address_distance() {
         let memory = Memory::new(MAX_ADDRESS_DISTANCE * 2);
         let mut processor = Processor::new(0);
-        processor.set_current_head(10);
+        processor.set_current_head_value(10);
         processor.forward_current_head(MAX_ADDRESS_DISTANCE + 1, &memory);
-        assert_eq!(processor.get_current_head(), Some(10));
+        assert_eq!(processor.get_current_head_value(), Some(10));
     }
 
     #[test]
     fn test_backward_current_head() {
         let mut processor = Processor::new(0);
-        processor.set_current_head(50);
+        processor.set_current_head_value(50);
         processor.backward_current_head(10);
-        assert_eq!(processor.get_current_head(), Some(40));
+        assert_eq!(processor.get_current_head_value(), Some(40));
     }
 
     #[test]
     fn test_backward_current_head_out_of_bounds_address_distance() {
         let mut processor = Processor::new(MAX_ADDRESS_DISTANCE * 2);
-        processor.set_current_head(MAX_ADDRESS_DISTANCE + 10);
+        processor.set_current_head_value(MAX_ADDRESS_DISTANCE + 10);
         processor.backward_current_head(MAX_ADDRESS_DISTANCE + 1);
         assert_eq!(
-            processor.get_current_head(),
+            processor.get_current_head_value(),
             Some(MAX_ADDRESS_DISTANCE + 10)
         );
     }

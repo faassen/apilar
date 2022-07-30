@@ -7,7 +7,7 @@ pub struct Memory {
 
 impl Memory {
     pub fn new(size: usize) -> Memory {
-        let values: Vec<u8> = vec![0; size];
+        let values: Vec<u8> = vec![u8::MAX; size];
         Memory { values }
     }
 

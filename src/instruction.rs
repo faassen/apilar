@@ -10,8 +10,6 @@ const MAX_MOVE_HEAD_AMOUNT: usize = 1024;
 
 #[derive(EnumIter, Debug, PartialEq, Display, FromPrimitive, ToPrimitive)]
 pub enum Instruction {
-    // Noop
-    NOOP = 0,
     // Numbers
     N0,
     N1,
@@ -78,6 +76,9 @@ pub enum Instruction {
     // resources
     EAT,
     GROW,
+
+    // Noop
+    NOOP = u8::MAX as isize,
 }
 
 impl Instruction {
@@ -249,7 +250,7 @@ impl Instruction {
                 processor.current_head = head_nr as usize;
             }
             Instruction::ADDR => {
-                processor.set_current_head(processor.ip);
+                processor.set_current_head_value(processor.ip);
             }
             Instruction::COPY => {
                 let head_nr = processor.pop_head_nr();
@@ -257,7 +258,7 @@ impl Instruction {
                 let value = processor.get_head(head_nr);
 
                 if let Some(value) = value {
-                    processor.set_current_head(value)
+                    processor.set_current_head_value(value)
                 }
             }
             Instruction::FORWARD => {
@@ -277,7 +278,7 @@ impl Instruction {
             Instruction::DISTANCE => {
                 let head_nr = processor.pop_head_nr();
 
-                let current_address = processor.get_current_head();
+                let current_address = processor.get_current_head_value();
                 match current_address {
                     Some(address) => match processor.get_head(head_nr) {
                         Some(other_address) => {
@@ -298,7 +299,7 @@ impl Instruction {
                 }
             }
             Instruction::READ => {
-                let popped = processor.get_current_head();
+                let popped = processor.get_current_head_value();
                 let value = match popped {
                     Some(address) => memory.values[address],
                     // out of bounds address
@@ -308,7 +309,7 @@ impl Instruction {
             }
             Instruction::WRITE => {
                 let value = processor.pop();
-                let popped = processor.get_current_head();
+                let popped = processor.get_current_head_value();
                 match popped {
                     Some(address) => {
                         let constrained_value = if value >= u8::MAX as u64 {
@@ -327,14 +328,14 @@ impl Instruction {
 
             // Control
             Instruction::JMP => {
-                let popped = processor.get_current_head();
+                let popped = processor.get_current_head_value();
                 if let Some(address) = popped {
                     processor.jump(address);
                 }
             }
             Instruction::JMPIF => {
                 let condition = processor.pop();
-                let popped = processor.get_current_head();
+                let popped = processor.get_current_head_value();
                 if condition == 0 {
                     return;
                 }
@@ -345,7 +346,7 @@ impl Instruction {
 
             // Processors
             Instruction::START => {
-                let popped = processor.get_current_head();
+                let popped = processor.get_current_head_value();
                 if let Some(address) = popped {
                     processor.start(address);
                 }
@@ -366,7 +367,7 @@ impl Instruction {
             // split and merge
             Instruction::SPLIT => {
                 let direction = processor.pop_clamped(4);
-                let popped = processor.get_current_head();
+                let popped = processor.get_current_head_value();
                 if let Some(address) = popped {
                     let direction = if let Some(direction) = num::FromPrimitive::from_u64(direction)
                     {
@@ -403,12 +404,12 @@ mod tests {
 
     #[test]
     fn test_decode_success() {
-        assert_eq!(Instruction::decode(0), Some(Instruction::NOOP));
+        assert_eq!(Instruction::decode(0), Some(Instruction::N0));
     }
 
     #[test]
     fn test_decode_failure() {
-        assert_eq!(Instruction::decode(u8::MAX), None);
+        assert_eq!(Instruction::decode(u8::MAX - 1), None);
     }
 
     #[test]
@@ -492,33 +493,33 @@ mod tests {
     #[test]
     fn test_addr() {
         let exec = execute("ADDR");
-        assert_eq!(exec.processor.get_current_head(), Some(0));
+        assert_eq!(exec.processor.get_current_head_value(), Some(0));
     }
 
     #[test]
     fn test_addr_further() {
         let exec = execute("N1 N2 N4 ADDR");
-        assert_eq!(exec.processor.get_current_head(), Some(3));
+        assert_eq!(exec.processor.get_current_head_value(), Some(3));
     }
 
     #[test]
     fn test_change_current_head() {
         let exec = execute("N1 HEAD ADDR");
-        assert_eq!(exec.processor.get_current_head(), Some(2));
+        assert_eq!(exec.processor.get_current_head_value(), Some(2));
         assert_eq!(exec.processor.current_head, 1);
     }
 
     #[test]
     fn test_change_current_head_clamped() {
         let exec = execute("N7 N3 MUL HEAD ADDR");
-        assert_eq!(exec.processor.current_head, 1);
-        assert_eq!(exec.processor.get_current_head(), Some(4));
+        assert_eq!(exec.processor.current_head, 5);
+        assert_eq!(exec.processor.get_current_head_value(), Some(4));
     }
 
     #[test]
     fn test_copy_head() {
         let exec = execute("N1 HEAD ADDR N0 HEAD N1 COPY");
-        assert_eq!(exec.processor.get_current_head(), Some(2));
+        assert_eq!(exec.processor.get_current_head_value(), Some(2));
         assert_eq!(exec.processor.get_head(1), Some(2));
         assert_eq!(exec.processor.current_head, 0);
     }
@@ -526,26 +527,26 @@ mod tests {
     #[test]
     fn test_forward() {
         let exec = execute("N0 HEAD ADDR N2 FORWARD");
-        assert_eq!(exec.processor.get_current_head(), Some(4));
+        assert_eq!(exec.processor.get_current_head_value(), Some(4));
         assert_eq!(exec.processor.current_stack(), &[] as &[u64])
     }
 
     #[test]
     fn test_forward_out_of_bounds() {
         let exec = execute("N0 HEAD ADDR N8 N8 MUL N8 MUL N8 MUL FORWARD");
-        assert_eq!(exec.processor.get_current_head(), Some(2));
+        assert_eq!(exec.processor.get_current_head_value(), Some(2));
     }
 
     #[test]
     fn test_backward() {
         let exec = execute("N0 HEAD ADDR N1 BACKWARD");
-        assert_eq!(exec.processor.get_current_head(), Some(1));
+        assert_eq!(exec.processor.get_current_head_value(), Some(1));
     }
 
     #[test]
     fn test_backward_out_of_bounds() {
         let exec = execute("N0 HEAD ADDR N3 BACKWARD");
-        assert_eq!(exec.processor.get_current_head(), Some(2));
+        assert_eq!(exec.processor.get_current_head_value(), Some(2));
     }
 
     #[test]
