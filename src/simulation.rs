@@ -75,7 +75,7 @@ impl Simulation {
                 );
             }
             if save && self.dump {
-                let file = BufWriter::new(File::create(format!("apilar-dump{}.cbor", save_nr))?);
+                let file = BufWriter::new(File::create(format!("apilar-dump{:06}.cbor", save_nr))?);
                 serde_cbor::to_writer(file, &world)?;
                 save_nr += 1;
             }
