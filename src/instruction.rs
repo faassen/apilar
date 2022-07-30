@@ -277,7 +277,6 @@ impl Instruction {
             }
             Instruction::DISTANCE => {
                 let head_nr = processor.pop_head_nr();
-
                 let current_address = processor.get_current_head_value();
                 match current_address {
                     Some(address) => match processor.get_head(head_nr) {
@@ -290,10 +289,12 @@ impl Instruction {
                             processor.push(distance as u64);
                         }
                         None => {
+                            println!("No other addr");
                             processor.push(0);
                         }
                     },
                     None => {
+                        println!("No current addr");
                         processor.push(0);
                     }
                 }

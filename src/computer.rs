@@ -187,66 +187,77 @@ mod tests {
     use rand::rngs::SmallRng;
     use rand::SeedableRng;
 
-    // #[test]
-    // fn test_replicate() {
-    //     let assembler = Assembler::new();
+    #[test]
+    fn test_replicate() {
+        let assembler = Assembler::new();
 
-    //     let text = "
-    //     ADDR  # c
-    //     DUP   # preserve starting point
-    //     ADDR  # c loop
-    //     SWAP  # loop c
-    //     DUP   # loop c c
-    //     READ  # loop c inst
-    //     SWAP  # loop inst c
-    //     DUP   # loop inst c c
-    //     N8
-    //     N8
-    //     MUL
-    //     ADD   # loop inst c c+64
-    //     ROT   # loop c c+64 inst
-    //     WRITE # loop c
-    //     N1
-    //     ADD   # loop c+1
-    //     DUP   # loop c+1 c+1
-    //     ADDR
-    //     N8
-    //     N8
-    //     N4
-    //     ADD
-    //     ADD   # add to get end of replicator
-    //     ADD   # loop c+1 c+1 end
-    //     LT    # loop c+1 b
-    //     ROT   # c+1 b loop
-    //     SWAP  # c+1 loop b
-    //     JMPIF # go to loop
-    //     DROP  # start
-    //     DUP   # start start
-    //     N8
-    //     N8
-    //     MUL
-    //     ADD   # start newstart
-    //     START # start
-    //     JMP   # jump to first addr
-    //     ";
-    //     let words = text_to_words(text);
-    //     let words_amount = words.len();
+        let text = "
+        ADDR  # h0 = start
+        N1
+        HEAD
+        N0
+        COPY  # h1 = reader
+        N2
+        HEAD
+        N0    
+        COPY  # h2 = writer
+        N8
+        N8
+        MUL
+        DUP
+        FORWARD # h2 forward 64
+        DUP
+        ADD # 128 on stack
+        N3
+        HEAD
+        N2
+        COPY  # h3 = h2, start offspring
+        N4
+        HEAD  
+        ADDR  # h4 = loop
+        N1
+        HEAD
+        READ  # read from h1
+        N1
+        FORWARD
+        N2
+        HEAD
+        WRITE # write to h2
+        N1
+        FORWARD
+        DUP   # duplicate 128 
+        N3
+        DISTANCE # distance h2 and h3
+        SWAP
+        LT    # if distance < 128
+        N4
+        HEAD
+        JMPIF # jump to h4, loop
+        N3
+        HEAD
+        START # start offspring at N3
+        N0
+        HEAD
+        JMP   # jump to first addr
+        ";
+        let words = text_to_words(text);
+        let words_amount = words.len();
 
-    //     let mut computer = Computer::new(1024, 10, 100);
-    //     assembler.assemble_words(words.clone(), &mut computer.memory, 0);
-    //     let mut small_rng = SmallRng::from_seed([0; 32]);
+        let mut computer = Computer::new(1024, 10, 100);
+        assembler.assemble_words(words.clone(), &mut computer.memory, 0);
+        let mut small_rng = SmallRng::from_seed([0; 32]);
 
-    //     computer.add_processor(0);
-    //     computer.execute(&mut small_rng, words_amount * words_amount);
+        computer.add_processor(0);
+        computer.execute(&mut small_rng, words_amount * 64);
 
-    //     let disassembled =
-    //         assembler.disassemble_to_words(&computer.memory.values[64..64 + words_amount]);
+        let disassembled =
+            assembler.disassemble_to_words(&computer.memory.values[64..64 + words_amount]);
 
-    //     assert_eq!(&disassembled, &words);
-    //     // a new processor was spawned
-    //     assert_eq!(computer.processors.len(), 2);
-    //     assert_eq!(computer.processors[1].address(), 64);
-    // }
+        assert_eq!(&disassembled, &words);
+        // a new processor was spawned
+        assert_eq!(computer.processors.len(), 2);
+        assert_eq!(computer.processors[1].address(), 64);
+    }
 
     #[test]
     fn test_split() {
