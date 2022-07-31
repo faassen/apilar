@@ -20,8 +20,9 @@ pub struct Processor {
     pub want_start: Option<usize>,
     pub want_split: Option<(Direction, usize)>,
     pub want_merge: Option<Direction>,
-    pub want_eat: bool,
-    pub want_grow: bool,
+    pub want_eat: Option<u64>,
+    pub want_grow: Option<u64>,
+    pub want_shrink: Option<u64>,
     pub current_head: usize,
     heads: [Option<usize>; HEADS_AMOUNT],
     #[serde(with = "BigArray")]
@@ -40,8 +41,9 @@ impl Processor {
             want_start: None,
             want_split: None,
             want_merge: None,
-            want_eat: false,
-            want_grow: false,
+            want_eat: None,
+            want_grow: None,
+            want_shrink: None,
             stack_pointer: 0,
         }
     }
@@ -77,8 +79,11 @@ impl Processor {
         amount: usize,
     ) -> usize {
         self.want_start = None;
-        self.want_eat = false;
-        self.want_grow = false;
+
+        self.want_eat = None;
+        self.want_grow = None;
+        self.want_shrink = None;
+
         self.want_split = None;
         self.want_merge = None;
         let mut total = 0;
@@ -163,37 +168,56 @@ impl Processor {
         self.ip as u64
     }
 
-    pub fn fix_out_of_bounds_heads(&mut self, split_address: usize) {
+    pub fn adjust_backward(&mut self, address: usize, distance: usize) {
+        if let Some(new_ip) = adjust_backward(self.ip, address, distance) {
+            self.ip = new_ip
+        } else {
+            self.ip = 0;
+            self.alive = false;
+        }
+
+        if let Some(start_address) = self.want_start {
+            self.want_start = adjust_backward(start_address, address, distance);
+        }
+
+        if let Some((direction, split_address)) = self.want_split {
+            if let Some(new_split_address) = adjust_backward(split_address, address, distance) {
+                self.want_split = Some((direction, new_split_address));
+            } else {
+                self.want_split = None;
+            }
+        }
+
         for i in 0..HEADS_AMOUNT {
             let head = self.heads[i];
-            if let Some(address) = head {
-                if address >= split_address {
-                    self.heads[i] = Some(0);
+            if let Some(head_address) = head {
+                self.heads[i] = adjust_backward(head_address, address, distance);
+            }
+        }
+    }
+
+    pub fn adjust_forward(&mut self, address: usize, distance: usize) {
+        if self.ip >= address {
+            self.ip += distance;
+        }
+        if let Some(start_address) = self.want_start {
+            if start_address >= address {
+                self.want_start = Some(start_address + distance);
+            }
+        }
+
+        if let Some((direction, split_address)) = self.want_split {
+            if split_address >= address {
+                self.want_split = Some((direction, split_address + distance));
+            }
+        }
+
+        for i in 0..HEADS_AMOUNT {
+            let head = self.heads[i];
+            if let Some(head_address) = head {
+                if head_address >= address {
+                    self.heads[i] = Some(head_address + distance);
                 }
-            }
-        }
-    }
-
-    pub fn shift_heads_backward(&mut self, distance: usize) {
-        for i in 0..HEADS_AMOUNT {
-            let head = self.heads[i];
-            if let Some(address) = head {
-                let new_value = if address > distance {
-                    address - distance
-                } else {
-                    // if the head is in the other half, make it 0
-                    0
-                };
-                self.heads[i] = Some(new_value);
-            }
-        }
-    }
-
-    pub fn shift_heads_forward(&mut self, distance: usize) {
-        for i in 0..HEADS_AMOUNT {
-            let head = self.heads[i];
-            if let Some(address) = head {
-                self.heads[i] = Some(address + distance);
             }
         }
     }
@@ -300,6 +324,17 @@ impl Processor {
         self.stack[one] = self.stack[two];
         self.stack[two] = self.stack[three];
         self.stack[three] = temp;
+    }
+}
+
+fn adjust_backward(address: usize, start: usize, distance: usize) -> Option<usize> {
+    if address < start {
+        return Some(address);
+    }
+    if address - start >= distance {
+        Some(address - distance)
+    } else {
+        None
     }
 }
 
@@ -511,5 +546,139 @@ mod tests {
         assert_eq!(processor.pop(), 1);
         assert_eq!(processor.pop(), 3);
         assert_eq!(processor.pop(), 2);
+    }
+
+    #[test]
+    fn test_adjust_forward() {
+        let mut processor = Processor::new(0);
+
+        processor.want_start = Some(10);
+        processor.want_split = Some((Direction::North, 20));
+
+        processor.heads[0] = Some(15);
+        processor.heads[1] = Some(25);
+
+        processor.adjust_forward(0, 10);
+        assert_eq!(processor.ip, 10);
+        assert_eq!(processor.want_start, Some(20));
+        assert_eq!(processor.want_split, Some((Direction::North, 30)));
+        assert_eq!(processor.heads[0], Some(25));
+        assert_eq!(processor.heads[1], Some(35));
+    }
+
+    #[test]
+    fn test_adjust_forward_from_address() {
+        let mut processor = Processor::new(0);
+
+        processor.want_start = Some(10);
+        processor.want_split = Some((Direction::North, 20));
+
+        processor.heads[0] = Some(15);
+        processor.heads[1] = Some(25);
+        processor.heads[2] = Some(10);
+
+        processor.adjust_forward(15, 10);
+        assert_eq!(processor.ip, 0);
+        assert_eq!(processor.want_start, Some(10));
+        assert_eq!(processor.want_split, Some((Direction::North, 30)));
+        assert_eq!(processor.heads[0], Some(25));
+        assert_eq!(processor.heads[1], Some(35));
+        assert_eq!(processor.heads[2], Some(10));
+    }
+
+    #[test]
+    fn test_adjust_backward() {
+        let mut processor = Processor::new(5);
+
+        processor.want_start = Some(10);
+        processor.want_split = Some((Direction::North, 20));
+
+        processor.heads[0] = Some(15);
+        processor.heads[1] = Some(25);
+
+        processor.adjust_backward(0, 5);
+        assert_eq!(processor.ip, 0);
+        assert_eq!(processor.want_start, Some(5));
+        assert_eq!(processor.want_split, Some((Direction::North, 15)));
+        assert_eq!(processor.heads[0], Some(10));
+        assert_eq!(processor.heads[1], Some(20));
+    }
+
+    #[test]
+    fn test_adjust_backward_illegal_ip() {
+        let mut processor = Processor::new(1);
+
+        processor.adjust_backward(0, 2);
+
+        assert_eq!(processor.ip, 0);
+        assert!(!processor.alive);
+    }
+
+    #[test]
+    fn test_adjust_backward_illegal_ip_after_deletion() {
+        let mut processor = Processor::new(3);
+
+        processor.adjust_backward(1, 3);
+
+        assert_eq!(processor.ip, 0);
+        assert!(!processor.alive);
+    }
+
+    #[test]
+    fn test_adjust_backward_still_legal() {
+        let mut processor = Processor::new(4);
+
+        processor.adjust_backward(1, 3);
+
+        assert_eq!(processor.ip, 1);
+        assert!(processor.alive);
+    }
+
+    #[test]
+    fn test_adjust_backward_illegal_want_start() {
+        let mut processor = Processor::new(0);
+        processor.want_start = Some(1);
+
+        processor.adjust_backward(0, 2);
+
+        assert_eq!(processor.want_start, None);
+    }
+
+    #[test]
+    fn test_adjust_backward_illegal_want_split() {
+        let mut processor = Processor::new(0);
+        processor.want_split = Some((Direction::North, 1));
+
+        processor.adjust_backward(0, 2);
+
+        assert_eq!(processor.want_split, None);
+    }
+
+    #[test]
+    fn test_adjust_backward_illegal_head() {
+        let mut processor = Processor::new(0);
+        processor.heads[0] = Some(1);
+
+        processor.adjust_backward(0, 2);
+
+        assert_eq!(processor.heads[0], None);
+    }
+
+    #[test]
+    fn test_adjust_backward_after_shrink() {
+        let mut processor = Processor::new(5);
+
+        processor.want_start = Some(10);
+        processor.want_split = Some((Direction::North, 20));
+
+        processor.heads[0] = Some(15);
+        processor.heads[1] = Some(25);
+
+        processor.adjust_backward(6, 30);
+        assert_eq!(processor.ip, 5);
+        assert_eq!(processor.want_start, None);
+        assert_eq!(processor.want_split, None);
+        assert_eq!(processor.heads[0], None);
+        assert_eq!(processor.heads[1], None);
     }
 }

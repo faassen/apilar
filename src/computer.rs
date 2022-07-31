@@ -34,12 +34,10 @@ impl Computer {
 
         for mut processor in self.processors.clone() {
             if processor.ip < address {
-                // reset heads that happen to be in the other half
-                processor.fix_out_of_bounds_heads(address);
+                processor.adjust_backward(address, child_memory_values.len());
                 parent_processors.push(processor);
             } else {
-                processor.ip -= address;
-                processor.shift_heads_backward(address);
+                processor.adjust_backward(0, address);
                 child_processors.push(processor);
             }
         }
@@ -62,8 +60,7 @@ impl Computer {
     pub fn merge(&mut self, other: &Computer) {
         for mut processor in other.processors.clone() {
             let distance = self.memory.values.len();
-            processor.ip += distance;
-            processor.shift_heads_forward(distance);
+            processor.adjust_forward(0, distance);
             self.processors.push(processor);
         }
         self.memory.values.extend(other.memory.values.clone());
@@ -105,7 +102,6 @@ impl Computer {
                 i += 1;
             }
         }
-
         // add new processors to start
         for address in to_start {
             if self.processors.len() < self.max_processors {
@@ -114,9 +110,35 @@ impl Computer {
         }
 
         // grow memory if we want to grow
-        if self.want_grow() && self.resources > 0 {
-            self.memory.values.push(u8::MAX);
-            self.resources -= 1;
+        if let Some(amount) = self.want_grow() {
+            let amount = if amount <= self.resources {
+                amount
+            } else {
+                self.resources
+            };
+            for _ in 0..amount {
+                self.memory.values.push(u8::MAX);
+            }
+            self.resources -= amount;
+        }
+
+        // shrink memory if we want to shrink
+        if let Some(amount) = self.want_shrink() {
+            let amount = amount as usize;
+            let amount = if amount < self.memory.values.len() {
+                amount
+            } else {
+                self.memory.values.len()
+            };
+
+            for _ in 0..amount {
+                self.memory.values.pop();
+            }
+            // ensure that processors referring to the shrunken bit are fixed up
+            for processor in &mut self.processors {
+                processor.adjust_backward(self.memory.values.len(), amount);
+            }
+            self.resources += amount as u64;
         }
 
         total
@@ -131,6 +153,22 @@ impl Computer {
             self.memory.values[address] = rng.gen::<u8>();
         }
     }
+
+    // pub fn mutate_memory_insert(&mut self, rng: &mut SmallRng) {
+    //     if self.memory.values.is_empty() {
+    //         return;
+    //     }
+    //     let address = rng.gen_range(0..self.memory.values.len());
+    //     if self.resources > 0 {
+    //         self.memory.values.insert(address, rng.gen::<u8>());
+    //         self.resources -= 1;
+    //         for processor in &mut self.processors {
+    //             if processor.ip >= address {
+    //                 processor.ip += 1;
+    //             }
+    //         }
+    //     }
+    // }
 
     pub fn mutate_processors(&mut self, rng: &mut SmallRng, amount: u64) {
         for _ in 0..amount {
@@ -163,22 +201,52 @@ impl Computer {
         None
     }
 
-    pub fn want_eat(&self) -> bool {
+    pub fn want_eat(&self) -> Option<u64> {
+        let mut max = 0;
         for processor in &self.processors {
-            if processor.want_eat {
-                return true;
+            if let Some(amount) = processor.want_eat {
+                if amount > max {
+                    max = amount;
+                }
             }
         }
-        false
+        if max > 0 {
+            Some(max)
+        } else {
+            None
+        }
     }
 
-    pub fn want_grow(&self) -> bool {
+    pub fn want_grow(&self) -> Option<u64> {
+        let mut max = 0;
         for processor in &self.processors {
-            if processor.want_grow {
-                return true;
+            if let Some(amount) = processor.want_grow {
+                if amount > max {
+                    max = amount;
+                }
             }
         }
-        false
+        if max > 0 {
+            Some(max)
+        } else {
+            None
+        }
+    }
+
+    pub fn want_shrink(&self) -> Option<u64> {
+        let mut max = 0;
+        for processor in &self.processors {
+            if let Some(amount) = processor.want_shrink {
+                if amount > max {
+                    max = amount;
+                }
+            }
+        }
+        if max > 0 {
+            Some(max)
+        } else {
+            None
+        }
     }
 }
 
@@ -325,15 +393,15 @@ mod tests {
         assert_eq!(computer.processors.len(), 2);
         assert_eq!(computer.processors[0].ip, 0);
         assert_eq!(computer.processors[0].get_current_head_value(), Some(0));
-        // oob gets reset to 0
-        assert_eq!(computer.processors[1].get_current_head_value(), Some(0));
+        // oob gets reset to None
+        assert_eq!(computer.processors[1].get_current_head_value(), None);
 
         assert_eq!(splitted.memory.values, [3, 4]);
         assert_eq!(splitted.resources, 50);
         assert_eq!(splitted.processors.len(), 2);
         assert_eq!(splitted.processors[0].ip, 0);
-        // oob gets reset to 0
-        assert_eq!(splitted.processors[0].get_current_head_value(), Some(0));
+        // oob gets reset to None
+        assert_eq!(splitted.processors[0].get_current_head_value(), None);
         assert_eq!(splitted.processors[1].get_current_head_value(), Some(0));
     }
 

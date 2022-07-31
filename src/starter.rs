@@ -26,7 +26,11 @@ COPY  # h3 = h2, start offspring
 N4
 HEAD  
 ADDR  # h4 = loop
+N8
+N8
+MUL
 EAT
+N1
 GROW
 N1
 HEAD

@@ -94,6 +94,7 @@ pub struct Run {
     #[clap(long, default_value_t = 1, value_parser)]
     processor_stack_mutation_amount: u64,
 
+    // XXX this is now superfluous
     #[clap(long, default_value_t = 100, value_parser)]
     eat_amount: u64,
 

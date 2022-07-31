@@ -7,6 +7,9 @@ use crate::memory::Memory;
 use crate::processor::Processor;
 
 const MAX_MOVE_HEAD_AMOUNT: usize = 1024;
+const MAX_EAT_AMOUNT: u64 = 128;
+const MAX_GROW_AMOUNT: u64 = 16;
+const MAX_SHRINK_AMOUNT: u64 = 16;
 
 #[derive(EnumIter, Debug, PartialEq, Display, FromPrimitive, ToPrimitive)]
 pub enum Instruction {
@@ -76,6 +79,8 @@ pub enum Instruction {
     // resources
     EAT,
     GROW,
+    SHRINK,
+    MEMORY,
 
     // Noop
     NOOP = u8::MAX as isize,
@@ -357,10 +362,20 @@ impl Instruction {
 
             // resources
             Instruction::EAT => {
-                processor.want_eat = true;
+                let amount = processor.pop_clamped(MAX_EAT_AMOUNT);
+                processor.want_eat = Some(amount);
             }
             Instruction::GROW => {
-                processor.want_grow = true;
+                let amount = processor.pop_clamped(MAX_GROW_AMOUNT);
+                processor.want_grow = Some(amount);
+            }
+            Instruction::SHRINK => {
+                let amount = processor.pop_clamped(MAX_SHRINK_AMOUNT);
+                processor.want_shrink = Some(amount);
+            }
+            Instruction::MEMORY => {
+                let length = memory.values.len();
+                processor.push(length as u64);
             }
 
             // split and merge

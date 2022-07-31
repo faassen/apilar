@@ -93,8 +93,8 @@ impl World {
             }
         }
 
-        if self.want_eat(coords) {
-            self.eat(coords);
+        if let Some(amount) = self.want_eat(coords) {
+            self.eat(coords, amount);
         }
         self.death(rng, coords, death_rate);
     }
@@ -149,11 +149,11 @@ impl World {
         None
     }
 
-    fn want_eat(&self, coords: Coords) -> bool {
+    fn want_eat(&self, coords: Coords) -> Option<u64> {
         if let Some(computer) = &self.get(coords).computer {
             return computer.want_eat();
         }
-        false
+        None
     }
 
     fn split(&mut self, coords: Coords, neighbor_coords: Coords, address: usize) {
@@ -172,8 +172,7 @@ impl World {
         neighbor_location.computer = None;
     }
 
-    fn eat(&mut self, coords: Coords) {
-        let eat_amount = self.eat_amount;
+    fn eat(&mut self, coords: Coords, eat_amount: u64) {
         let location = self.get_mut(coords);
         if let Some(computer) = &mut location.computer {
             let amount = if location.resources >= eat_amount {
@@ -181,7 +180,6 @@ impl World {
             } else {
                 location.resources
             };
-
             computer.resources += amount;
             location.resources -= amount;
         }
