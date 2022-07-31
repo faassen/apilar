@@ -154,21 +154,33 @@ impl Computer {
         }
     }
 
-    // pub fn mutate_memory_insert(&mut self, rng: &mut SmallRng) {
-    //     if self.memory.values.is_empty() {
-    //         return;
-    //     }
-    //     let address = rng.gen_range(0..self.memory.values.len());
-    //     if self.resources > 0 {
-    //         self.memory.values.insert(address, rng.gen::<u8>());
-    //         self.resources -= 1;
-    //         for processor in &mut self.processors {
-    //             if processor.ip >= address {
-    //                 processor.ip += 1;
-    //             }
-    //         }
-    //     }
-    // }
+    pub fn mutate_memory_insert(&mut self, rng: &mut SmallRng) {
+        if self.memory.values.is_empty() {
+            return;
+        }
+        let address = rng.gen_range(0..self.memory.values.len());
+        if self.resources > 0 {
+            self.memory.values.insert(address, rng.gen::<u8>());
+            self.resources -= 1;
+            for processor in &mut self.processors {
+                processor.adjust_forward(address, 1);
+            }
+        }
+    }
+
+    pub fn mutate_memory_delete(&mut self, rng: &mut SmallRng) {
+        if self.memory.values.is_empty() {
+            return;
+        }
+        let address = rng.gen_range(0..self.memory.values.len());
+        if self.resources > 0 {
+            self.memory.values.remove(address);
+            self.resources += 1;
+            for processor in &mut self.processors {
+                processor.adjust_backward(address, 1);
+            }
+        }
+    }
 
     pub fn mutate_processors(&mut self, rng: &mut SmallRng, amount: u64) {
         for _ in 0..amount {

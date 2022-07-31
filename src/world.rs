@@ -107,6 +107,22 @@ impl World {
         }
     }
 
+    pub fn mutate_memory_insert(&mut self, rng: &mut SmallRng) {
+        let coords = self.get_random_coords(rng);
+        let location = self.get_mut(coords);
+        if let Some(computer) = &mut location.computer {
+            computer.mutate_memory_insert(rng);
+        }
+    }
+
+    pub fn mutate_memory_delete(&mut self, rng: &mut SmallRng) {
+        let coords = self.get_random_coords(rng);
+        let location = self.get_mut(coords);
+        if let Some(computer) = &mut location.computer {
+            computer.mutate_memory_delete(rng);
+        }
+    }
+
     pub fn mutate_processor_stack(&mut self, rng: &mut SmallRng, amount_processors: u64) {
         let coords = self.get_random_coords(rng);
         let location = self.get_mut(coords);
@@ -213,6 +229,7 @@ impl World {
         let mut free: u64 = 0;
         let mut bound: u64 = 0;
         let mut memory: u64 = 0;
+        let mut with_merge: u64 = 0;
         for row in &self.rows {
             for location in row {
                 free += location.resources;

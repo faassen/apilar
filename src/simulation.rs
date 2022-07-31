@@ -69,6 +69,8 @@ impl Simulation {
             world.update(small_rng, self.instructions_per_update, self.death_rate);
             if mutate {
                 world.mutate_memory(small_rng, self.memory_mutation_amount);
+                world.mutate_memory_insert(small_rng);
+                // world.mutate_memory_delete(small_rng);
                 world.mutate_processor_stack(small_rng, self.processor_stack_mutation_amount)
             }
             if save && self.dump {
