@@ -68,11 +68,8 @@ impl Simulation {
 
             world.update(small_rng, self.instructions_per_update, self.death_rate);
             if mutate {
-                world.mutate(
-                    small_rng,
-                    self.memory_mutation_amount,
-                    self.processor_stack_mutation_amount,
-                );
+                world.mutate_memory(small_rng, self.memory_mutation_amount);
+                world.mutate_processor_stack(small_rng, self.processor_stack_mutation_amount)
             }
             if save && self.dump {
                 let file = BufWriter::new(File::create(format!("apilar-dump{:06}.cbor", save_nr))?);

@@ -115,7 +115,7 @@ impl Computer {
 
         // grow memory if we want to grow
         if self.want_grow() && self.resources > 0 {
-            self.memory.values.push(0);
+            self.memory.values.push(u8::MAX);
             self.resources -= 1;
         }
 

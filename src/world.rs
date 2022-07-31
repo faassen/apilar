@@ -99,11 +99,18 @@ impl World {
         self.death(rng, coords, death_rate);
     }
 
-    pub fn mutate(&mut self, rng: &mut SmallRng, amount_memory: u64, amount_processors: u64) {
+    pub fn mutate_memory(&mut self, rng: &mut SmallRng, amount_memory: u64) {
         let coords = self.get_random_coords(rng);
         let location = self.get_mut(coords);
         if let Some(computer) = &mut location.computer {
             computer.mutate_memory(rng, amount_memory);
+        }
+    }
+
+    pub fn mutate_processor_stack(&mut self, rng: &mut SmallRng, amount_processors: u64) {
+        let coords = self.get_random_coords(rng);
+        let location = self.get_mut(coords);
+        if let Some(computer) = &mut location.computer {
             computer.mutate_processors(rng, amount_processors);
         }
     }
