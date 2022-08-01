@@ -9,6 +9,7 @@ use axum::{
     Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
+use std::net::TcpListener;
 use std::sync::Arc;
 use std::{net::SocketAddr, path::PathBuf};
 use tokio::sync::mpsc;
@@ -57,13 +58,27 @@ pub async fn serve(world_info_rx: WorldInfoReceiver, client_command_tx: ClientCo
         .layer(Extension(Arc::new(Mutex::new(world_info_rx))))
         .layer(Extension(client_command_tx));
 
-    // run it with hyper
-    let addr = SocketAddr::from(([127, 0, 0, 1], 4000));
+    let port = get_available_port().unwrap();
+
+    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+
     // tracing::debug!("listening on {}", addr);
+
+    // run it with hyper
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
         .unwrap();
+}
+
+// taken from https://elliotekj.com/posts/2017/07/25/find-available-tcp-port-rust/
+
+fn get_available_port() -> Option<u16> {
+    (4000..5000).find(|port| is_port_available(*port))
+}
+
+fn is_port_available(port: u16) -> bool {
+    TcpListener::bind(("127.0.0.1", port)).is_ok()
 }
 
 async fn ws_handler(
