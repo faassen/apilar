@@ -2,10 +2,11 @@ use crate::client_command::ClientCommand;
 use crate::info::WorldInfo;
 use crate::render::{render_start, render_update};
 use crate::world::World;
+use crate::{Load, Run};
 use rand::rngs::SmallRng;
 use std::error::Error;
 use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::BufWriter;
 use tokio::sync::mpsc;
 
 pub struct Frequencies {
@@ -99,6 +100,42 @@ impl Simulation {
                 }
             }
             i = i.wrapping_add(1);
+        }
+    }
+}
+
+impl From<&Run> for Simulation {
+    fn from(run: &Run) -> Self {
+        Simulation {
+            instructions_per_update: run.instructions_per_update,
+            memory_mutation_amount: run.memory_mutation_amount,
+            processor_stack_mutation_amount: run.processor_stack_mutation_amount,
+            death_rate: run.death_rate,
+            frequencies: Frequencies {
+                mutation_frequency: run.mutation_frequency,
+                redraw_frequency: run.redraw_frequency,
+                save_frequency: run.save_frequency,
+            },
+            dump: run.dump,
+            text_ui: run.text_ui,
+        }
+    }
+}
+
+impl From<&Load> for Simulation {
+    fn from(load: &Load) -> Self {
+        Simulation {
+            instructions_per_update: load.instructions_per_update,
+            memory_mutation_amount: load.memory_mutation_amount,
+            processor_stack_mutation_amount: load.processor_stack_mutation_amount,
+            death_rate: load.death_rate,
+            frequencies: Frequencies {
+                mutation_frequency: load.mutation_frequency,
+                redraw_frequency: load.redraw_frequency,
+                save_frequency: load.save_frequency,
+            },
+            dump: load.dump,
+            text_ui: load.text_ui,
         }
     }
 }

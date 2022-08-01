@@ -1,16 +1,30 @@
 use crate::assembler::Assembler;
 use crate::computer::Computer;
 use crate::serve::serve;
-use crate::simulation::{Frequencies, Simulation};
+use crate::simulation::Simulation;
 use crate::world::World;
-use crate::Run;
+use crate::{Load, Run};
 use rand::rngs::SmallRng;
 use rand::SeedableRng;
 use std::error::Error;
+use std::fs::File;
+use std::io::BufReader;
 use tokio::sync::mpsc;
+
+pub async fn load(load: &Load) -> Result<(), Box<dyn Error>> {
+    let file = BufReader::new(File::open(load.filename.clone())?);
+
+    let mut world: World = serde_cbor::from_reader(file)?;
+
+    let simulation = Simulation::from(load);
+
+    run_world(&simulation, &mut world).await
+}
 
 pub async fn run(run: &Run, words: Vec<&str>) -> Result<(), Box<dyn Error>> {
     let assembler = Assembler::new();
+
+    let mut world = World::new(run.width, run.height, run.eat_amount, run.world_resources);
 
     let mut computer = Computer::new(
         run.starting_memory_size,
@@ -19,10 +33,13 @@ pub async fn run(run: &Run, words: Vec<&str>) -> Result<(), Box<dyn Error>> {
     );
     assembler.assemble_words(words, &mut computer.memory, 0);
     computer.add_processor(0);
-
-    let mut world = World::new(run.width, run.height, run.eat_amount, run.world_resources);
     world.set((run.width / 2, run.height / 2), computer);
 
+    let simulation = Simulation::from(run);
+    run_world(&simulation, &mut world).await
+}
+
+pub async fn run_world(simulation: &Simulation, world: &mut World) -> Result<(), Box<dyn Error>> {
     let mut small_rng = SmallRng::from_entropy();
 
     let (world_info_tx, world_info_rx) = mpsc::channel(32);
@@ -31,28 +48,7 @@ pub async fn run(run: &Run, words: Vec<&str>) -> Result<(), Box<dyn Error>> {
         serve(world_info_rx, client_command_tx).await;
     });
 
-    let frequencies = Frequencies {
-        mutation_frequency: run.mutation_frequency,
-        redraw_frequency: run.redraw_frequency,
-        save_frequency: run.save_frequency,
-    };
-
-    let simulation = Simulation::new(
-        run.instructions_per_update,
-        run.memory_mutation_amount,
-        run.processor_stack_mutation_amount,
-        run.death_rate,
-        frequencies,
-        run.dump,
-        run.text_ui,
-    );
-
     simulation
-        .run(
-            &mut world,
-            &mut small_rng,
-            world_info_tx,
-            &mut client_command_rx,
-        )
+        .run(world, &mut small_rng, world_info_tx, &mut client_command_rx)
         .await
 }

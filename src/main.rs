@@ -23,13 +23,12 @@ pub mod world;
 pub mod testutil;
 
 use crate::assembler::{text_to_words, Assembler};
-use crate::run::run;
+use crate::run::{load, run};
 use crate::starter::PROGRAM_TEXT;
 use crate::world::World;
 use clap::{Args, Parser, Subcommand};
 use std::error::Error;
 use std::fs::File;
-use std::io::prelude::*;
 use std::io::{BufReader, Read};
 
 #[derive(Parser, Debug)]
@@ -43,6 +42,7 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Commands {
     Run(Box<Run>),
+    Load(Box<Load>),
     Disassemble {
         #[clap(value_parser)]
         filename: String,
@@ -108,6 +108,43 @@ pub struct Run {
     text_ui: bool,
 }
 
+#[derive(Debug, Args)]
+pub struct Load {
+    #[clap(value_parser)]
+    filename: String,
+
+    #[clap(long, default_value_t = 10, value_parser)]
+    instructions_per_update: usize,
+
+    #[clap(long, default_value_t = 10000, value_parser)]
+    mutation_frequency: u64,
+
+    #[clap(long, default_value_t = 100000, value_parser)]
+    redraw_frequency: u64,
+
+    #[clap(long, default_value_t = 100000000, value_parser)]
+    save_frequency: u64,
+
+    #[clap(long, default_value_t = 1, value_parser)]
+    memory_mutation_amount: u64,
+
+    #[clap(long, default_value_t = 1, value_parser)]
+    processor_stack_mutation_amount: u64,
+
+    // XXX this is now superfluous
+    #[clap(long, default_value_t = 100, value_parser)]
+    eat_amount: u64,
+
+    #[clap(long, default_value_t = 20000, value_parser)]
+    death_rate: u32,
+
+    #[clap(long, default_value_t = false, value_parser)]
+    dump: bool,
+
+    #[clap(long, default_value_t = false, value_parser)]
+    text_ui: bool,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
@@ -126,6 +163,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let words = text_to_words(&contents);
             run(cli, words).await?;
         }
+        Commands::Load(cli) => load(cli).await?,
         Commands::Disassemble { filename, x, y } => {
             let file = BufReader::new(File::open(filename)?);
             let world: World = serde_cbor::from_reader(file)?;

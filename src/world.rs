@@ -229,7 +229,7 @@ impl World {
         let mut free: u64 = 0;
         let mut bound: u64 = 0;
         let mut memory: u64 = 0;
-        let mut with_merge: u64 = 0;
+
         for row in &self.rows {
             for location in row {
                 free += location.resources;
