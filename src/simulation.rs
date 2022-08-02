@@ -1,3 +1,4 @@
+use crate::assembler::Assembler;
 use crate::client_command::ClientCommand;
 use crate::info::WorldInfo;
 use crate::render::{render_start, render_update};
@@ -91,6 +92,22 @@ impl Simulation {
             }
 
             if receive_command {
+                if let Ok(cmd) = client_command_rx.try_recv() {
+                    match cmd {
+                        ClientCommand::Stop => loop {
+                            // doesn't handle other commands while paused..
+                            if let Some(ClientCommand::Start) = client_command_rx.recv().await {
+                                break;
+                            }
+                        },
+                        ClientCommand::Start => {
+                            // no op when already started
+                        }
+                        ClientCommand::Disassemble { x, y, respond } => {
+                            respond.send(disassemble(world, x, y)).unwrap();
+                        }
+                    }
+                }
                 if let Ok(ClientCommand::Stop) = client_command_rx.try_recv() {
                     loop {
                         if let Some(ClientCommand::Start) = client_command_rx.recv().await {
@@ -101,6 +118,23 @@ impl Simulation {
             }
             i = i.wrapping_add(1);
         }
+    }
+}
+
+fn disassemble(world: &World, x: usize, y: usize) -> Result<String, String> {
+    let assembler = Assembler::new();
+    if x >= world.width {
+        return Err("x out of range".to_string());
+    }
+    if y >= world.height {
+        return Err("y out of range".to_string());
+    }
+
+    let location = world.get((x, y));
+    if let Some(computer) = &location.computer {
+        Ok(assembler.line_disassemble(&computer.memory.values))
+    } else {
+        Err("no computer".to_string())
     }
 }
 

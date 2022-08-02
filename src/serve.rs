@@ -2,18 +2,21 @@ use crate::client_command::ClientCommand;
 use crate::info::WorldInfo;
 use axum::{
     extract::ws::{Message, WebSocket, WebSocketUpgrade},
-    extract::Extension,
+    extract::{Extension, Query},
     http::StatusCode,
-    response::IntoResponse,
+    response::{IntoResponse, Json},
     routing::{get, get_service},
     Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
+use serde_derive::Deserialize;
+use serde_json::json;
 use std::net::TcpListener;
 use std::sync::Arc;
 use std::{net::SocketAddr, path::PathBuf};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
+use tokio::sync::oneshot;
 use tower_http::{
     services::ServeDir,
     trace::{DefaultMakeSpan, TraceLayer},
@@ -50,6 +53,7 @@ pub async fn serve(world_info_tx: WorldInfoSender, client_command_tx: ClientComm
         // routes are matched from bottom to top, so we have to put the fallback at the
         // top since it matches all routes
         .route("/ws", get(ws_handler))
+        .route("/disassemble", get(disassemble_handler))
         // logging so we can see whats going on
         // .layer(
         //     TraceLayer::new_for_http()
@@ -79,6 +83,31 @@ fn get_available_port() -> Option<u16> {
 
 fn is_port_available(port: u16) -> bool {
     TcpListener::bind(("127.0.0.1", port)).is_ok()
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct Coordinates {
+    x: usize,
+    y: usize,
+}
+
+async fn disassemble_handler(
+    coordinates: Query<Coordinates>,
+    Extension(client_command_tx): Extension<ClientCommandSender>,
+) -> impl IntoResponse {
+    let (resp_tx, resp_rx) = oneshot::channel();
+    client_command_tx
+        .send(ClientCommand::Disassemble {
+            x: coordinates.x,
+            y: coordinates.y,
+            respond: resp_tx,
+        })
+        .await
+        .unwrap(); // XXX unwrap
+    match resp_rx.await.unwrap() {
+        Ok(code) => Json(json!({ "code": code })),
+        Err(message) => Json(json!({ "error": message })),
+    }
 }
 
 async fn ws_handler(
