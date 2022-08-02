@@ -7,6 +7,7 @@ use rand::rngs::SmallRng;
 use std::error::Error;
 use std::fs::File;
 use std::io::BufWriter;
+use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 
 pub struct Frequencies {
@@ -50,7 +51,7 @@ impl Simulation {
         &self,
         world: &mut World,
         small_rng: &mut SmallRng,
-        world_info_tx: mpsc::Sender<WorldInfo>,
+        world_info_tx: broadcast::Sender<WorldInfo>,
         client_command_rx: &mut mpsc::Receiver<ClientCommand>,
     ) -> Result<(), Box<dyn Error>> {
         if self.text_ui {
@@ -86,8 +87,7 @@ impl Simulation {
             }
 
             if redraw {
-                // XXX does try send work?
-                let _ = world_info_tx.try_send(WorldInfo::new(world)); // .await?;
+                let _ = world_info_tx.send(WorldInfo::new(world));
             }
 
             if receive_command {

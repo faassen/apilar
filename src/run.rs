@@ -9,6 +9,7 @@ use rand::SeedableRng;
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
+use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 
 pub async fn load(load: &Load) -> Result<(), Box<dyn Error>> {
@@ -42,13 +43,19 @@ pub async fn run(run: &Run, words: Vec<&str>) -> Result<(), Box<dyn Error>> {
 pub async fn run_world(simulation: &Simulation, world: &mut World) -> Result<(), Box<dyn Error>> {
     let mut small_rng = SmallRng::from_entropy();
 
-    let (world_info_tx, world_info_rx) = mpsc::channel(32);
+    let (world_info_tx, _) = broadcast::channel(32);
+    let world_info_tx2 = world_info_tx.clone();
     let (client_command_tx, mut client_command_rx) = mpsc::channel(32);
     tokio::spawn(async move {
-        serve(world_info_rx, client_command_tx).await;
+        serve(world_info_tx, client_command_tx).await;
     });
 
     simulation
-        .run(world, &mut small_rng, world_info_tx, &mut client_command_rx)
+        .run(
+            world,
+            &mut small_rng,
+            world_info_tx2,
+            &mut client_command_rx,
+        )
         .await
 }

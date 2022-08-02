@@ -12,20 +12,20 @@ use futures::{sink::SinkExt, stream::StreamExt};
 use std::net::TcpListener;
 use std::sync::Arc;
 use std::{net::SocketAddr, path::PathBuf};
+use tokio::sync::broadcast;
 use tokio::sync::mpsc;
-use tokio::sync::Mutex;
 use tower_http::{
     services::ServeDir,
     trace::{DefaultMakeSpan, TraceLayer},
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-type WorldInfoReceiver = mpsc::Receiver<WorldInfo>;
-type WorldInfoSharedReceiver = Arc<Mutex<WorldInfoReceiver>>;
+type WorldInfoSender = broadcast::Sender<WorldInfo>;
+type WorldInfoSharedSender = Arc<WorldInfoSender>;
 
 type ClientCommandSender = mpsc::Sender<ClientCommand>;
 
-pub async fn serve(world_info_rx: WorldInfoReceiver, client_command_tx: ClientCommandSender) {
+pub async fn serve(world_info_tx: WorldInfoSender, client_command_tx: ClientCommandSender) {
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(
             std::env::var("RUST_LOG")
@@ -55,7 +55,7 @@ pub async fn serve(world_info_rx: WorldInfoReceiver, client_command_tx: ClientCo
         //     TraceLayer::new_for_http()
         //         .make_span_with(DefaultMakeSpan::default().include_headers(true)),
         // )
-        .layer(Extension(Arc::new(Mutex::new(world_info_rx))))
+        .layer(Extension(Arc::new(world_info_tx)))
         .layer(Extension(client_command_tx));
 
     let port = get_available_port().unwrap();
@@ -83,15 +83,15 @@ fn is_port_available(port: u16) -> bool {
 
 async fn ws_handler(
     ws: WebSocketUpgrade,
-    Extension(world_info_rx): Extension<WorldInfoSharedReceiver>,
+    Extension(world_info_tx): Extension<WorldInfoSharedSender>,
     Extension(client_command_tx): Extension<ClientCommandSender>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(|socket| handle_socket(socket, world_info_rx, client_command_tx))
+    ws.on_upgrade(|socket| handle_socket(socket, world_info_tx, client_command_tx))
 }
 
 async fn handle_socket<'a>(
     socket: WebSocket,
-    world_info_rx: WorldInfoSharedReceiver,
+    world_info_tx: WorldInfoSharedSender,
     client_command_tx: ClientCommandSender,
 ) {
     let (mut sender, mut receiver) = socket.split();
@@ -108,8 +108,9 @@ async fn handle_socket<'a>(
         }
     });
 
+    let mut world_info_rx = world_info_tx.subscribe();
     loop {
-        if let Some(value) = world_info_rx.lock().await.recv().await {
+        if let Ok(value) = world_info_rx.recv().await {
             // XXX unwrap here, what if this fails?
             let json = serde_json::to_string(&value).unwrap();
 
