@@ -96,8 +96,16 @@ impl Simulation {
                     match cmd {
                         ClientCommand::Stop => loop {
                             // doesn't handle other commands while paused..
-                            if let Some(ClientCommand::Start) = client_command_rx.recv().await {
-                                break;
+                            if let Some(cmd) = client_command_rx.recv().await {
+                                match cmd {
+                                    ClientCommand::Start => break,
+                                    ClientCommand::Stop => {
+                                        // no op when already stopped
+                                    }
+                                    ClientCommand::Disassemble { x, y, respond } => {
+                                        respond.send(disassemble(world, x, y)).unwrap();
+                                    }
+                                }
                             }
                         },
                         ClientCommand::Start => {

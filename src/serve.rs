@@ -9,8 +9,7 @@ use axum::{
     Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
-use serde_derive::Deserialize;
-use serde_json::json;
+use serde_derive::{Deserialize, Serialize};
 use std::net::TcpListener;
 use std::sync::Arc;
 use std::{net::SocketAddr, path::PathBuf};
@@ -91,6 +90,12 @@ struct Coordinates {
     y: usize,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+enum DisassembleResponse {
+    Success { code: String },
+    Failure { message: String },
+}
+
 async fn disassemble_handler(
     coordinates: Query<Coordinates>,
     Extension(client_command_tx): Extension<ClientCommandSender>,
@@ -104,9 +109,10 @@ async fn disassemble_handler(
         })
         .await
         .unwrap(); // XXX unwrap
+
     match resp_rx.await.unwrap() {
-        Ok(code) => Json(json!({ "code": code })),
-        Err(message) => Json(json!({ "error": message })),
+        Ok(code) => Json(DisassembleResponse::Success { code }),
+        Err(message) => Json(DisassembleResponse::Failure { message }),
     }
 }
 

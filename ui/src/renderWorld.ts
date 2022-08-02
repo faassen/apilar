@@ -15,7 +15,11 @@ const LIGHT_GREY = 0xd3d3d3;
 const BLACK = 0x000000;
 const RED = 0xff0000;
 
-export function renderWorld(viewport: Viewport, world: World): RenderData {
+export function renderWorld(
+  viewport: Viewport,
+  world: World,
+  onClick: (options: { location: Location; x: number; y: number }) => void
+): RenderData {
   const renderData: RenderData = { sprites: [] };
   for (let iy = 0; iy < world.locations.length; iy++) {
     const row = world.locations[iy];
@@ -27,7 +31,7 @@ export function renderWorld(viewport: Viewport, world: World): RenderData {
       drawBox(sprite, ix, iy, BOX_SIZE, fill);
       sprite.interactive = true;
       sprite.on("pointerdown", () => {
-        console.log("clicked on ", ix, iy);
+        onClick({ location, x: ix, y: iy });
       });
       renderRow.push(sprite);
       viewport.addChild(sprite);
