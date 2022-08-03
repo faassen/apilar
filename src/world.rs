@@ -1,5 +1,6 @@
 use crate::computer::Computer;
 use crate::direction::Direction;
+use crate::simulation::Simulation;
 use rand::rngs::SmallRng;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
@@ -16,14 +17,13 @@ pub struct Location {
 pub struct World {
     pub width: usize,
     pub height: usize,
-    eat_amount: u64,
     pub rows: Vec<Vec<Location>>,
 }
 
 type Coords = (usize, usize);
 
 impl World {
-    pub fn new(width: usize, height: usize, eat_amount: u64, resources: u64) -> World {
+    pub fn new(width: usize, height: usize, resources: u64) -> World {
         let mut rows: Vec<Vec<Location>> = Vec::new();
         for _ in 0..height {
             let mut column_vec: Vec<Location> = Vec::new();
@@ -34,7 +34,6 @@ impl World {
         }
         World {
             width,
-            eat_amount,
             height,
             rows,
         }
@@ -77,11 +76,11 @@ impl World {
         self.get(coords).computer.is_none()
     }
 
-    pub fn update(&mut self, rng: &mut SmallRng, amount_per_processor: usize, death_rate: u32) {
+    pub fn update(&mut self, rng: &mut SmallRng, simulation: &Simulation) {
         let coords = self.get_random_coords(rng);
 
         let location = self.get_mut(coords);
-        location.update(rng, amount_per_processor);
+        location.update(rng, simulation);
 
         if let Some((neighbor_coords, address)) = self.want_split(coords) {
             self.split(coords, neighbor_coords, address);
@@ -96,7 +95,7 @@ impl World {
         if let Some(amount) = self.want_eat(coords) {
             self.eat(coords, amount);
         }
-        self.death(rng, coords, death_rate);
+        self.death(rng, coords, simulation.death_rate);
     }
 
     pub fn mutate_memory(&mut self, rng: &mut SmallRng, amount_memory: u64) {
@@ -251,7 +250,7 @@ impl Location {
         }
     }
 
-    pub fn update(&mut self, rng: &mut SmallRng, amount_per_processor: usize) {
+    pub fn update(&mut self, rng: &mut SmallRng, simulation: &Simulation) {
         let mut eliminate_computer: bool = false;
 
         if let Some(computer) = &mut self.computer {
@@ -259,7 +258,11 @@ impl Location {
                 self.resources += computer.resources + computer.memory.values.len() as u64;
                 eliminate_computer = true;
             } else {
-                computer.execute(rng, amount_per_processor);
+                computer.execute(
+                    rng,
+                    simulation.instructions_per_update,
+                    &simulation.metabolism,
+                );
             }
         }
         if eliminate_computer {
@@ -274,7 +277,7 @@ mod tests {
 
     #[test]
     fn test_neighbor_out_of_bounds() {
-        let world = World::new(5, 5, 10, 5);
+        let world = World::new(5, 5, 5);
         assert_eq!(world.neighbor_coords((2, 2), Direction::North), (2, 1));
         assert_eq!(world.neighbor_coords((2, 2), Direction::South), (2, 3));
         assert_eq!(world.neighbor_coords((2, 2), Direction::West), (1, 2));

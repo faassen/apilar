@@ -1,6 +1,7 @@
 use crate::assembler::Assembler;
 use crate::client_command::ClientCommand;
 use crate::info::WorldInfo;
+use crate::instruction::Metabolism;
 use crate::render::{render_start, render_update};
 use crate::world::World;
 use crate::{Load, Run};
@@ -18,36 +19,17 @@ pub struct Frequencies {
 }
 
 pub struct Simulation {
-    instructions_per_update: usize,
+    pub instructions_per_update: usize,
     memory_mutation_amount: u64,
     processor_stack_mutation_amount: u64,
-    death_rate: u32,
+    pub death_rate: u32,
+    pub metabolism: Metabolism,
     frequencies: Frequencies,
     dump: bool,
     text_ui: bool,
 }
 
 impl Simulation {
-    pub fn new(
-        instructions_per_update: usize,
-        memory_mutation_amount: u64,
-        processor_stack_mutation_amount: u64,
-        death_rate: u32,
-        frequencies: Frequencies,
-        dump: bool,
-        text_ui: bool,
-    ) -> Simulation {
-        Simulation {
-            instructions_per_update,
-            memory_mutation_amount,
-            processor_stack_mutation_amount,
-            death_rate,
-            frequencies,
-            dump,
-            text_ui,
-        }
-    }
-
     pub async fn run(
         &self,
         world: &mut World,
@@ -69,7 +51,7 @@ impl Simulation {
             let save = i % frequencies.save_frequency == 0;
             let receive_command = i % frequencies.redraw_frequency == 0;
 
-            world.update(small_rng, self.instructions_per_update, self.death_rate);
+            world.update(small_rng, self);
             if mutate {
                 world.mutate_memory(small_rng, self.memory_mutation_amount);
                 world.mutate_memory_insert(small_rng);
@@ -153,6 +135,11 @@ impl From<&Run> for Simulation {
             memory_mutation_amount: run.memory_mutation_amount,
             processor_stack_mutation_amount: run.processor_stack_mutation_amount,
             death_rate: run.death_rate,
+            metabolism: Metabolism {
+                max_eat_amount: run.max_eat_amount,
+                max_grow_amount: run.max_grow_amount,
+                max_shrink_amount: run.max_shrink_amount,
+            },
             frequencies: Frequencies {
                 mutation_frequency: run.mutation_frequency,
                 redraw_frequency: run.redraw_frequency,
@@ -171,6 +158,11 @@ impl From<&Load> for Simulation {
             memory_mutation_amount: load.memory_mutation_amount,
             processor_stack_mutation_amount: load.processor_stack_mutation_amount,
             death_rate: load.death_rate,
+            metabolism: Metabolism {
+                max_eat_amount: load.max_eat_amount,
+                max_grow_amount: load.max_grow_amount,
+                max_shrink_amount: load.max_shrink_amount,
+            },
             frequencies: Frequencies {
                 mutation_frequency: load.mutation_frequency,
                 redraw_frequency: load.redraw_frequency,

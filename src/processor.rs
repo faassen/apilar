@@ -2,7 +2,7 @@ use moveslice::Moveslice;
 use rand::rngs::SmallRng;
 
 use crate::direction::Direction;
-use crate::instruction::Instruction;
+use crate::instruction::{Instruction, Metabolism};
 use crate::memory::Memory;
 use serde_big_array::BigArray;
 use serde_derive::{Deserialize, Serialize};
@@ -52,7 +52,12 @@ impl Processor {
         &self.stack[0..self.stack_pointer]
     }
 
-    pub fn execute(&mut self, memory: &mut Memory, rng: &mut SmallRng) -> bool {
+    pub fn execute(
+        &mut self,
+        memory: &mut Memory,
+        rng: &mut SmallRng,
+        metabolism: &Metabolism,
+    ) -> bool {
         if !self.alive {
             return false;
         }
@@ -62,7 +67,7 @@ impl Processor {
         }
         let value = memory.values[self.ip];
         if let Some(instruction) = Instruction::decode(value) {
-            instruction.execute(self, memory, rng);
+            instruction.execute(self, memory, rng, metabolism);
         } // any other instruction is a noop
         if !self.jumped {
             self.ip += 1;
@@ -77,6 +82,7 @@ impl Processor {
         memory: &mut Memory,
         rng: &mut SmallRng,
         amount: usize,
+        metabolism: &Metabolism,
     ) -> usize {
         self.want_start = None;
 
@@ -88,7 +94,7 @@ impl Processor {
         self.want_merge = None;
         let mut total = 0;
         for _ in 0..amount {
-            if self.execute(memory, rng) {
+            if self.execute(memory, rng, metabolism) {
                 total += 1;
             }
         }

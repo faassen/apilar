@@ -25,7 +25,7 @@ pub async fn load(load: &Load) -> Result<(), Box<dyn Error>> {
 pub async fn run(run: &Run, words: Vec<&str>) -> Result<(), Box<dyn Error>> {
     let assembler = Assembler::new();
 
-    let mut world = World::new(run.width, run.height, run.eat_amount, run.world_resources);
+    let mut world = World::new(run.width, run.height, run.world_resources);
 
     let mut computer = Computer::new(
         run.starting_memory_size,

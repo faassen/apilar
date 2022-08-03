@@ -4,6 +4,7 @@ use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::direction::Direction;
+use crate::instruction::Metabolism;
 use crate::memory::Memory;
 use crate::processor::Processor;
 
@@ -77,11 +78,21 @@ impl Computer {
         self.processors.push(Processor::new(index));
     }
 
-    pub fn execute(&mut self, rng: &mut SmallRng, amount_per_processor: usize) -> usize {
+    pub fn execute(
+        &mut self,
+        rng: &mut SmallRng,
+        instructions_per_update: usize,
+        metabolism: &Metabolism,
+    ) -> usize {
         // execute amount of instructions per processor
         let mut total = 0;
         for processor in &mut self.processors {
-            total += processor.execute_amount(&mut self.memory, rng, amount_per_processor);
+            total += processor.execute_amount(
+                &mut self.memory,
+                rng,
+                instructions_per_update,
+                metabolism,
+            );
         }
 
         // obtain any start instructions
@@ -330,7 +341,16 @@ mod tests {
         let mut small_rng = SmallRng::from_seed([0; 32]);
 
         computer.add_processor(0);
-        computer.execute(&mut small_rng, words_amount * 64);
+
+        computer.execute(
+            &mut small_rng,
+            words_amount * 64,
+            &Metabolism {
+                max_eat_amount: 0,
+                max_grow_amount: 0,
+                max_shrink_amount: 0,
+            },
+        );
 
         let disassembled =
             assembler.disassemble_to_words(&computer.memory.values[64..64 + words_amount]);

@@ -15,7 +15,6 @@ pub mod render;
 pub mod run;
 pub mod serve;
 pub mod simulation;
-pub mod single;
 pub mod starter;
 pub mod world;
 
@@ -94,12 +93,17 @@ pub struct Run {
     #[clap(long, default_value_t = 1, value_parser)]
     processor_stack_mutation_amount: u64,
 
-    // XXX this is now superfluous
-    #[clap(long, default_value_t = 100, value_parser)]
-    eat_amount: u64,
-
     #[clap(long, default_value_t = 20000, value_parser)]
     death_rate: u32,
+
+    #[clap(long, default_value_t = 128, value_parser)]
+    max_eat_amount: u64,
+
+    #[clap(long, default_value_t = 16, value_parser)]
+    max_grow_amount: u64,
+
+    #[clap(long, default_value_t = 16, value_parser)]
+    max_shrink_amount: u64,
 
     #[clap(long, default_value_t = false, value_parser)]
     dump: bool,
@@ -131,12 +135,17 @@ pub struct Load {
     #[clap(long, default_value_t = 1, value_parser)]
     processor_stack_mutation_amount: u64,
 
-    // XXX this is now superfluous
-    #[clap(long, default_value_t = 100, value_parser)]
-    eat_amount: u64,
-
     #[clap(long, default_value_t = 20000, value_parser)]
     death_rate: u32,
+
+    #[clap(long, default_value_t = 128, value_parser)]
+    max_eat_amount: u64,
+
+    #[clap(long, default_value_t = 16, value_parser)]
+    max_grow_amount: u64,
+
+    #[clap(long, default_value_t = 16, value_parser)]
+    max_shrink_amount: u64,
 
     #[clap(long, default_value_t = false, value_parser)]
     dump: bool,
