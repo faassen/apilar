@@ -11,7 +11,7 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::broadcast;
 use tokio::sync::{mpsc, Mutex};
 use tokio::time;
 
@@ -48,7 +48,7 @@ impl Simulation {
         if self.text_ui {
             render_start();
         }
-        let mut i: u64 = 0;
+        let mut tick: u64 = 0;
         let mut save_nr = 0;
 
         let frequencies = &self.frequencies;
@@ -62,13 +62,35 @@ impl Simulation {
             }
         });
 
-        let instant = time::Instant::now();
+        if self.dump {
+            let save_world = Arc::clone(&world);
+            tokio::spawn(async move {
+                loop {
+                    let result = save_file(&*save_world.lock().await, save_nr);
+                    if result.is_err() {
+                        println!("Could not write save file");
+                        break;
+                    }
+                    save_nr += 1;
+                    time::sleep(Duration::from_secs(60)).await;
+                }
+            });
+        }
+
+        if self.text_ui {
+            let text_ui_world = Arc::clone(&world);
+            tokio::spawn(async move {
+                loop {
+                    render_update();
+                    println!("{}", text_ui_world.lock().await);
+                    time::sleep(Duration::new(0, 1_000_000_000u32 / 8)).await;
+                }
+            });
+        }
 
         loop {
-            let redraw = i % frequencies.redraw_frequency == 0;
-            let mutate = i % frequencies.mutation_frequency == 0;
-            let save = i % frequencies.save_frequency == 0;
-            let receive_command = i % frequencies.redraw_frequency == 0;
+            let mutate = tick % frequencies.mutation_frequency == 0;
+            let receive_command = tick % frequencies.redraw_frequency == 0;
 
             world.lock().await.update(small_rng, self);
             if mutate {
@@ -83,61 +105,52 @@ impl Simulation {
                     .await
                     .mutate_processor_stack(small_rng, self.processor_stack_mutation_amount)
             }
-            // if save && self.dump {
-            //     let file = BufWriter::new(File::create(format!("apilar-dump{:06}.cbor", save_nr))?);
-            //     serde_cbor::to_writer(file, &world)?;
-            //     save_nr += 1;
-            // }
 
-            // if self.text_ui && redraw {
-            //     render_update();
-            //     println!("{}", world);
-            // }
-
-            if redraw {
-                let seconds_elapsed = instant.elapsed().as_secs();
-                if seconds_elapsed > 0 {
-                    println!("ticks per second: {}", i / seconds_elapsed);
+            if receive_command {
+                if let Ok(cmd) = client_command_rx.try_recv() {
+                    match cmd {
+                        ClientCommand::Stop => loop {
+                            // doesn't handle other commands while paused..
+                            if let Some(cmd) = client_command_rx.recv().await {
+                                match cmd {
+                                    ClientCommand::Start => break,
+                                    ClientCommand::Stop => {
+                                        // no op when already stopped
+                                    }
+                                    ClientCommand::Disassemble { x, y, respond } => {
+                                        respond
+                                            .send(disassemble(&*world.lock().await, x, y))
+                                            .unwrap();
+                                    }
+                                }
+                            }
+                        },
+                        ClientCommand::Start => {
+                            // no op when already started
+                        }
+                        ClientCommand::Disassemble { x, y, respond } => {
+                            respond
+                                .send(disassemble(&*world.lock().await, x, y))
+                                .unwrap();
+                        }
+                    }
                 }
-                // let _ = world_info_tx.send(WorldInfo::new(world));
+                if let Ok(ClientCommand::Stop) = client_command_rx.try_recv() {
+                    loop {
+                        if let Some(ClientCommand::Start) = client_command_rx.recv().await {
+                            break;
+                        }
+                    }
+                }
             }
-
-            // if receive_command {
-            //     if let Ok(cmd) = client_command_rx.try_recv() {
-            //         match cmd {
-            //             ClientCommand::Stop => loop {
-            //                 // doesn't handle other commands while paused..
-            //                 if let Some(cmd) = client_command_rx.recv().await {
-            //                     match cmd {
-            //                         ClientCommand::Start => break,
-            //                         ClientCommand::Stop => {
-            //                             // no op when already stopped
-            //                         }
-            //                         ClientCommand::Disassemble { x, y, respond } => {
-            //                             respond.send(disassemble(world, x, y)).unwrap();
-            //                         }
-            //                     }
-            //                 }
-            //             },
-            //             ClientCommand::Start => {
-            //                 // no op when already started
-            //             }
-            //             ClientCommand::Disassemble { x, y, respond } => {
-            //                 respond.send(disassemble(world, x, y)).unwrap();
-            //             }
-            //         }
-            //     }
-            //     if let Ok(ClientCommand::Stop) = client_command_rx.try_recv() {
-            //         loop {
-            //             if let Some(ClientCommand::Start) = client_command_rx.recv().await {
-            //                 break;
-            //             }
-            //         }
-            //     }
-            // }
-            i = i.wrapping_add(1);
+            tick = tick.wrapping_add(1);
         }
     }
+}
+
+fn save_file(world: &World, save_nr: u64) -> Result<(), serde_cbor::Error> {
+    let file = BufWriter::new(File::create(format!("apilar-dump{:06}.cbor", save_nr))?);
+    serde_cbor::to_writer(file, world)
 }
 
 fn disassemble(world: &World, x: usize, y: usize) -> Result<String, String> {
