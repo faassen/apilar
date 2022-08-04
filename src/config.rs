@@ -22,6 +22,7 @@ impl From<&Run> for Config {
         Config {
             habitat_config: HabitatConfig {
                 instructions_per_update: cli.instructions_per_update,
+                max_processors: cli.max_processors,
                 mutation_frequency: cli.mutation_frequency,
                 mutation: Mutation {
                     overwrite_amount: cli.memory_overwrite_mutation_amount,
@@ -58,6 +59,7 @@ impl From<&Load> for Config {
         Config {
             habitat_config: HabitatConfig {
                 instructions_per_update: cli.instructions_per_update,
+                max_processors: cli.max_processors,
                 mutation_frequency: cli.mutation_frequency,
                 mutation: Mutation {
                     overwrite_amount: cli.memory_overwrite_mutation_amount,

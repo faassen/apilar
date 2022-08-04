@@ -52,11 +52,7 @@ pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<(), Box<dyn Erro
 
     let mut habitat = Habitat::new(cli.width, cli.height, cli.world_resources);
 
-    let mut computer = Computer::new(
-        cli.starting_memory_size,
-        cli.max_processors,
-        cli.starting_resources,
-    );
+    let mut computer = Computer::new(cli.starting_memory_size, cli.starting_resources);
     assembler.assemble_words(words, &mut computer.memory, 0);
     computer.add_processor(0);
     habitat.set((cli.width / 2, cli.height / 2), computer);

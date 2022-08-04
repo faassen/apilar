@@ -35,6 +35,7 @@ pub struct Death {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HabitatConfig {
     pub instructions_per_update: usize,
+    pub max_processors: usize,
     // how many ticks between mutations
     pub mutation_frequency: Ticks,
     pub mutation: Mutation,
@@ -110,7 +111,12 @@ impl Habitat {
         if let Some(neighbor_coords) = self.want_merge(coords) {
             let neighbor_computer = self.get(neighbor_coords).computer.clone();
             if let Some(neighbor_computer) = neighbor_computer {
-                self.merge(coords, neighbor_coords, &neighbor_computer);
+                self.merge(
+                    coords,
+                    neighbor_coords,
+                    &neighbor_computer,
+                    config.max_processors,
+                );
             }
         }
 
@@ -215,10 +221,16 @@ impl Habitat {
         neighbor_location.computer = splitted;
     }
 
-    fn merge(&mut self, coords: Coords, neighbor_coords: Coords, neighbor_computer: &Computer) {
+    fn merge(
+        &mut self,
+        coords: Coords,
+        neighbor_coords: Coords,
+        neighbor_computer: &Computer,
+        max_processors: usize,
+    ) {
         let computer = &mut self.get_mut(coords).computer;
         if let Some(computer) = computer {
-            computer.merge(neighbor_computer);
+            computer.merge(neighbor_computer, max_processors);
         }
         let neighbor_location = self.get_mut(neighbor_coords);
         neighbor_location.computer = None;
@@ -295,7 +307,12 @@ impl Location {
                 self.resources += computer.resources + computer.memory.values.len() as u64;
                 eliminate_computer = true;
             } else {
-                computer.execute(rng, config.instructions_per_update, &config.metabolism);
+                computer.execute(
+                    rng,
+                    config.instructions_per_update,
+                    config.max_processors,
+                    &config.metabolism,
+                );
             }
         }
         if eliminate_computer {

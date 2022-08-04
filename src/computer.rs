@@ -10,16 +10,14 @@ use crate::processor::Processor;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Computer {
-    pub max_processors: usize,
     pub resources: u64,
     pub memory: Memory,
     pub processors: Vec<Processor>,
 }
 
 impl Computer {
-    pub fn new(size: usize, max_processors: usize, resources: u64) -> Computer {
+    pub fn new(size: usize, resources: u64) -> Computer {
         Computer {
-            max_processors,
             resources,
             memory: Memory::new(size),
             processors: Vec::new(),
@@ -52,24 +50,23 @@ impl Computer {
 
         Computer {
             resources: child_resources,
-            max_processors: self.max_processors,
             memory: Memory::from_values(child_memory_values),
             processors: child_processors,
         }
     }
 
-    pub fn merge(&mut self, other: &Computer) {
+    pub fn merge(&mut self, other: &Computer, max_processors: usize) {
         for mut processor in other.processors.clone() {
             let distance = self.memory.values.len();
             processor.adjust_forward(0, distance);
             self.processors.push(processor);
         }
         self.memory.values.extend(other.memory.values.clone());
-        if self.processors.len() > self.max_processors {
+        if self.processors.len() > max_processors {
             // throw away any excess processors
             // this may lead to a strategy where being near max processors is good
             // for predation
-            self.processors = self.processors[0..self.max_processors].to_vec();
+            self.processors = self.processors[0..max_processors].to_vec();
         }
         self.resources += other.resources;
     }
@@ -82,6 +79,7 @@ impl Computer {
         &mut self,
         rng: &mut SmallRng,
         instructions_per_update: usize,
+        max_processors: usize,
         metabolism: &Metabolism,
     ) -> usize {
         // execute amount of instructions per processor
@@ -115,7 +113,7 @@ impl Computer {
         }
         // add new processors to start
         for address in to_start {
-            if self.processors.len() < self.max_processors {
+            if self.processors.len() < max_processors {
                 self.processors.push(Processor::new(address));
             }
         }
@@ -332,7 +330,7 @@ mod tests {
         let words = text_to_words(text);
         let words_amount = words.len();
 
-        let mut computer = Computer::new(1024, 10, 100);
+        let mut computer = Computer::new(1024, 100);
         assembler.assemble_words(words.clone(), &mut computer.memory, 0);
         let mut rng = SmallRng::from_seed([0; 32]);
 
@@ -341,6 +339,7 @@ mod tests {
         computer.execute(
             &mut rng,
             words_amount * 64,
+            10,
             &Metabolism {
                 max_eat_amount: 0,
                 max_grow_amount: 0,
@@ -369,7 +368,7 @@ mod tests {
         ";
         let words = text_to_words(text);
 
-        let mut computer = Computer::new(4, 10, 100);
+        let mut computer = Computer::new(4, 100);
         assembler.assemble_words(words.clone(), &mut computer.memory, 0);
         computer.add_processor(0);
         computer.add_processor(2);
@@ -402,7 +401,7 @@ mod tests {
         ";
         let words = text_to_words(text);
 
-        let mut computer = Computer::new(4, 10, 100);
+        let mut computer = Computer::new(4, 100);
         assembler.assemble_words(words.clone(), &mut computer.memory, 0);
         computer.add_processor(0);
         computer.add_processor(0);
@@ -446,7 +445,7 @@ mod tests {
         ";
         let words = text_to_words(text);
 
-        let mut computer = Computer::new(5, 10, 107);
+        let mut computer = Computer::new(5, 107);
         assembler.assemble_words(words.clone(), &mut computer.memory, 0);
         computer.add_processor(0);
         computer.add_processor(2);
@@ -479,7 +478,7 @@ mod tests {
         ";
         let words = text_to_words(text);
 
-        let mut computer = Computer::new(4, 10, 100);
+        let mut computer = Computer::new(4, 100);
         assembler.assemble_words(words.clone(), &mut computer.memory, 0);
         computer.add_processor(0);
         computer.add_processor(2);
@@ -487,7 +486,7 @@ mod tests {
         computer.processors[1].set_current_head_value(2);
 
         let splitted = computer.split(2);
-        computer.merge(&splitted);
+        computer.merge(&splitted, 10);
 
         assert_eq!(computer.memory.values, [1, 2, 3, 4]);
         assert_eq!(computer.resources, 100);
@@ -510,7 +509,7 @@ mod tests {
         ";
         let words = text_to_words(text);
 
-        let mut computer = Computer::new(4, 3, 100);
+        let mut computer = Computer::new(4, 100);
         assembler.assemble_words(words.clone(), &mut computer.memory, 0);
         computer.add_processor(0);
         computer.add_processor(1);
@@ -518,7 +517,7 @@ mod tests {
 
         let mut splitted = computer.split(2);
         splitted.add_processor(2);
-        computer.merge(&splitted);
+        computer.merge(&splitted, 3);
 
         assert_eq!(computer.memory.values, [1, 2, 3, 4]);
         assert_eq!(computer.resources, 100);
