@@ -73,61 +73,23 @@ async fn run(
         render_start();
     }
 
-    let render_world = Arc::clone(&world);
-
-    tokio::spawn(async move {
-        loop {
-            let _ = world_info_tx2.send(WorldInfo::new(&*render_world.lock().unwrap()));
-            time::sleep(Duration::new(0, 1_000_000_000u32 / 8)).await;
-        }
-    });
+    tokio::spawn(render_world_task(Arc::clone(&world), world_info_tx2));
 
     if simulation.dump {
-        let mut save_nr = 0;
-        let save_world = Arc::clone(&world);
-        tokio::spawn(async move {
-            loop {
-                let result = save_file(&*save_world.lock().unwrap(), save_nr);
-                if result.is_err() {
-                    println!("Could not write save file");
-                    break;
-                }
-                save_nr += 1;
-                time::sleep(Duration::from_secs(60)).await;
-            }
-        });
+        tokio::spawn(save_world_task(Arc::clone(&world)));
     }
 
     if simulation.text_ui {
-        let text_ui_world = Arc::clone(&world);
-        tokio::spawn(async move {
-            loop {
-                render_update();
-                println!("{}", text_ui_world.lock().unwrap());
-                time::sleep(Duration::new(0, 1_000_000_000u32 / 8)).await;
-            }
-        });
+        tokio::spawn(text_ui_task(Arc::clone(&world)));
     }
 
     let (main_loop_control_tx, mut main_loop_control_rx) = mpsc::channel::<bool>(32);
-    let client_command_world = Arc::clone(&world);
-    tokio::spawn(async move {
-        while let Some(cmd) = client_command_rx.recv().await {
-            match cmd {
-                ClientCommand::Stop => {
-                    main_loop_control_tx.send(false).await.unwrap();
-                }
-                ClientCommand::Start => {
-                    main_loop_control_tx.send(true).await.unwrap();
-                }
-                ClientCommand::Disassemble { x, y, respond } => {
-                    respond
-                        .send(disassemble(&*client_command_world.lock().unwrap(), x, y))
-                        .unwrap();
-                }
-            }
-        }
-    });
+
+    tokio::spawn(client_command_task(
+        Arc::clone(&world),
+        client_command_rx,
+        main_loop_control_tx,
+    ));
 
     tokio::task::spawn_blocking(move || {
         let mut tick: u64 = 0;
@@ -165,7 +127,57 @@ async fn run(
     .await?
 }
 
-fn save_file(world: &World, save_nr: u64) -> Result<(), serde_cbor::Error> {
+async fn render_world_task(world: Arc<Mutex<World>>, tx: broadcast::Sender<WorldInfo>) {
+    loop {
+        let _ = tx.send(WorldInfo::new(&*world.lock().unwrap()));
+        time::sleep(Duration::new(0, 1_000_000_000u32 / 8)).await;
+    }
+}
+
+async fn save_world_task(world: Arc<Mutex<World>>) {
+    let mut save_nr = 0;
+    loop {
+        let result = save_world(&*world.lock().unwrap(), save_nr);
+        if result.is_err() {
+            println!("Could not write save file");
+            break;
+        }
+        save_nr += 1;
+        time::sleep(Duration::from_secs(60)).await;
+    }
+}
+
+async fn text_ui_task(world: Arc<Mutex<World>>) {
+    loop {
+        render_update();
+        println!("{}", world.lock().unwrap());
+        time::sleep(Duration::new(0, 1_000_000_000u32 / 8)).await;
+    }
+}
+
+async fn client_command_task(
+    world: Arc<Mutex<World>>,
+    mut rx: mpsc::Receiver<ClientCommand>,
+    tx: mpsc::Sender<bool>,
+) {
+    while let Some(cmd) = rx.recv().await {
+        match cmd {
+            ClientCommand::Stop => {
+                tx.send(false).await.unwrap();
+            }
+            ClientCommand::Start => {
+                tx.send(true).await.unwrap();
+            }
+            ClientCommand::Disassemble { x, y, respond } => {
+                respond
+                    .send(disassemble(&*world.lock().unwrap(), x, y))
+                    .unwrap();
+            }
+        }
+    }
+}
+
+fn save_world(world: &World, save_nr: u64) -> Result<(), serde_cbor::Error> {
     let file = BufWriter::new(File::create(format!("apilar-dump{:06}.cbor", save_nr))?);
     serde_cbor::to_writer(file, world)
 }
