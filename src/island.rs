@@ -24,7 +24,7 @@ struct Connection {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Island {
-    habitat: Habitat,
+    pub habitat: Habitat,
     config: HabitatConfig,
     connections: Vec<Connection>,
 }

@@ -25,35 +25,8 @@ impl World {
             island.update(ticks, rng);
         }
     }
+
+    pub fn habitat(&self) -> &Habitat {
+        &self.islands[0].habitat
+    }
 }
-
-// // this should really become part of run.rs
-// #[derive(Debug)]
-// struct World {
-//     state: Arc<Mutex<WorldState>>,
-// }
-
-// const COMMAND_PROCESS_FREQUENCY: Ticks = Ticks(10000);
-
-// impl World {
-//     pub fn update(&self, rng: &mut SmallRng, mut main_loop_control_rx: mpsc::Receiver<bool>) {
-//         let mut ticks = Ticks(0);
-//         let receive_command = ticks.is_at(COMMAND_PROCESS_FREQUENCY);
-//         loop {
-//             self.state.lock().unwrap().update(ticks, rng);
-
-//             if receive_command {
-//                 if let Ok(started) = main_loop_control_rx.try_recv() {
-//                     if !started {
-//                         while let Some(started) = main_loop_control_rx.blocking_recv() {
-//                             if started {
-//                                 break;
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-//             ticks = ticks.tick();
-//         }
-//     }
-// }

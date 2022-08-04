@@ -2,11 +2,12 @@ use crate::assembler::Assembler;
 use crate::client_command::ClientCommand;
 use crate::computer::Computer;
 use crate::config::{Config, RunConfig};
-use crate::habitat::{Habitat, HabitatConfig};
+use crate::habitat::Habitat;
 use crate::info::HabitatInfo;
 use crate::render::{render_start, render_update};
 use crate::serve::serve_task;
 use crate::ticks::Ticks;
+use crate::world::World;
 use crate::{Load, Run};
 use rand::rngs::SmallRng;
 use rand::SeedableRng;
@@ -31,23 +32,25 @@ const COMMAND_PROCESS_FREQUENCY: Ticks = Ticks(10000);
 pub async fn load_command(cli: &Load) -> Result<(), Box<dyn Error + Sync + Send>> {
     let file = BufReader::new(File::open(cli.filename.clone())?);
 
-    let habitat: Arc<Mutex<Habitat>> = Arc::new(Mutex::new(serde_cbor::from_reader(file)?));
-
     let config: Config = Config::from(cli);
+    let habitat = serde_cbor::from_reader(file)?;
+
+    let world: Arc<Mutex<World>> = Arc::new(Mutex::new(World::from_habitat(
+        habitat,
+        config.habitat_config,
+    )));
 
     let assembler = Assembler::new();
 
-    run(config.run_config, config.habitat_config, habitat, assembler).await
+    run(config.run_config, world, assembler).await
 }
 
 pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<(), Box<dyn Error + Sync + Send>> {
     let assembler = Assembler::new();
 
-    let habitat = Arc::new(Mutex::new(Habitat::new(
-        cli.width,
-        cli.height,
-        cli.world_resources,
-    )));
+    let config = Config::from(cli);
+
+    let mut habitat = Habitat::new(cli.width, cli.height, cli.world_resources);
 
     let mut computer = Computer::new(
         cli.starting_memory_size,
@@ -56,20 +59,19 @@ pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<(), Box<dyn Erro
     );
     assembler.assemble_words(words, &mut computer.memory, 0);
     computer.add_processor(0);
-    habitat
-        .lock()
-        .unwrap()
-        .set((cli.width / 2, cli.height / 2), computer);
+    habitat.set((cli.width / 2, cli.height / 2), computer);
 
-    let config = Config::from(cli);
+    let world: Arc<Mutex<World>> = Arc::new(Mutex::new(World::from_habitat(
+        habitat,
+        config.habitat_config,
+    )));
 
-    run(config.run_config, config.habitat_config, habitat, assembler).await
+    run(config.run_config, world, assembler).await
 }
 
 async fn run(
-    config: RunConfig,
-    habitat_config: HabitatConfig,
-    habitat: Arc<Mutex<Habitat>>,
+    run_config: RunConfig,
+    world: Arc<Mutex<World>>,
     assembler: Assembler,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     let mut rng = SmallRng::from_entropy();
@@ -77,64 +79,62 @@ async fn run(
     let (habitat_info_tx, _) = broadcast::channel(32);
     let (client_command_tx, client_command_rx) = mpsc::channel(32);
 
-    if config.server {
+    if run_config.server {
         tokio::spawn(serve_task(habitat_info_tx.clone(), client_command_tx));
     }
 
-    tokio::spawn(render_habitat_task(
-        Arc::clone(&habitat),
+    tokio::spawn(render_world_task(
+        Arc::clone(&world),
         habitat_info_tx.clone(),
-        config.redraw_frequency,
+        run_config.redraw_frequency,
     ));
 
     let (main_loop_control_tx, main_loop_control_rx) = mpsc::channel::<bool>(32);
 
     tokio::spawn(client_command_task(
-        Arc::clone(&habitat),
+        Arc::clone(&world),
         assembler,
         client_command_rx,
         main_loop_control_tx,
     ));
 
-    if config.autosave.enabled {
-        tokio::spawn(save_habitat_task(
-            Arc::clone(&habitat),
-            config.autosave.frequency,
+    if run_config.autosave.enabled {
+        tokio::spawn(save_world_task(
+            Arc::clone(&world),
+            run_config.autosave.frequency,
         ));
     }
 
-    if config.text_ui {
+    if run_config.text_ui {
         render_start();
-        tokio::spawn(text_ui_task(Arc::clone(&habitat), config.redraw_frequency));
+        tokio::spawn(text_ui_task(
+            Arc::clone(&world),
+            run_config.redraw_frequency,
+        ));
     }
 
     tokio::task::spawn_blocking(move || {
-        simulation_task(
-            habitat_config,
-            Arc::clone(&habitat),
-            &mut rng,
-            main_loop_control_rx,
-        )
+        simulation_task(Arc::clone(&world), &mut rng, main_loop_control_rx)
     })
     .await?;
     Ok(())
 }
 
-async fn render_habitat_task(
-    habitat: Arc<Mutex<Habitat>>,
+async fn render_world_task(
+    world: Arc<Mutex<World>>,
     tx: broadcast::Sender<HabitatInfo>,
     duration: Duration,
 ) {
     loop {
-        let _ = tx.send(HabitatInfo::new(&*habitat.lock().unwrap()));
+        let _ = tx.send(HabitatInfo::new(&*world.lock().unwrap().habitat()));
         time::sleep(duration).await;
     }
 }
 
-async fn save_habitat_task(habitat: Arc<Mutex<Habitat>>, duration: Duration) {
+async fn save_world_task(world: Arc<Mutex<World>>, duration: Duration) {
     let mut save_nr = 0;
     loop {
-        let result = save_habitat(&*habitat.lock().unwrap(), save_nr);
+        let result = save_habitat(&*world.lock().unwrap().habitat(), save_nr);
         if result.is_err() {
             println!("Could not write save file");
             break;
@@ -144,16 +144,16 @@ async fn save_habitat_task(habitat: Arc<Mutex<Habitat>>, duration: Duration) {
     }
 }
 
-async fn text_ui_task(habitat: Arc<Mutex<Habitat>>, duration: Duration) {
+async fn text_ui_task(world: Arc<Mutex<World>>, duration: Duration) {
     loop {
         render_update();
-        println!("{}", habitat.lock().unwrap());
+        println!("{}", world.lock().unwrap().habitat());
         time::sleep(duration).await;
     }
 }
 
 async fn client_command_task(
-    habitat: Arc<Mutex<Habitat>>,
+    world: Arc<Mutex<World>>,
     assembler: Assembler,
     mut rx: mpsc::Receiver<ClientCommand>,
     tx: mpsc::Sender<bool>,
@@ -168,7 +168,12 @@ async fn client_command_task(
             }
             ClientCommand::Disassemble { x, y, respond } => {
                 respond
-                    .send(disassemble(&*habitat.lock().unwrap(), &assembler, x, y))
+                    .send(disassemble(
+                        &*world.lock().unwrap().habitat(),
+                        &assembler,
+                        x,
+                        y,
+                    ))
                     .unwrap();
             }
         }
@@ -176,21 +181,16 @@ async fn client_command_task(
 }
 
 fn simulation_task(
-    config: HabitatConfig,
-    habitat: Arc<Mutex<Habitat>>,
+    world: Arc<Mutex<World>>,
     rng: &mut SmallRng,
     mut main_loop_control_rx: mpsc::Receiver<bool>,
 ) {
     let mut ticks = Ticks(0);
 
     loop {
-        let mutate = ticks.is_at(config.mutation_frequency);
         let receive_command = ticks.is_at(COMMAND_PROCESS_FREQUENCY);
 
-        habitat.lock().unwrap().update(rng, &config);
-        if mutate {
-            habitat.lock().unwrap().mutate(rng, &config.mutation);
-        }
+        world.lock().unwrap().update(ticks, rng);
 
         if receive_command {
             if let Ok(started) = main_loop_control_rx.try_recv() {
