@@ -147,7 +147,7 @@ async fn handle_socket<'a>(
 ) {
     let (mut sender, mut receiver) = socket.split();
 
-    tokio::spawn(async move {
+    let start_stop_task = tokio::spawn(async move {
         loop {
             if let Some(Ok(Message::Text(msg))) = receiver.next().await {
                 if msg == "stop" {
@@ -168,6 +168,7 @@ async fn handle_socket<'a>(
             if sender.send(Message::Text(json)).await.is_err() {
                 // XXX this isn't the world's best error handling either
                 println!("client disconnected");
+                start_stop_task.abort();
                 return;
             }
         }
