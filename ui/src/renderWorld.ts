@@ -54,6 +54,9 @@ export function updateWorld(world: World, renderData: RenderData) {
 }
 
 export function getWorldDimensions(world: World): [number, number] {
+  // XXX there is a problem if we have islands of different dimensions,
+  // because we only calculate this once and we only do render once, we need to
+  // tweak it
   const island = world.islands[world.observedIslandId];
 
   return [island.width * BOX_SIZE, island.height * BOX_SIZE];

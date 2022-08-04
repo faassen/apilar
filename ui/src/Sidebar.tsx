@@ -4,6 +4,7 @@ import { World } from "./world";
 
 function Sidebar(props: {
   world: Accessor<World | undefined>;
+  islandId: Accessor<number>;
   code: Accessor<string | undefined>;
   codeError: Accessor<string | undefined>;
 }) {
@@ -11,6 +12,7 @@ function Sidebar(props: {
     <Show when={props.world() != null}>
       <Info
         world={props.world as Accessor<World>}
+        islandId={props.islandId}
         code={props.code}
         codeError={props.codeError}
       />
@@ -20,31 +22,35 @@ function Sidebar(props: {
 
 function Info(props: {
   world: Accessor<World>;
+  islandId: Accessor<number>;
   code: Accessor<string | undefined>;
   codeError: Accessor<string | undefined>;
 }) {
+  const island = () => {
+    return props.world().islands[props.islandId()];
+  };
   const processorsPerComputer = () =>
-    props.world().totalProcessors / props.world().totalComputers;
+    island().totalProcessors / island().totalComputers;
   const resourcesPerComputer = () =>
-    props.world().totalBoundResources / props.world().totalComputers;
+    island().totalBoundResources / island().totalComputers;
   const memoryPerComputer = () =>
-    props.world().totalMemoryResources / props.world().totalComputers;
+    island().totalMemoryResources / island().totalComputers;
   const totalResources = () =>
-    props.world().totalFreeResources +
-    props.world().totalBoundResources +
-    props.world().totalMemoryResources;
+    island().totalFreeResources +
+    island().totalBoundResources +
+    island().totalMemoryResources;
 
   return (
     <div class="flex h-full flex-col">
       <div class="shrink flex-grow-0 basis-auto">
-        <div>Computers: {props.world().totalComputers}</div>
-        <div>Processors: {props.world().totalProcessors}</div>
+        <div>Computers: {island().totalComputers}</div>
+        <div>Processors: {island().totalProcessors}</div>
         <div>Processors per computer: {processorsPerComputer().toFixed(3)}</div>
         <div>Resources per computer: {resourcesPerComputer().toFixed(3)}</div>
         <div>Memory per computer: {memoryPerComputer().toFixed(3)}</div>
-        <div>Resources Free: {props.world().totalFreeResources}</div>
-        <div>Resources Bound: {props.world().totalBoundResources}</div>
-        <div>Resources Memory: {props.world().totalMemoryResources}</div>
+        <div>Resources Free: {island().totalFreeResources}</div>
+        <div>Resources Bound: {island().totalBoundResources}</div>
+        <div>Resources Memory: {island().totalMemoryResources}</div>
         <div>Resources total: {totalResources()}</div>
       </div>
       <div class="shrink flex-grow basis-auto overflow-y-auto border">

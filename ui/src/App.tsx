@@ -1,9 +1,18 @@
-import { Component, onCleanup, onMount, createSignal } from "solid-js";
+import {
+  Component,
+  onCleanup,
+  onMount,
+  createSignal,
+  Show,
+  Accessor,
+  createEffect,
+} from "solid-js";
 
 import { World, Location } from "./world";
 import { renderWorld, updateWorld, getWorldDimensions } from "./renderWorld";
 import RenderCanvas from "./RenderCanvas";
 import Sidebar from "./Sidebar";
+import IslandSelect from "./IslandSelect";
 
 const socket = new WebSocket("ws://localhost:3000/ws");
 
@@ -11,6 +20,7 @@ const App: Component = () => {
   const [world, setWorld] = createSignal<World | undefined>();
   const [code, setCode] = createSignal<string | undefined>();
   const [codeError, setCodeError] = createSignal<string | undefined>();
+  const [islandId, setIslandId] = createSignal<number>(0);
 
   const handleStop = () => {
     socket.send("stop");
@@ -54,11 +64,26 @@ const App: Component = () => {
   };
   // browser resize handlers
 
+  createEffect(() => {
+    fetch(`/api/observe?island_id=${islandId()}`, {
+      method: "POST",
+    });
+  });
+
   return (
     <div class="flex h-screen flex-col">
       <div class="shrink flex-grow-0 basis-auto flex gap-3">
         <button onClick={handleStop}>Stop</button>
         <button onClick={handleStart}>Start</button>
+        <Show when={world()}>
+          {() => (
+            <IslandSelect
+              world={world as Accessor<World>}
+              islandId={islandId}
+              setIslandId={setIslandId}
+            />
+          )}
+        </Show>
       </div>
       <div class="shrink flex-grow basis-auto overflow-y-auto flex flex-row w-full">
         <div class="w-4/6">
@@ -71,7 +96,12 @@ const App: Component = () => {
           />
         </div>
         <div class="w-2/6">
-          <Sidebar world={world} code={code} codeError={codeError} />
+          <Sidebar
+            world={world}
+            islandId={islandId}
+            code={code}
+            codeError={codeError}
+          />
         </div>
       </div>
     </div>
