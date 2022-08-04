@@ -86,11 +86,11 @@ impl World {
         self.get(coords).computer.is_none()
     }
 
-    pub fn update(&mut self, rng: &mut SmallRng, simulation: &Configuration) {
+    pub fn update(&mut self, rng: &mut SmallRng, config: &Configuration) {
         let coords = self.get_random_coords(rng);
 
         let location = self.get_mut(coords);
-        location.update(rng, simulation);
+        location.update(rng, config);
 
         if let Some((neighbor_coords, address)) = self.want_split(coords) {
             self.split(coords, neighbor_coords, address);
@@ -105,7 +105,7 @@ impl World {
         if let Some(amount) = self.want_eat(coords) {
             self.eat(coords, amount);
         }
-        self.death(rng, coords, &simulation.death);
+        self.death(rng, coords, &config.death);
     }
 
     pub fn mutate(&mut self, rng: &mut SmallRng, mutation: &Mutation) {
@@ -275,7 +275,7 @@ impl Location {
         }
     }
 
-    pub fn update(&mut self, rng: &mut SmallRng, simulation: &Configuration) {
+    pub fn update(&mut self, rng: &mut SmallRng, config: &Configuration) {
         let mut eliminate_computer: bool = false;
 
         if let Some(computer) = &mut self.computer {
@@ -283,11 +283,7 @@ impl Location {
                 self.resources += computer.resources + computer.memory.values.len() as u64;
                 eliminate_computer = true;
             } else {
-                computer.execute(
-                    rng,
-                    simulation.instructions_per_update,
-                    &simulation.metabolism,
-                );
+                computer.execute(rng, config.instructions_per_update, &config.metabolism);
             }
         }
         if eliminate_computer {

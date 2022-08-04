@@ -33,11 +33,11 @@ pub async fn load_command(cli: &Load) -> Result<(), Box<dyn Error + Sync + Send>
 
     let world: Arc<Mutex<World>> = Arc::new(Mutex::new(serde_cbor::from_reader(file)?));
 
-    let simulation: Configuration = Configuration::from(cli);
+    let config: Configuration = Configuration::from(cli);
 
     let assembler = Assembler::new();
 
-    run(simulation, world, assembler).await
+    run(config, world, assembler).await
 }
 
 pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<(), Box<dyn Error + Sync + Send>> {
@@ -61,13 +61,13 @@ pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<(), Box<dyn Erro
         .unwrap()
         .set((cli.width / 2, cli.height / 2), computer);
 
-    let simulation = Configuration::from(cli);
+    let config = Configuration::from(cli);
 
-    run(simulation, world, assembler).await
+    run(config, world, assembler).await
 }
 
 async fn run(
-    simulation: Configuration,
+    config: Configuration,
     world: Arc<Mutex<World>>,
     assembler: Assembler,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
@@ -76,14 +76,14 @@ async fn run(
     let (world_info_tx, _) = broadcast::channel(32);
     let (client_command_tx, client_command_rx) = mpsc::channel(32);
 
-    if simulation.server {
+    if config.server {
         tokio::spawn(serve_task(world_info_tx.clone(), client_command_tx));
     }
 
     tokio::spawn(render_world_task(
         Arc::clone(&world),
         world_info_tx.clone(),
-        simulation.redraw_frequency,
+        config.redraw_frequency,
     ));
 
     let (main_loop_control_tx, main_loop_control_rx) = mpsc::channel::<bool>(32);
@@ -95,28 +95,20 @@ async fn run(
         main_loop_control_tx,
     ));
 
-    if simulation.autosave.enabled {
+    if config.autosave.enabled {
         tokio::spawn(save_world_task(
             Arc::clone(&world),
-            simulation.autosave.frequency,
+            config.autosave.frequency,
         ));
     }
 
-    if simulation.text_ui {
+    if config.text_ui {
         render_start();
-        tokio::spawn(text_ui_task(
-            Arc::clone(&world),
-            simulation.redraw_frequency,
-        ));
+        tokio::spawn(text_ui_task(Arc::clone(&world), config.redraw_frequency));
     }
 
     tokio::task::spawn_blocking(move || {
-        simulation_task(
-            simulation,
-            Arc::clone(&world),
-            &mut rng,
-            main_loop_control_rx,
-        )
+        simulation_task(config, Arc::clone(&world), &mut rng, main_loop_control_rx)
     })
     .await?;
     Ok(())
@@ -178,7 +170,7 @@ async fn client_command_task(
 }
 
 fn simulation_task(
-    simulation: Configuration,
+    config: Configuration,
     world: Arc<Mutex<World>>,
     rng: &mut SmallRng,
     mut main_loop_control_rx: mpsc::Receiver<bool>,
@@ -186,12 +178,12 @@ fn simulation_task(
     let mut ticks = Ticks(0);
 
     loop {
-        let mutate = ticks.is_at(simulation.mutation_frequency);
+        let mutate = ticks.is_at(config.mutation_frequency);
         let receive_command = ticks.is_at(COMMAND_PROCESS_FREQUENCY);
 
-        world.lock().unwrap().update(rng, &simulation);
+        world.lock().unwrap().update(rng, &config);
         if mutate {
-            world.lock().unwrap().mutate(rng, &simulation.mutation);
+            world.lock().unwrap().mutate(rng, &config.mutation);
         }
 
         if receive_command {
