@@ -122,13 +122,11 @@ pub async fn run(
 
             world.lock().unwrap().update(&mut small_rng, &simulation);
             if mutate {
-                world
-                    .lock()
-                    .unwrap()
-                    .mutate_memory(&mut small_rng, simulation.memory_mutation_amount);
-                world.lock().unwrap().mutate_memory_insert(&mut small_rng);
+                let mut world = world.lock().unwrap();
+                world.mutate_memory(&mut small_rng, simulation.memory_mutation_amount);
+                world.mutate_memory_insert(&mut small_rng);
                 // world.mutate_memory_delete(small_rng);
-                world.lock().unwrap().mutate_processor_stack(
+                world.mutate_processor_stack(
                     &mut small_rng,
                     simulation.processor_stack_mutation_amount,
                 )
