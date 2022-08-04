@@ -1,7 +1,7 @@
 use crate::assembler::Assembler;
 use crate::client_command::ClientCommand;
 use crate::computer::Computer;
-use crate::config::Config;
+use crate::config::{Config, RunConfig};
 use crate::habitat::{Habitat, HabitatConfig};
 use crate::info::HabitatInfo;
 use crate::render::{render_start, render_update};
@@ -37,7 +37,7 @@ pub async fn load_command(cli: &Load) -> Result<(), Box<dyn Error + Sync + Send>
 
     let assembler = Assembler::new();
 
-    run(config, habitat, assembler).await
+    run(config.run_config, config.habitat_config, habitat, assembler).await
 }
 
 pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<(), Box<dyn Error + Sync + Send>> {
@@ -63,11 +63,12 @@ pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<(), Box<dyn Erro
 
     let config = Config::from(cli);
 
-    run(config, habitat, assembler).await
+    run(config.run_config, config.habitat_config, habitat, assembler).await
 }
 
 async fn run(
-    config: Config,
+    config: RunConfig,
+    habitat_config: HabitatConfig,
     habitat: Arc<Mutex<Habitat>>,
     assembler: Assembler,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
@@ -109,7 +110,7 @@ async fn run(
 
     tokio::task::spawn_blocking(move || {
         simulation_task(
-            config.habitat_config,
+            habitat_config,
             Arc::clone(&habitat),
             &mut rng,
             main_loop_control_rx,

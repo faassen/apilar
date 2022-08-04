@@ -11,6 +11,7 @@ pub mod direction;
 pub mod habitat;
 pub mod info;
 pub mod instruction;
+pub mod island;
 pub mod memory;
 pub mod processor;
 pub mod render;

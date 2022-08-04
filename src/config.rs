@@ -6,6 +6,10 @@ use std::time::Duration;
 
 pub struct Config {
     pub habitat_config: HabitatConfig,
+    pub run_config: RunConfig,
+}
+
+pub struct RunConfig {
     pub autosave: Autosave,
     // how many milliseconds between redraws
     pub redraw_frequency: Duration,
@@ -35,14 +39,16 @@ impl From<&Run> for Config {
                     max_shrink_amount: cli.max_shrink_amount,
                 },
             },
-            autosave: Autosave {
-                enabled: cli.autosave,
-                // how many milliseconds between autosaves
-                frequency: Duration::from_millis(cli.save_frequency),
+            run_config: RunConfig {
+                autosave: Autosave {
+                    enabled: cli.autosave,
+                    // how many milliseconds between autosaves
+                    frequency: Duration::from_millis(cli.save_frequency),
+                },
+                redraw_frequency: Duration::from_millis(cli.redraw_frequency),
+                text_ui: cli.text_ui,
+                server: !cli.no_server,
             },
-            redraw_frequency: Duration::from_millis(cli.redraw_frequency),
-            text_ui: cli.text_ui,
-            server: !cli.no_server,
         }
     }
 }
@@ -69,14 +75,16 @@ impl From<&Load> for Config {
                     max_shrink_amount: cli.max_shrink_amount,
                 },
             },
-            autosave: Autosave {
-                enabled: cli.autosave,
-                // how many milliseconds between autosaves
-                frequency: Duration::from_millis(cli.autosave_frequency),
+            run_config: RunConfig {
+                autosave: Autosave {
+                    enabled: cli.autosave,
+                    // how many milliseconds between autosaves
+                    frequency: Duration::from_millis(cli.autosave_frequency),
+                },
+                redraw_frequency: Duration::from_millis(cli.redraw_frequency),
+                text_ui: cli.text_ui,
+                server: !cli.no_server,
             },
-            redraw_frequency: Duration::from_millis(cli.redraw_frequency),
-            text_ui: cli.text_ui,
-            server: !cli.no_server,
         }
     }
 }
