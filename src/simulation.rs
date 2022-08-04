@@ -1,10 +1,11 @@
 use crate::instruction::Metabolism;
+use crate::ticks::Ticks;
 use crate::{Load, Run};
 
 pub struct Frequencies {
     // how many ticks before a mutation; this could turn into a mutation
     // chance per tick
-    pub mutation_frequency: u64,
+    pub mutation_frequency: Ticks,
     // this could be expressed as frames per second,
     // but better consistency is 'every x miliseconds'
     pub redraw_frequency: u64,

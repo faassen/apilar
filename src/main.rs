@@ -16,6 +16,7 @@ pub mod run;
 pub mod serve;
 pub mod simulation;
 pub mod starter;
+pub mod ticks;
 pub mod world;
 
 #[cfg(test)]
@@ -24,6 +25,7 @@ pub mod testutil;
 use crate::assembler::{text_to_words, Assembler};
 use crate::run::{load_command, run_command};
 use crate::starter::PROGRAM_TEXT;
+use crate::ticks::Ticks;
 use crate::world::World;
 use clap::{Args, Parser, Subcommand};
 use std::error::Error;
@@ -52,6 +54,8 @@ enum Commands {
     },
 }
 
+struct Miliseconds(u64);
+
 #[derive(Debug, Args)]
 pub struct Run {
     #[clap(value_parser)]
@@ -78,8 +82,8 @@ pub struct Run {
     #[clap(long, default_value_t = 10, value_parser)]
     instructions_per_update: usize,
 
-    #[clap(long, default_value_t = 10000, value_parser)]
-    mutation_frequency: u64,
+    #[clap(long, default_value_t = Ticks(10000), value_parser = Ticks::parse)]
+    mutation_frequency: Ticks,
 
     #[clap(long, default_value_t = 100000, value_parser)]
     redraw_frequency: u64,
@@ -120,8 +124,8 @@ pub struct Load {
     #[clap(long, default_value_t = 10, value_parser)]
     instructions_per_update: usize,
 
-    #[clap(long, default_value_t = 10000, value_parser)]
-    mutation_frequency: u64,
+    #[clap(long, default_value_t = Ticks(10000), value_parser = Ticks::parse)]
+    mutation_frequency: Ticks,
 
     #[clap(long, default_value_t = 100000, value_parser)]
     redraw_frequency: u64,

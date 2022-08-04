@@ -5,6 +5,7 @@ use crate::info::WorldInfo;
 use crate::render::{render_start, render_update};
 use crate::serve::serve_task;
 use crate::simulation::Simulation;
+use crate::ticks::Ticks;
 use crate::world::World;
 use crate::{Load, Run};
 use rand::rngs::SmallRng;
@@ -19,6 +20,8 @@ use std::time::Duration;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use tokio::time;
+
+const COMMAND_PROCESS_FREQUENCY: Ticks = Ticks(10000);
 
 pub async fn load_command(cli: &Load) -> Result<(), Box<dyn Error + Sync + Send>> {
     let file = BufReader::new(File::open(cli.filename.clone())?);
@@ -159,11 +162,11 @@ fn simulation_task(
     small_rng: &mut SmallRng,
     mut main_loop_control_rx: mpsc::Receiver<bool>,
 ) {
-    let mut tick: u64 = 0;
+    let mut ticks = Ticks(0);
 
     loop {
-        let mutate = tick % simulation.frequencies.mutation_frequency == 0;
-        let receive_command = tick % simulation.frequencies.redraw_frequency == 0;
+        let mutate = ticks.is_at(simulation.frequencies.mutation_frequency);
+        let receive_command = ticks.is_at(COMMAND_PROCESS_FREQUENCY);
 
         world.lock().unwrap().update(small_rng, &simulation);
         if mutate {
@@ -185,7 +188,7 @@ fn simulation_task(
                 }
             }
         }
-        tick = tick.wrapping_add(1);
+        ticks = ticks.tick();
     }
 }
 
