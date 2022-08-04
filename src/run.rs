@@ -27,7 +27,9 @@ pub async fn load_command(cli: &Load) -> Result<(), Box<dyn Error + Sync + Send>
 
     let simulation: Simulation = Simulation::from(cli);
 
-    run(simulation, world).await
+    let assembler = Assembler::new();
+
+    run(simulation, world, assembler).await
 }
 
 pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<(), Box<dyn Error + Sync + Send>> {
@@ -53,12 +55,13 @@ pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<(), Box<dyn Erro
 
     let simulation = Simulation::from(cli);
 
-    run(simulation, world).await
+    run(simulation, world, assembler).await
 }
 
 async fn run(
     simulation: Simulation,
     world: Arc<Mutex<World>>,
+    assembler: Assembler,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     let mut small_rng = SmallRng::from_entropy();
 
@@ -73,6 +76,7 @@ async fn run(
 
     tokio::spawn(client_command_task(
         Arc::clone(&world),
+        assembler,
         client_command_rx,
         main_loop_control_tx,
     ));
@@ -128,6 +132,7 @@ async fn text_ui_task(world: Arc<Mutex<World>>) {
 
 async fn client_command_task(
     world: Arc<Mutex<World>>,
+    assembler: Assembler,
     mut rx: mpsc::Receiver<ClientCommand>,
     tx: mpsc::Sender<bool>,
 ) {
@@ -141,7 +146,7 @@ async fn client_command_task(
             }
             ClientCommand::Disassemble { x, y, respond } => {
                 respond
-                    .send(disassemble(&*world.lock().unwrap(), x, y))
+                    .send(disassemble(&*world.lock().unwrap(), &assembler, x, y))
                     .unwrap();
             }
         }
@@ -189,8 +194,7 @@ fn save_world(world: &World, save_nr: u64) -> Result<(), serde_cbor::Error> {
     serde_cbor::to_writer(file, world)
 }
 
-fn disassemble(world: &World, x: usize, y: usize) -> Result<String, String> {
-    let assembler = Assembler::new();
+fn disassemble(world: &World, assembler: &Assembler, x: usize, y: usize) -> Result<String, String> {
     if x >= world.width {
         return Err("x out of range".to_string());
     }
