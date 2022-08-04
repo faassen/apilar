@@ -22,8 +22,8 @@ use tokio::sync::mpsc;
 use tokio::time;
 
 pub struct Autosave {
-    pub autosave: bool,
-    pub autosave_frequency: Duration,
+    pub enabled: bool,
+    pub frequency: Duration,
 }
 
 const COMMAND_PROCESS_FREQUENCY: Ticks = Ticks(10000);
@@ -93,10 +93,10 @@ async fn run(
         main_loop_control_tx,
     ));
 
-    if simulation.autosave.autosave {
+    if simulation.autosave.enabled {
         tokio::spawn(save_world_task(
             Arc::clone(&world),
-            simulation.autosave.autosave_frequency,
+            simulation.autosave.frequency,
         ));
     }
 

@@ -19,15 +19,15 @@ pub struct World {
 }
 
 pub struct Mutation {
-    pub memory_overwrite_mutation_amount: u64,
-    pub memory_insert_mutation_amount: u64,
-    pub memory_delete_mutation_amount: u64,
-    pub processor_stack_mutation_amount: u64,
+    pub overwrite_amount: u64,
+    pub insert_amount: u64,
+    pub delete_amount: u64,
+    pub stack_amount: u64,
 }
 
 pub struct Death {
-    pub death_rate: u32,
-    pub death_memory_size: usize,
+    pub rate: u32,
+    pub memory_size: usize,
 }
 
 type Coords = (usize, usize);
@@ -109,10 +109,10 @@ impl World {
     }
 
     pub fn mutate(&mut self, rng: &mut SmallRng, mutation: &Mutation) {
-        self.mutate_memory_overwrite(rng, mutation.memory_overwrite_mutation_amount);
-        self.mutate_memory_insert(rng, mutation.memory_insert_mutation_amount);
-        self.mutate_memory_delete(rng, mutation.memory_delete_mutation_amount);
-        self.mutate_processor_stack(rng, mutation.processor_stack_mutation_amount)
+        self.mutate_memory_overwrite(rng, mutation.overwrite_amount);
+        self.mutate_memory_insert(rng, mutation.insert_amount);
+        self.mutate_memory_delete(rng, mutation.delete_amount);
+        self.mutate_processor_stack(rng, mutation.stack_amount)
     }
 
     pub fn mutate_memory_overwrite(&mut self, rng: &mut SmallRng, amount: u64) {
@@ -158,9 +158,7 @@ impl World {
     pub fn death(&mut self, rng: &mut SmallRng, coords: Coords, death: &Death) {
         let location = self.get_mut(coords);
         if let Some(computer) = &mut location.computer {
-            if rng.gen_ratio(1, death.death_rate)
-                || computer.memory.values.len() > death.death_memory_size
-            {
+            if rng.gen_ratio(1, death.rate) || computer.memory.values.len() > death.memory_size {
                 location.resources += computer.resources + computer.memory.values.len() as u64;
                 location.computer = None;
             }

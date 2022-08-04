@@ -28,14 +28,14 @@ impl From<&Run> for Simulation {
             instructions_per_update: cli.instructions_per_update,
             mutation_frequency: cli.mutation_frequency,
             mutation: Mutation {
-                memory_overwrite_mutation_amount: cli.memory_overwrite_mutation_amount,
-                memory_insert_mutation_amount: cli.memory_insert_mutation_amount,
-                memory_delete_mutation_amount: cli.memory_delete_mutation_amount,
-                processor_stack_mutation_amount: cli.processor_stack_mutation_amount,
+                overwrite_amount: cli.memory_overwrite_mutation_amount,
+                insert_amount: cli.memory_insert_mutation_amount,
+                delete_amount: cli.memory_delete_mutation_amount,
+                stack_amount: cli.processor_stack_mutation_amount,
             },
             death: Death {
-                death_rate: cli.death_rate,
-                death_memory_size: cli.death_memory_size,
+                rate: cli.death_rate,
+                memory_size: cli.death_memory_size,
             },
             metabolism: Metabolism {
                 max_eat_amount: cli.max_eat_amount,
@@ -46,9 +46,9 @@ impl From<&Run> for Simulation {
                 redraw_frequency: Duration::from_millis(cli.redraw_frequency),
             },
             autosave: Autosave {
-                autosave: cli.autosave,
+                enabled: cli.autosave,
                 // how many milliseconds between autosaves
-                autosave_frequency: Duration::from_millis(cli.save_frequency),
+                frequency: Duration::from_millis(cli.save_frequency),
             },
             text_ui: cli.text_ui,
         }
@@ -61,14 +61,14 @@ impl From<&Load> for Simulation {
             instructions_per_update: cli.instructions_per_update,
             mutation_frequency: cli.mutation_frequency,
             mutation: Mutation {
-                memory_overwrite_mutation_amount: cli.memory_overwrite_mutation_amount,
-                memory_insert_mutation_amount: cli.memory_insert_mutation_amount,
-                memory_delete_mutation_amount: cli.memory_delete_mutation_amount,
-                processor_stack_mutation_amount: cli.processor_stack_mutation_amount,
+                overwrite_amount: cli.memory_overwrite_mutation_amount,
+                insert_amount: cli.memory_insert_mutation_amount,
+                delete_amount: cli.memory_delete_mutation_amount,
+                stack_amount: cli.processor_stack_mutation_amount,
             },
             death: Death {
-                death_rate: cli.death_rate,
-                death_memory_size: cli.death_memory_size,
+                rate: cli.death_rate,
+                memory_size: cli.death_memory_size,
             },
             metabolism: Metabolism {
                 max_eat_amount: cli.max_eat_amount,
@@ -79,9 +79,9 @@ impl From<&Load> for Simulation {
                 redraw_frequency: Duration::from_millis(cli.redraw_frequency),
             },
             autosave: Autosave {
-                autosave: cli.autosave,
+                enabled: cli.autosave,
                 // how many milliseconds between autosaves
-                autosave_frequency: Duration::from_millis(cli.autosave_frequency),
+                frequency: Duration::from_millis(cli.autosave_frequency),
             },
             text_ui: cli.text_ui,
         }
