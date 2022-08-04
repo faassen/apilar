@@ -73,7 +73,11 @@ async fn run(
 
     tokio::spawn(serve_task(world_info_tx.clone(), client_command_tx));
 
-    tokio::spawn(render_world_task(Arc::clone(&world), world_info_tx.clone()));
+    tokio::spawn(render_world_task(
+        Arc::clone(&world),
+        world_info_tx.clone(),
+        Duration::from_millis(simulation.frequencies.redraw_frequency),
+    ));
 
     let (main_loop_control_tx, main_loop_control_rx) = mpsc::channel::<bool>(32);
 
@@ -85,12 +89,18 @@ async fn run(
     ));
 
     if simulation.dump {
-        tokio::spawn(save_world_task(Arc::clone(&world)));
+        tokio::spawn(save_world_task(
+            Arc::clone(&world),
+            Duration::from_millis(simulation.frequencies.save_frequency),
+        ));
     }
 
     if simulation.text_ui {
         render_start();
-        tokio::spawn(text_ui_task(Arc::clone(&world)));
+        tokio::spawn(text_ui_task(
+            Arc::clone(&world),
+            Duration::from_millis(simulation.frequencies.redraw_frequency),
+        ));
     }
 
     tokio::task::spawn_blocking(move || {
@@ -105,14 +115,18 @@ async fn run(
     Ok(())
 }
 
-async fn render_world_task(world: Arc<Mutex<World>>, tx: broadcast::Sender<WorldInfo>) {
+async fn render_world_task(
+    world: Arc<Mutex<World>>,
+    tx: broadcast::Sender<WorldInfo>,
+    duration: Duration,
+) {
     loop {
         let _ = tx.send(WorldInfo::new(&*world.lock().unwrap()));
-        time::sleep(Duration::new(0, 1_000_000_000u32 / 8)).await;
+        time::sleep(duration).await;
     }
 }
 
-async fn save_world_task(world: Arc<Mutex<World>>) {
+async fn save_world_task(world: Arc<Mutex<World>>, duration: Duration) {
     let mut save_nr = 0;
     loop {
         let result = save_world(&*world.lock().unwrap(), save_nr);
@@ -121,15 +135,15 @@ async fn save_world_task(world: Arc<Mutex<World>>) {
             break;
         }
         save_nr += 1;
-        time::sleep(Duration::from_secs(60)).await;
+        time::sleep(duration).await;
     }
 }
 
-async fn text_ui_task(world: Arc<Mutex<World>>) {
+async fn text_ui_task(world: Arc<Mutex<World>>, duration: Duration) {
     loop {
         render_update();
         println!("{}", world.lock().unwrap());
-        time::sleep(Duration::new(0, 1_000_000_000u32 / 8)).await;
+        time::sleep(duration).await;
     }
 }
 

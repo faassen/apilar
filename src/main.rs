@@ -54,8 +54,6 @@ enum Commands {
     },
 }
 
-struct Miliseconds(u64);
-
 #[derive(Debug, Args)]
 pub struct Run {
     #[clap(value_parser)]
@@ -85,10 +83,10 @@ pub struct Run {
     #[clap(long, default_value_t = Ticks(10000), value_parser = Ticks::parse)]
     mutation_frequency: Ticks,
 
-    #[clap(long, default_value_t = 100000, value_parser)]
+    #[clap(long, default_value_t = 1000 / 8, value_parser)]
     redraw_frequency: u64,
 
-    #[clap(long, default_value_t = 100000000, value_parser)]
+    #[clap(long, default_value_t = 1000 * 60, value_parser)]
     save_frequency: u64,
 
     #[clap(long, default_value_t = 1, value_parser)]

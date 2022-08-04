@@ -9,13 +9,6 @@ impl fmt::Display for Ticks {
     }
 }
 
-pub fn ticks_value_parser(s: &str) -> Result<Ticks, String> {
-    let ticks: u64 = s
-        .parse()
-        .map_err(|_| format!("`{}` isn't a valid ticks", s))?;
-    Ok(Ticks(ticks))
-}
-
 impl Ticks {
     pub fn parse(s: &str) -> Result<Ticks, String> {
         let ticks: u64 = s
