@@ -1,29 +1,25 @@
 use crate::assembler::Assembler;
 use crate::computer::Computer;
-use crate::serve::serve;
-use crate::simulation::Simulation;
+use crate::simulation::{run as sim_run, Simulation};
 use crate::world::World;
 use crate::{Load, Run};
-use rand::rngs::SmallRng;
-use rand::SeedableRng;
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
 use std::sync::Arc;
-use tokio::sync::mpsc;
-use tokio::sync::{broadcast, Mutex};
+use std::sync::Mutex;
 
-pub async fn load(load: &Load) -> Result<(), Box<dyn Error>> {
+pub async fn load(load: &Load) -> Result<(), Box<dyn Error + Sync + Send>> {
     let file = BufReader::new(File::open(load.filename.clone())?);
 
     let world: Arc<Mutex<World>> = Arc::new(Mutex::new(serde_cbor::from_reader(file)?));
 
-    let simulation = Simulation::from(load);
+    let simulation: Arc<Simulation> = Arc::new(Simulation::from(load));
 
-    run_world(&simulation, world).await
+    sim_run(simulation, world).await
 }
 
-pub async fn run(run: &Run, words: Vec<&str>) -> Result<(), Box<dyn Error>> {
+pub async fn run(run: &Run, words: Vec<&str>) -> Result<(), Box<dyn Error + Sync + Send>> {
     let assembler = Assembler::new();
 
     let world = Arc::new(Mutex::new(World::new(
@@ -41,32 +37,10 @@ pub async fn run(run: &Run, words: Vec<&str>) -> Result<(), Box<dyn Error>> {
     computer.add_processor(0);
     world
         .lock()
-        .await
+        .unwrap()
         .set((run.width / 2, run.height / 2), computer);
 
-    let simulation = Simulation::from(run);
-    run_world(&simulation, world).await
-}
+    let simulation = Arc::new(Simulation::from(run));
 
-pub async fn run_world(
-    simulation: &Simulation,
-    world: Arc<Mutex<World>>,
-) -> Result<(), Box<dyn Error>> {
-    let mut small_rng = SmallRng::from_entropy();
-
-    let (world_info_tx, _) = broadcast::channel(32);
-    let world_info_tx2 = world_info_tx.clone();
-    let (client_command_tx, mut client_command_rx) = mpsc::channel(32);
-    tokio::spawn(async move {
-        serve(world_info_tx, client_command_tx).await;
-    });
-
-    simulation
-        .run(
-            world,
-            &mut small_rng,
-            world_info_tx2,
-            &mut client_command_rx,
-        )
-        .await
+    sim_run(simulation, world).await
 }

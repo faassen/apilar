@@ -3,16 +3,19 @@ use crate::client_command::ClientCommand;
 use crate::info::WorldInfo;
 use crate::instruction::Metabolism;
 use crate::render::{render_start, render_update};
+use crate::serve::serve;
 use crate::world::World;
 use crate::{Load, Run};
 use rand::rngs::SmallRng;
+use rand::SeedableRng;
 use std::error::Error;
 use std::fs::File;
 use std::io::BufWriter;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
 use tokio::sync::broadcast;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::mpsc;
 use tokio::time;
 
 pub struct Frequencies {
@@ -37,115 +40,115 @@ pub struct Simulation {
     text_ui: bool,
 }
 
-impl Simulation {
-    pub async fn run(
-        &self,
-        world: Arc<Mutex<World>>,
-        small_rng: &mut SmallRng,
-        world_info_tx: broadcast::Sender<WorldInfo>,
-        client_command_rx: &mut mpsc::Receiver<ClientCommand>,
-    ) -> Result<(), Box<dyn Error>> {
-        if self.text_ui {
-            render_start();
+pub async fn run(
+    simulation: Arc<Simulation>,
+    world: Arc<Mutex<World>>,
+) -> Result<(), Box<dyn Error + Send + Sync>> {
+    let mut small_rng = SmallRng::from_entropy();
+
+    let (world_info_tx, _) = broadcast::channel(32);
+    let world_info_tx2 = world_info_tx.clone();
+    let (client_command_tx, mut client_command_rx) = mpsc::channel(32);
+    tokio::spawn(async move {
+        serve(world_info_tx, client_command_tx).await;
+    });
+
+    if simulation.text_ui {
+        render_start();
+    }
+
+    let render_world = Arc::clone(&world);
+
+    tokio::spawn(async move {
+        loop {
+            let _ = world_info_tx2.send(WorldInfo::new(&*render_world.lock().unwrap()));
+            time::sleep(Duration::new(0, 1_000_000_000u32 / 8)).await;
         }
-        let mut tick: u64 = 0;
+    });
+
+    if simulation.dump {
         let mut save_nr = 0;
-
-        let frequencies = &self.frequencies;
-
-        let render_world = Arc::clone(&world);
-
+        let save_world = Arc::clone(&world);
         tokio::spawn(async move {
             loop {
-                let _ = world_info_tx.send(WorldInfo::new(&*render_world.lock().await));
+                let result = save_file(&*save_world.lock().unwrap(), save_nr);
+                if result.is_err() {
+                    println!("Could not write save file");
+                    break;
+                }
+                save_nr += 1;
+                time::sleep(Duration::from_secs(60)).await;
+            }
+        });
+    }
+
+    if simulation.text_ui {
+        let text_ui_world = Arc::clone(&world);
+        tokio::spawn(async move {
+            loop {
+                render_update();
+                println!("{}", text_ui_world.lock().unwrap());
                 time::sleep(Duration::new(0, 1_000_000_000u32 / 8)).await;
             }
         });
+    }
 
-        if self.dump {
-            let save_world = Arc::clone(&world);
-            tokio::spawn(async move {
-                loop {
-                    let result = save_file(&*save_world.lock().await, save_nr);
-                    if result.is_err() {
-                        println!("Could not write save file");
-                        break;
-                    }
-                    save_nr += 1;
-                    time::sleep(Duration::from_secs(60)).await;
+    let (main_loop_control_tx, mut main_loop_control_rx) = mpsc::channel::<bool>(32);
+    let client_command_world = Arc::clone(&world);
+    tokio::spawn(async move {
+        while let Some(cmd) = client_command_rx.recv().await {
+            match cmd {
+                ClientCommand::Stop => {
+                    main_loop_control_tx.send(false).await.unwrap();
                 }
-            });
+                ClientCommand::Start => {
+                    main_loop_control_tx.send(true).await.unwrap();
+                }
+                ClientCommand::Disassemble { x, y, respond } => {
+                    respond
+                        .send(disassemble(&*client_command_world.lock().unwrap(), x, y))
+                        .unwrap();
+                }
+            }
         }
+    });
 
-        if self.text_ui {
-            let text_ui_world = Arc::clone(&world);
-            tokio::spawn(async move {
-                loop {
-                    render_update();
-                    println!("{}", text_ui_world.lock().await);
-                    time::sleep(Duration::new(0, 1_000_000_000u32 / 8)).await;
-                }
-            });
-        }
+    tokio::task::spawn_blocking(move || {
+        let mut tick: u64 = 0;
 
         loop {
-            let mutate = tick % frequencies.mutation_frequency == 0;
-            let receive_command = tick % frequencies.redraw_frequency == 0;
+            let mutate = tick % simulation.frequencies.mutation_frequency == 0;
+            let receive_command = tick % simulation.frequencies.redraw_frequency == 0;
 
-            world.lock().await.update(small_rng, self);
+            world.lock().unwrap().update(&mut small_rng, &simulation);
             if mutate {
                 world
                     .lock()
-                    .await
-                    .mutate_memory(small_rng, self.memory_mutation_amount);
-                world.lock().await.mutate_memory_insert(small_rng);
+                    .unwrap()
+                    .mutate_memory(&mut small_rng, simulation.memory_mutation_amount);
+                world.lock().unwrap().mutate_memory_insert(&mut small_rng);
                 // world.mutate_memory_delete(small_rng);
-                world
-                    .lock()
-                    .await
-                    .mutate_processor_stack(small_rng, self.processor_stack_mutation_amount)
+                world.lock().unwrap().mutate_processor_stack(
+                    &mut small_rng,
+                    simulation.processor_stack_mutation_amount,
+                )
             }
 
             if receive_command {
-                if let Ok(cmd) = client_command_rx.try_recv() {
-                    match cmd {
-                        ClientCommand::Stop => loop {
-                            // doesn't handle other commands while paused..
-                            if let Some(cmd) = client_command_rx.recv().await {
-                                match cmd {
-                                    ClientCommand::Start => break,
-                                    ClientCommand::Stop => {
-                                        // no op when already stopped
-                                    }
-                                    ClientCommand::Disassemble { x, y, respond } => {
-                                        respond
-                                            .send(disassemble(&*world.lock().await, x, y))
-                                            .unwrap();
-                                    }
-                                }
+                if let Ok(started) = main_loop_control_rx.try_recv() {
+                    if !started {
+                        while let Some(started) = main_loop_control_rx.blocking_recv() {
+                            if started {
+                                break;
                             }
-                        },
-                        ClientCommand::Start => {
-                            // no op when already started
-                        }
-                        ClientCommand::Disassemble { x, y, respond } => {
-                            respond
-                                .send(disassemble(&*world.lock().await, x, y))
-                                .unwrap();
-                        }
-                    }
-                }
-                if let Ok(ClientCommand::Stop) = client_command_rx.try_recv() {
-                    loop {
-                        if let Some(ClientCommand::Start) = client_command_rx.recv().await {
-                            break;
                         }
                     }
                 }
             }
             tick = tick.wrapping_add(1);
         }
-    }
+    })
+    .await?
 }
 
 fn save_file(world: &World, save_nr: u64) -> Result<(), serde_cbor::Error> {
