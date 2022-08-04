@@ -6,27 +6,36 @@ use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct World {
+    habitats: Vec<Habitat>,
     islands: Vec<Island>,
 }
 
 impl World {
-    pub fn from_island(island: Island) -> World {
+    pub fn from_habitat(habitat: Habitat, config: HabitatConfig) -> World {
         World {
-            islands: vec![island],
+            habitats: vec![habitat],
+            islands: vec![Island::new(config)],
         }
     }
 
-    pub fn from_habitat(habitat: Habitat, config: HabitatConfig) -> World {
-        Self::from_island(Island::new(habitat, config))
+    pub fn update_habitat(&mut self, id: usize, ticks: Ticks, rng: &mut SmallRng) {
+        let config = &self.islands[id].config;
+        let habitat = &mut self.habitats[id];
+
+        habitat.update(rng, config);
+        let mutate = ticks.is_at(config.mutation_frequency);
+        if mutate {
+            habitat.mutate(rng, &config.mutation);
+        }
     }
 
     pub fn update(&mut self, ticks: Ticks, rng: &mut SmallRng) {
-        for island in &mut self.islands {
-            island.update(ticks, rng);
+        for id in 0..self.habitats.len() {
+            self.update_habitat(id, ticks, rng)
         }
     }
 
     pub fn habitat(&self) -> &Habitat {
-        &self.islands[0].habitat
+        &self.habitats[0]
     }
 }
