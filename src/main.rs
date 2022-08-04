@@ -19,6 +19,7 @@ pub mod run;
 pub mod serve;
 pub mod starter;
 pub mod ticks;
+pub mod topology;
 pub mod world;
 
 #[cfg(test)]
@@ -54,6 +55,7 @@ enum Commands {
         #[clap(value_parser)]
         y: usize,
     },
+    Config,
 }
 
 #[derive(Debug, Args)]
@@ -135,6 +137,9 @@ pub struct Load {
 
     #[clap(long, default_value_t = 10, value_parser)]
     instructions_per_update: usize,
+
+    #[clap(long, default_value_t = 10, value_parser)]
+    max_processors: usize,
 
     #[clap(long, default_value_t = Ticks(10000), value_parser = Ticks::parse)]
     mutation_frequency: Ticks,
@@ -224,6 +229,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
                     println!("No computer at this location")
                 }
             }
+        }
+        Commands::Config => {
+            crate::topology::run();
         }
     }
 

@@ -4,22 +4,23 @@ use crate::{
 };
 use rand::rngs::SmallRng;
 use serde_derive::{Deserialize, Serialize};
+use std::time::Duration;
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Rectangle {
-    x: usize,
-    y: usize,
-    w: usize,
-    h: usize,
+pub struct Rectangle {
+    pub x: usize,
+    pub y: usize,
+    pub w: usize,
+    pub h: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Connection {
-    from_rect: Rectangle,
-    from_id: usize,
-    to_rect: Rectangle,
-    to_id: usize,
-    transmit_frequency: u32, // use some kind of type, newtype? time-based?
+pub struct Connection {
+    pub from_rect: Rectangle,
+    pub from_id: usize,
+    pub to_rect: Rectangle,
+    pub to_id: usize,
+    pub transmit_frequency: Duration,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
