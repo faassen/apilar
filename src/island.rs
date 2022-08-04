@@ -1,4 +1,3 @@
-use crate::config::Config;
 use crate::direction::Direction;
 use crate::instruction::Metabolism;
 use crate::{computer::Computer, ticks::Ticks};
