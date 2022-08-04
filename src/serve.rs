@@ -27,7 +27,7 @@ type WorldInfoSharedSender = Arc<WorldInfoSender>;
 
 type ClientCommandSender = mpsc::Sender<ClientCommand>;
 
-pub async fn serve(world_info_tx: WorldInfoSender, client_command_tx: ClientCommandSender) {
+pub async fn serve_task(world_info_tx: WorldInfoSender, client_command_tx: ClientCommandSender) {
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(
             std::env::var("RUST_LOG")

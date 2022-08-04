@@ -3,7 +3,7 @@ use crate::client_command::ClientCommand;
 use crate::computer::Computer;
 use crate::info::WorldInfo;
 use crate::render::{render_start, render_update};
-use crate::serve::serve;
+use crate::serve::serve_task;
 use crate::simulation::Simulation;
 use crate::world::World;
 use crate::{Load, Run};
@@ -63,25 +63,11 @@ async fn run(
     let mut small_rng = SmallRng::from_entropy();
 
     let (world_info_tx, _) = broadcast::channel(32);
-    let world_info_tx2 = world_info_tx.clone();
-    let (client_command_tx, mut client_command_rx) = mpsc::channel(32);
-    tokio::spawn(async move {
-        serve(world_info_tx, client_command_tx).await;
-    });
+    let (client_command_tx, client_command_rx) = mpsc::channel(32);
 
-    if simulation.text_ui {
-        render_start();
-    }
+    tokio::spawn(serve_task(world_info_tx.clone(), client_command_tx));
 
-    tokio::spawn(render_world_task(Arc::clone(&world), world_info_tx2));
-
-    if simulation.dump {
-        tokio::spawn(save_world_task(Arc::clone(&world)));
-    }
-
-    if simulation.text_ui {
-        tokio::spawn(text_ui_task(Arc::clone(&world)));
-    }
+    tokio::spawn(render_world_task(Arc::clone(&world), world_info_tx.clone()));
 
     let (main_loop_control_tx, mut main_loop_control_rx) = mpsc::channel::<bool>(32);
 
@@ -90,6 +76,15 @@ async fn run(
         client_command_rx,
         main_loop_control_tx,
     ));
+
+    if simulation.dump {
+        tokio::spawn(save_world_task(Arc::clone(&world)));
+    }
+
+    if simulation.text_ui {
+        render_start();
+        tokio::spawn(text_ui_task(Arc::clone(&world)));
+    }
 
     tokio::task::spawn_blocking(move || {
         let mut tick: u64 = 0;
