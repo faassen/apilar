@@ -1,9 +1,9 @@
-use crate::world::World;
+use crate::island::Island;
 use std::fmt;
 
 // display procedure based off https://oneorten.dev/blog/automata_rust_1/
 
-impl fmt::Display for World {
+impl fmt::Display for Island {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for row in &self.rows {
             for location in row.iter() {

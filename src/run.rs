@@ -2,11 +2,11 @@ use crate::assembler::Assembler;
 use crate::client_command::ClientCommand;
 use crate::computer::Computer;
 use crate::configuration::Configuration;
-use crate::info::WorldInfo;
+use crate::info::IslandInfo;
+use crate::island::Island;
 use crate::render::{render_start, render_update};
 use crate::serve::serve_task;
 use crate::ticks::Ticks;
-use crate::world::World;
 use crate::{Load, Run};
 use rand::rngs::SmallRng;
 use rand::SeedableRng;
@@ -31,19 +31,19 @@ const COMMAND_PROCESS_FREQUENCY: Ticks = Ticks(10000);
 pub async fn load_command(cli: &Load) -> Result<(), Box<dyn Error + Sync + Send>> {
     let file = BufReader::new(File::open(cli.filename.clone())?);
 
-    let world: Arc<Mutex<World>> = Arc::new(Mutex::new(serde_cbor::from_reader(file)?));
+    let island: Arc<Mutex<Island>> = Arc::new(Mutex::new(serde_cbor::from_reader(file)?));
 
     let config: Configuration = Configuration::from(cli);
 
     let assembler = Assembler::new();
 
-    run(config, world, assembler).await
+    run(config, island, assembler).await
 }
 
 pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<(), Box<dyn Error + Sync + Send>> {
     let assembler = Assembler::new();
 
-    let world = Arc::new(Mutex::new(World::new(
+    let island = Arc::new(Mutex::new(Island::new(
         cli.width,
         cli.height,
         cli.world_resources,
@@ -56,79 +56,79 @@ pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<(), Box<dyn Erro
     );
     assembler.assemble_words(words, &mut computer.memory, 0);
     computer.add_processor(0);
-    world
+    island
         .lock()
         .unwrap()
         .set((cli.width / 2, cli.height / 2), computer);
 
     let config = Configuration::from(cli);
 
-    run(config, world, assembler).await
+    run(config, island, assembler).await
 }
 
 async fn run(
     config: Configuration,
-    world: Arc<Mutex<World>>,
+    island: Arc<Mutex<Island>>,
     assembler: Assembler,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     let mut rng = SmallRng::from_entropy();
 
-    let (world_info_tx, _) = broadcast::channel(32);
+    let (island_info_tx, _) = broadcast::channel(32);
     let (client_command_tx, client_command_rx) = mpsc::channel(32);
 
     if config.server {
-        tokio::spawn(serve_task(world_info_tx.clone(), client_command_tx));
+        tokio::spawn(serve_task(island_info_tx.clone(), client_command_tx));
     }
 
-    tokio::spawn(render_world_task(
-        Arc::clone(&world),
-        world_info_tx.clone(),
+    tokio::spawn(render_island_task(
+        Arc::clone(&island),
+        island_info_tx.clone(),
         config.redraw_frequency,
     ));
 
     let (main_loop_control_tx, main_loop_control_rx) = mpsc::channel::<bool>(32);
 
     tokio::spawn(client_command_task(
-        Arc::clone(&world),
+        Arc::clone(&island),
         assembler,
         client_command_rx,
         main_loop_control_tx,
     ));
 
     if config.autosave.enabled {
-        tokio::spawn(save_world_task(
-            Arc::clone(&world),
+        tokio::spawn(save_island_task(
+            Arc::clone(&island),
             config.autosave.frequency,
         ));
     }
 
     if config.text_ui {
         render_start();
-        tokio::spawn(text_ui_task(Arc::clone(&world), config.redraw_frequency));
+        tokio::spawn(text_ui_task(Arc::clone(&island), config.redraw_frequency));
     }
 
     tokio::task::spawn_blocking(move || {
-        simulation_task(config, Arc::clone(&world), &mut rng, main_loop_control_rx)
+        simulation_task(config, Arc::clone(&island), &mut rng, main_loop_control_rx)
     })
     .await?;
     Ok(())
 }
 
-async fn render_world_task(
-    world: Arc<Mutex<World>>,
-    tx: broadcast::Sender<WorldInfo>,
+async fn render_island_task(
+    island: Arc<Mutex<Island>>,
+    tx: broadcast::Sender<IslandInfo>,
     duration: Duration,
 ) {
     loop {
-        let _ = tx.send(WorldInfo::new(&*world.lock().unwrap()));
+        let _ = tx.send(IslandInfo::new(&*island.lock().unwrap()));
         time::sleep(duration).await;
     }
 }
 
-async fn save_world_task(world: Arc<Mutex<World>>, duration: Duration) {
+async fn save_island_task(island: Arc<Mutex<Island>>, duration: Duration) {
     let mut save_nr = 0;
     loop {
-        let result = save_world(&*world.lock().unwrap(), save_nr);
+        let result = save_island(&*island.lock().unwrap(), save_nr);
         if result.is_err() {
             println!("Could not write save file");
             break;
@@ -138,16 +138,16 @@ async fn save_world_task(world: Arc<Mutex<World>>, duration: Duration) {
     }
 }
 
-async fn text_ui_task(world: Arc<Mutex<World>>, duration: Duration) {
+async fn text_ui_task(island: Arc<Mutex<Island>>, duration: Duration) {
     loop {
         render_update();
-        println!("{}", world.lock().unwrap());
+        println!("{}", island.lock().unwrap());
         time::sleep(duration).await;
     }
 }
 
 async fn client_command_task(
-    world: Arc<Mutex<World>>,
+    island: Arc<Mutex<Island>>,
     assembler: Assembler,
     mut rx: mpsc::Receiver<ClientCommand>,
     tx: mpsc::Sender<bool>,
@@ -162,7 +162,7 @@ async fn client_command_task(
             }
             ClientCommand::Disassemble { x, y, respond } => {
                 respond
-                    .send(disassemble(&*world.lock().unwrap(), &assembler, x, y))
+                    .send(disassemble(&*island.lock().unwrap(), &assembler, x, y))
                     .unwrap();
             }
         }
@@ -171,7 +171,7 @@ async fn client_command_task(
 
 fn simulation_task(
     config: Configuration,
-    world: Arc<Mutex<World>>,
+    island: Arc<Mutex<Island>>,
     rng: &mut SmallRng,
     mut main_loop_control_rx: mpsc::Receiver<bool>,
 ) {
@@ -181,9 +181,9 @@ fn simulation_task(
         let mutate = ticks.is_at(config.mutation_frequency);
         let receive_command = ticks.is_at(COMMAND_PROCESS_FREQUENCY);
 
-        world.lock().unwrap().update(rng, &config);
+        island.lock().unwrap().update(rng, &config);
         if mutate {
-            world.lock().unwrap().mutate(rng, &config.mutation);
+            island.lock().unwrap().mutate(rng, &config.mutation);
         }
 
         if receive_command {
@@ -201,20 +201,25 @@ fn simulation_task(
     }
 }
 
-fn save_world(world: &World, save_nr: u64) -> Result<(), serde_cbor::Error> {
+fn save_island(island: &Island, save_nr: u64) -> Result<(), serde_cbor::Error> {
     let file = BufWriter::new(File::create(format!("apilar-dump{:06}.cbor", save_nr))?);
-    serde_cbor::to_writer(file, world)
+    serde_cbor::to_writer(file, island)
 }
 
-fn disassemble(world: &World, assembler: &Assembler, x: usize, y: usize) -> Result<String, String> {
-    if x >= world.width {
+fn disassemble(
+    island: &Island,
+    assembler: &Assembler,
+    x: usize,
+    y: usize,
+) -> Result<String, String> {
+    if x >= island.width {
         return Err("x out of range".to_string());
     }
-    if y >= world.height {
+    if y >= island.height {
         return Err("y out of range".to_string());
     }
 
-    let location = world.get((x, y));
+    let location = island.get((x, y));
     if let Some(computer) = &location.computer {
         Ok(assembler.line_disassemble(&computer.memory.values))
     } else {

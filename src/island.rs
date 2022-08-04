@@ -12,7 +12,7 @@ pub struct Location {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct World {
+pub struct Island {
     pub width: usize,
     pub height: usize,
     pub rows: Vec<Vec<Location>>,
@@ -32,8 +32,8 @@ pub struct Death {
 
 type Coords = (usize, usize);
 
-impl World {
-    pub fn new(width: usize, height: usize, resources: u64) -> World {
+impl Island {
+    pub fn new(width: usize, height: usize, resources: u64) -> Island {
         let mut rows: Vec<Vec<Location>> = Vec::new();
         for _ in 0..height {
             let mut column_vec: Vec<Location> = Vec::new();
@@ -42,7 +42,7 @@ impl World {
             }
             rows.push(column_vec);
         }
-        World {
+        Island {
             width,
             height,
             rows,
@@ -298,15 +298,15 @@ mod tests {
 
     #[test]
     fn test_neighbor_out_of_bounds() {
-        let world = World::new(5, 5, 5);
-        assert_eq!(world.neighbor_coords((2, 2), Direction::North), (2, 1));
-        assert_eq!(world.neighbor_coords((2, 2), Direction::South), (2, 3));
-        assert_eq!(world.neighbor_coords((2, 2), Direction::West), (1, 2));
-        assert_eq!(world.neighbor_coords((2, 2), Direction::East), (3, 2));
+        let island = Island::new(5, 5, 5);
+        assert_eq!(island.neighbor_coords((2, 2), Direction::North), (2, 1));
+        assert_eq!(island.neighbor_coords((2, 2), Direction::South), (2, 3));
+        assert_eq!(island.neighbor_coords((2, 2), Direction::West), (1, 2));
+        assert_eq!(island.neighbor_coords((2, 2), Direction::East), (3, 2));
 
-        assert_eq!(world.neighbor_coords((1, 0), Direction::North), (1, 4));
-        assert_eq!(world.neighbor_coords((1, 4), Direction::South), (1, 0));
-        assert_eq!(world.neighbor_coords((0, 2), Direction::West), (4, 2));
-        assert_eq!(world.neighbor_coords((4, 2), Direction::East), (0, 2));
+        assert_eq!(island.neighbor_coords((1, 0), Direction::North), (1, 4));
+        assert_eq!(island.neighbor_coords((1, 4), Direction::South), (1, 0));
+        assert_eq!(island.neighbor_coords((0, 2), Direction::West), (4, 2));
+        assert_eq!(island.neighbor_coords((4, 2), Direction::East), (0, 2));
     }
 }

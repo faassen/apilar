@@ -1,12 +1,12 @@
 use crate::computer::Computer;
-use crate::world::{Location, World};
+use crate::island::{Island, Location};
 use serde_derive::Serialize;
 
 // info useful for the UI
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct WorldInfo {
+pub struct IslandInfo {
     width: usize,
     height: usize,
     total_free_resources: u64,
@@ -32,16 +32,16 @@ pub struct ComputerInfo {
     bound_resources: u64,
 }
 
-impl WorldInfo {
-    pub fn new(world: &World) -> WorldInfo {
+impl IslandInfo {
+    pub fn new(island: &Island) -> IslandInfo {
         let (total_free_resources, total_bound_resources, total_memory_resources) =
-            world.resources_amounts();
-        let total_computers = world.computers_amount();
-        let total_processors = world.processors_amount();
+            island.resources_amounts();
+        let total_computers = island.computers_amount();
+        let total_processors = island.processors_amount();
 
         let mut locations: Vec<Vec<LocationInfo>> = Vec::new();
 
-        for row in &world.rows {
+        for row in &island.rows {
             let mut row_locations: Vec<LocationInfo> = Vec::new();
             for location in row {
                 row_locations.push(LocationInfo::new(location))
@@ -49,9 +49,9 @@ impl WorldInfo {
             locations.push(row_locations);
         }
 
-        WorldInfo {
-            width: world.width,
-            height: world.height,
+        IslandInfo {
+            width: island.width,
+            height: island.height,
             total_free_resources,
             total_bound_resources,
             total_memory_resources,

@@ -10,6 +10,7 @@ pub mod configuration;
 pub mod direction;
 pub mod info;
 pub mod instruction;
+pub mod island;
 pub mod memory;
 pub mod processor;
 pub mod render;
@@ -17,16 +18,15 @@ pub mod run;
 pub mod serve;
 pub mod starter;
 pub mod ticks;
-pub mod world;
 
 #[cfg(test)]
 pub mod testutil;
 
 use crate::assembler::{text_to_words, Assembler};
+use crate::island::Island;
 use crate::run::{load_command, run_command};
 use crate::starter::PROGRAM_TEXT;
 use crate::ticks::Ticks;
-use crate::world::World;
 use clap::{Args, Parser, Subcommand};
 use std::error::Error;
 use std::fs::File;
@@ -201,17 +201,17 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         Commands::Load(cli) => load_command(cli).await?,
         Commands::Disassemble { filename, x, y } => {
             let file = BufReader::new(File::open(filename)?);
-            let world: World = serde_cbor::from_reader(file)?;
-            if *x >= world.width {
+            let island: Island = serde_cbor::from_reader(file)?;
+            if *x >= island.width {
                 println!("x out of range");
                 return Ok(());
             }
-            if *y >= world.height {
+            if *y >= island.height {
                 println!("y out of range");
                 return Ok(());
             }
 
-            let location = world.get((*x, *y));
+            let location = island.get((*x, *y));
             match &location.computer {
                 Some(computer) => {
                     let assembler = Assembler::new();

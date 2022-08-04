@@ -1,7 +1,7 @@
 use crate::instruction::Metabolism;
+use crate::island::{Death, Mutation};
 use crate::run::Autosave;
 use crate::ticks::Ticks;
-use crate::world::{Death, Mutation};
 use crate::{Load, Run};
 use std::time::Duration;
 
