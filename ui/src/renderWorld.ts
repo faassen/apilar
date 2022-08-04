@@ -1,6 +1,6 @@
 import * as pixi from "pixi.js";
 
-import { World, Location } from "./world";
+import { Island, World, Location } from "./world";
 import { Viewport } from "pixi-viewport";
 
 const BOX_SIZE = 20;
@@ -54,7 +54,9 @@ export function updateWorld(world: World, renderData: RenderData) {
 }
 
 export function getWorldDimensions(world: World): [number, number] {
-  return [world.width * BOX_SIZE, world.height * BOX_SIZE];
+  const island = world.islands[world.observedIslandId];
+
+  return [island.width * BOX_SIZE, island.height * BOX_SIZE];
 }
 
 function drawBox(

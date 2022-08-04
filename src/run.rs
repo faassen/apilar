@@ -3,7 +3,7 @@ use crate::client_command::ClientCommand;
 use crate::computer::Computer;
 use crate::config::{Config, RunConfig};
 use crate::habitat::Habitat;
-use crate::info::HabitatInfo;
+use crate::info::WorldInfo;
 use crate::render::{render_start, render_update};
 use crate::serve::serve_task;
 use crate::ticks::Ticks;
@@ -120,11 +120,11 @@ async fn run(run_config: RunConfig, world: Arc<Mutex<World>>, assembler: Assembl
 
 async fn render_world_task(
     world: Arc<Mutex<World>>,
-    tx: broadcast::Sender<HabitatInfo>,
+    tx: broadcast::Sender<WorldInfo>,
     duration: Duration,
 ) {
     loop {
-        let _ = tx.send(HabitatInfo::new(&*world.lock().unwrap().habitat()));
+        let _ = tx.send(WorldInfo::new(&*world.lock().unwrap()));
         time::sleep(duration).await;
     }
 }
@@ -163,6 +163,9 @@ async fn client_command_task(
             }
             ClientCommand::Start => {
                 tx.send(true).await.unwrap();
+            }
+            ClientCommand::Observe { island_id } => {
+                world.lock().unwrap().set_observed(island_id);
             }
             ClientCommand::Disassemble { x, y, respond } => {
                 respond

@@ -1,11 +1,11 @@
 use crate::client_command::ClientCommand;
-use crate::info::HabitatInfo;
+use crate::info::WorldInfo;
 use axum::{
     extract::ws::{Message, WebSocket, WebSocketUpgrade},
     extract::{Extension, Query},
     http::StatusCode,
     response::{IntoResponse, Json},
-    routing::{get, get_service},
+    routing::{get, get_service, post},
     Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
@@ -19,15 +19,12 @@ use tokio::sync::oneshot;
 use tower_http::services::ServeDir;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-type HabitatInfoSender = broadcast::Sender<HabitatInfo>;
-type HabitatInfoSharedSender = Arc<HabitatInfoSender>;
+type WorldInfoSender = broadcast::Sender<WorldInfo>;
+type WorldInfoSharedSender = Arc<WorldInfoSender>;
 
 type ClientCommandSender = mpsc::Sender<ClientCommand>;
 
-pub async fn serve_task(
-    habitat_info_tx: HabitatInfoSender,
-    client_command_tx: ClientCommandSender,
-) {
+pub async fn serve_task(habitat_info_tx: WorldInfoSender, client_command_tx: ClientCommandSender) {
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(
             std::env::var("RUST_LOG")
@@ -53,6 +50,7 @@ pub async fn serve_task(
         // top since it matches all routes
         .route("/ws", get(ws_handler))
         .route("/disassemble", get(disassemble_handler))
+        .route("/observe", post(observe_handler))
         // logging so we can see whats going on
         // .layer(
         //     TraceLayer::new_for_http()
@@ -117,9 +115,26 @@ async fn disassemble_handler(
     }
 }
 
+#[derive(Debug, Deserialize, Default)]
+struct ObserveQuery {
+    island_id: usize,
+}
+
+// XXX or use a Path extractor
+async fn observe_handler(
+    query: Query<ObserveQuery>,
+    Extension(client_command_tx): Extension<ClientCommandSender>,
+) -> impl IntoResponse {
+    client_command_tx
+        .send(ClientCommand::Observe {
+            island_id: query.island_id,
+        })
+        .await
+        .unwrap(); // XXX unwrap
+}
 async fn ws_handler(
     ws: WebSocketUpgrade,
-    Extension(habitat_info_tx): Extension<HabitatInfoSharedSender>,
+    Extension(habitat_info_tx): Extension<WorldInfoSharedSender>,
     Extension(client_command_tx): Extension<ClientCommandSender>,
 ) -> impl IntoResponse {
     ws.on_upgrade(|socket| handle_socket(socket, habitat_info_tx, client_command_tx))
@@ -127,7 +142,7 @@ async fn ws_handler(
 
 async fn handle_socket<'a>(
     socket: WebSocket,
-    habitat_info_tx: HabitatInfoSharedSender,
+    habitat_info_tx: WorldInfoSharedSender,
     client_command_tx: ClientCommandSender,
 ) {
     let (mut sender, mut receiver) = socket.split();

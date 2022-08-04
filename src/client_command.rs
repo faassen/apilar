@@ -9,4 +9,7 @@ pub enum ClientCommand {
         y: usize,
         respond: oneshot::Sender<Result<String, String>>,
     },
+    Observe {
+        island_id: usize,
+    },
 }

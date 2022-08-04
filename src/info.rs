@@ -1,12 +1,22 @@
 use crate::computer::Computer;
-use crate::habitat::{Habitat, Location};
+use crate::habitat::Location;
+use crate::island::Island;
+use crate::world::World;
 use serde_derive::Serialize;
 
 // info useful for the UI
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct HabitatInfo {
+pub struct WorldInfo {
+    islands: Vec<IslandInfo>,
+    observed_island_id: usize,
+    locations: Vec<Vec<LocationInfo>>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct IslandInfo {
     width: usize,
     height: usize,
     total_free_resources: u64,
@@ -14,7 +24,6 @@ pub struct HabitatInfo {
     total_memory_resources: u64,
     total_computers: u64,
     total_processors: u64,
-    locations: Vec<Vec<LocationInfo>>,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -32,14 +41,17 @@ pub struct ComputerInfo {
     bound_resources: u64,
 }
 
-impl HabitatInfo {
-    pub fn new(habitat: &Habitat) -> HabitatInfo {
-        let (total_free_resources, total_bound_resources, total_memory_resources) =
-            habitat.resources_amounts();
-        let total_computers = habitat.computers_amount();
-        let total_processors = habitat.processors_amount();
+// XXX implement as From traits
 
+impl WorldInfo {
+    pub fn new(world: &World) -> WorldInfo {
+        let mut islands = Vec::new();
+        for island in &world.islands {
+            islands.push(IslandInfo::new(island));
+        }
         let mut locations: Vec<Vec<LocationInfo>> = Vec::new();
+
+        let habitat = world.habitat();
 
         for row in &habitat.rows {
             let mut row_locations: Vec<LocationInfo> = Vec::new();
@@ -49,15 +61,39 @@ impl HabitatInfo {
             locations.push(row_locations);
         }
 
-        HabitatInfo {
-            width: habitat.width,
-            height: habitat.height,
+        WorldInfo {
+            locations,
+            islands,
+            observed_island_id: world.observed_island,
+        }
+    }
+}
+
+impl IslandInfo {
+    pub fn new(island: &Island) -> IslandInfo {
+        let (total_free_resources, total_bound_resources, total_memory_resources) =
+            island.habitat.resources_amounts();
+        let total_computers = island.habitat.computers_amount();
+        let total_processors = island.habitat.processors_amount();
+
+        let mut locations: Vec<Vec<LocationInfo>> = Vec::new();
+
+        for row in &island.habitat.rows {
+            let mut row_locations: Vec<LocationInfo> = Vec::new();
+            for location in row {
+                row_locations.push(LocationInfo::new(location))
+            }
+            locations.push(row_locations);
+        }
+
+        IslandInfo {
+            width: island.habitat.width,
+            height: island.habitat.height,
             total_free_resources,
             total_bound_resources,
             total_memory_resources,
             total_computers,
             total_processors,
-            locations,
         }
     }
 }

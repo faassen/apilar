@@ -13,17 +13,22 @@ use std::io::{BufReader, Read};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct World {
-    islands: Vec<Island>,
+    pub islands: Vec<Island>,
+    pub observed_island: usize,
 }
 
 impl World {
     pub fn new(islands: Vec<Island>) -> World {
-        World { islands }
+        World {
+            islands,
+            observed_island: 0,
+        }
     }
 
     pub fn from_island(island: Island) -> World {
         World {
             islands: vec![island],
+            observed_island: 0,
         }
     }
 
@@ -37,8 +42,16 @@ impl World {
         }
     }
 
+    pub fn set_observed(&mut self, island_id: usize) {
+        if island_id >= self.islands.len() {
+            println!("Island id {} out of range", island_id);
+            return;
+        }
+        self.observed_island = island_id;
+    }
+
     pub fn habitat(&self) -> &Habitat {
-        &self.islands[0].habitat
+        &self.islands[self.observed_island].habitat
     }
 }
 

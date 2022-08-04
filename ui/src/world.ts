@@ -1,4 +1,10 @@
 export type World = {
+  islands: Island[];
+  observedIslandId: number;
+  locations: Location[][];
+};
+
+export type Island = {
   width: number;
   height: number;
   totalFreeResources: number;
@@ -6,7 +12,6 @@ export type World = {
   totalMemoryResources: number;
   totalComputers: number;
   totalProcessors: number;
-  locations: Location[][];
 };
 
 export type Location = {
