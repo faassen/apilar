@@ -1,16 +1,15 @@
 use crate::instruction::Metabolism;
 use crate::ticks::Ticks;
 use crate::{Load, Run};
+use std::time::Duration;
 
 pub struct Frequencies {
-    // how many ticks before a mutation; this could turn into a mutation
-    // chance per tick
+    // how many ticks before mutations happen
     pub mutation_frequency: Ticks,
-    // this could be expressed as frames per second,
-    // but better consistency is 'every x miliseconds'
-    pub redraw_frequency: u64,
-    // this could be expressed as "every 5 minutes"
-    pub save_frequency: u64,
+    // how many milliseconds between redraws
+    pub redraw_frequency: Duration,
+    // how many milliseconds between saves
+    pub save_frequency: Duration,
 }
 
 pub struct Simulation {
@@ -38,8 +37,8 @@ impl From<&Run> for Simulation {
             },
             frequencies: Frequencies {
                 mutation_frequency: run.mutation_frequency,
-                redraw_frequency: run.redraw_frequency,
-                save_frequency: run.save_frequency,
+                redraw_frequency: Duration::from_millis(run.redraw_frequency),
+                save_frequency: Duration::from_millis(run.save_frequency),
             },
             dump: run.dump,
             text_ui: run.text_ui,
@@ -61,8 +60,8 @@ impl From<&Load> for Simulation {
             },
             frequencies: Frequencies {
                 mutation_frequency: load.mutation_frequency,
-                redraw_frequency: load.redraw_frequency,
-                save_frequency: load.save_frequency,
+                redraw_frequency: Duration::from_millis(load.redraw_frequency),
+                save_frequency: Duration::from_millis(load.save_frequency),
             },
             dump: load.dump,
             text_ui: load.text_ui,
