@@ -55,13 +55,13 @@ const App: Component = () => {
   // browser resize handlers
 
   return (
-    <div class="h-screen">
-      <div class="flex gap-3">
+    <div class="flex h-screen flex-col">
+      <div class="shrink flex-grow-0 basis-auto flex gap-3">
         <button onClick={handleStop}>Stop</button>
         <button onClick={handleStart}>Start</button>
       </div>
-      <div class="flex flex-row w-full h-5/6">
-        <div class="w-4/6 h-full">
+      <div class="shrink flex-grow basis-auto overflow-y-auto flex flex-row w-full">
+        <div class="w-4/6">
           <RenderCanvas
             render={renderWorld}
             update={updateWorld}

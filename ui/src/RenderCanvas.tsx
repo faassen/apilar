@@ -17,9 +17,13 @@ function RenderCanvas<T, R, C>(props: {
     width: number,
     height: number
   ) => {
+    // we have to constrain screenWidth and screenHeight to the world width
+    // otherwise it bounces up and down for some reason.
+    let screenWidth = Math.min(app.view.width, width);
+    let screenHeight = Math.min(app.view.height, height);
     const viewport = new Viewport({
-      screenWidth: app.view.width,
-      screenHeight: app.view.height,
+      screenWidth,
+      screenHeight,
       worldWidth: width,
       worldHeight: height,
       interaction: app.renderer.plugins.interaction,
