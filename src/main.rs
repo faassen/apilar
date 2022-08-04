@@ -15,21 +15,21 @@ pub mod render;
 pub mod run;
 pub mod serve;
 pub mod simulation;
-pub mod single;
 pub mod starter;
+pub mod ticks;
 pub mod world;
 
 #[cfg(test)]
 pub mod testutil;
 
 use crate::assembler::{text_to_words, Assembler};
-use crate::run::run;
+use crate::run::{load_command, run_command};
 use crate::starter::PROGRAM_TEXT;
+use crate::ticks::Ticks;
 use crate::world::World;
 use clap::{Args, Parser, Subcommand};
 use std::error::Error;
 use std::fs::File;
-use std::io::prelude::*;
 use std::io::{BufReader, Read};
 
 #[derive(Parser, Debug)]
@@ -43,6 +43,7 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Commands {
     Run(Box<Run>),
+    Load(Box<Load>),
     Disassemble {
         #[clap(value_parser)]
         filename: String,
@@ -79,37 +80,108 @@ pub struct Run {
     #[clap(long, default_value_t = 10, value_parser)]
     instructions_per_update: usize,
 
-    #[clap(long, default_value_t = 10000, value_parser)]
-    mutation_frequency: u64,
-
-    #[clap(long, default_value_t = 100000, value_parser)]
-    redraw_frequency: u64,
-
-    #[clap(long, default_value_t = 100000000, value_parser)]
-    save_frequency: u64,
+    #[clap(long, default_value_t = Ticks(10000), value_parser = Ticks::parse)]
+    mutation_frequency: Ticks,
 
     #[clap(long, default_value_t = 1, value_parser)]
-    memory_mutation_amount: u64,
+    memory_overwrite_mutation_amount: u64,
+
+    #[clap(long, default_value_t = 1, value_parser)]
+    memory_insert_mutation_amount: u64,
+
+    #[clap(long, default_value_t = 0, value_parser)]
+    memory_delete_mutation_amount: u64,
 
     #[clap(long, default_value_t = 1, value_parser)]
     processor_stack_mutation_amount: u64,
 
-    // XXX this is now superfluous
-    #[clap(long, default_value_t = 100, value_parser)]
-    eat_amount: u64,
+    #[clap(long, default_value_t = 20000, value_parser)]
+    death_rate: u32,
+
+    #[clap(long, default_value_t = 2usize.pow(13), value_parser)]
+    death_memory_size: usize,
+
+    #[clap(long, default_value_t = 128, value_parser)]
+    max_eat_amount: u64,
+
+    #[clap(long, default_value_t = 16, value_parser)]
+    max_grow_amount: u64,
+
+    #[clap(long, default_value_t = 16, value_parser)]
+    max_shrink_amount: u64,
+
+    #[clap(long, default_value_t = false, value_parser)]
+    autosave: bool,
+
+    #[clap(long, default_value_t = 1000 * 60, value_parser)]
+    save_frequency: u64,
+
+    #[clap(long, default_value_t = 1000 / 8, value_parser)]
+    redraw_frequency: u64,
+
+    #[clap(long, default_value_t = false, value_parser)]
+    text_ui: bool,
+
+    #[clap(long, default_value_t = false, value_parser)]
+    no_server: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct Load {
+    #[clap(value_parser)]
+    filename: String,
+
+    #[clap(long, default_value_t = 10, value_parser)]
+    instructions_per_update: usize,
+
+    #[clap(long, default_value_t = Ticks(10000), value_parser = Ticks::parse)]
+    mutation_frequency: Ticks,
+
+    #[clap(long, default_value_t = 1, value_parser)]
+    memory_overwrite_mutation_amount: u64,
+
+    #[clap(long, default_value_t = 1, value_parser)]
+    memory_insert_mutation_amount: u64,
+
+    #[clap(long, default_value_t = 0, value_parser)]
+    memory_delete_mutation_amount: u64,
+
+    #[clap(long, default_value_t = 1, value_parser)]
+    processor_stack_mutation_amount: u64,
 
     #[clap(long, default_value_t = 20000, value_parser)]
     death_rate: u32,
 
+    #[clap(long, default_value_t = 2usize.pow(13), value_parser)]
+    death_memory_size: usize,
+
+    #[clap(long, default_value_t = 128, value_parser)]
+    max_eat_amount: u64,
+
+    #[clap(long, default_value_t = 16, value_parser)]
+    max_grow_amount: u64,
+
+    #[clap(long, default_value_t = 16, value_parser)]
+    max_shrink_amount: u64,
+
     #[clap(long, default_value_t = false, value_parser)]
-    dump: bool,
+    autosave: bool,
+
+    #[clap(long, default_value_t = 100000000, value_parser)]
+    autosave_frequency: u64,
+
+    #[clap(long, default_value_t = 100000, value_parser)]
+    redraw_frequency: u64,
 
     #[clap(long, default_value_t = false, value_parser)]
     text_ui: bool,
+
+    #[clap(long, default_value_t = false, value_parser)]
+    no_server: bool,
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     let cli = Cli::parse();
 
     match &cli.command {
@@ -124,8 +196,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 None => PROGRAM_TEXT.to_string(),
             };
             let words = text_to_words(&contents);
-            run(cli, words).await?;
+            run_command(cli, words).await?;
         }
+        Commands::Load(cli) => load_command(cli).await?,
         Commands::Disassemble { filename, x, y } => {
             let file = BufReader::new(File::open(filename)?);
             let world: World = serde_cbor::from_reader(file)?;

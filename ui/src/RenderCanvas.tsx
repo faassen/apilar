@@ -3,11 +3,12 @@ import { createEffect, onMount, Accessor } from "solid-js";
 import * as pixi from "pixi.js";
 import { Viewport } from "pixi-viewport";
 
-function RenderCanvas<T, R>(props: {
+function RenderCanvas<T, R, C>(props: {
   data: Accessor<T | undefined>;
-  render: (viewport: Viewport, data: T) => R;
+  render: (viewport: Viewport, data: T, onClick: (c: C) => void) => R;
   update: (data: T, renderData: R) => void;
   getDimensions: (data: T) => [number, number];
+  onClick: (c: C) => void;
 }) {
   let pixiContainer: HTMLDivElement | undefined;
 
@@ -16,9 +17,13 @@ function RenderCanvas<T, R>(props: {
     width: number,
     height: number
   ) => {
+    // we have to constrain screenWidth and screenHeight to the world width
+    // otherwise it bounces up and down for some reason.
+    let screenWidth = Math.min(app.view.width, width);
+    let screenHeight = Math.min(app.view.height, height);
     const viewport = new Viewport({
-      screenWidth: app.view.width,
-      screenHeight: app.view.height,
+      screenWidth,
+      screenHeight,
       worldWidth: width,
       worldHeight: height,
       interaction: app.renderer.plugins.interaction,
@@ -62,7 +67,7 @@ function RenderCanvas<T, R>(props: {
       const [width, height] = props.getDimensions(data);
       if (renderData == null) {
         const viewport = createViewport(app, width, height);
-        renderData = props.render(viewport, data);
+        renderData = props.render(viewport, data, props.onClick);
       } else {
         props.update(data, renderData);
       }

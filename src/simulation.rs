@@ -1,104 +1,84 @@
-use crate::client_command::ClientCommand;
-use crate::info::WorldInfo;
-use crate::render::{render_start, render_update};
-use crate::world::World;
-use rand::rngs::SmallRng;
-use std::error::Error;
-use std::fs::File;
-use std::io::{BufWriter, Write};
-use tokio::sync::mpsc;
-
-pub struct Frequencies {
-    pub mutation_frequency: u64,
-    pub redraw_frequency: u64,
-    pub save_frequency: u64,
-}
+use crate::instruction::Metabolism;
+use crate::run::Autosave;
+use crate::ticks::Ticks;
+use crate::world::{Death, Mutation};
+use crate::{Load, Run};
+use std::time::Duration;
 
 pub struct Simulation {
-    instructions_per_update: usize,
-    memory_mutation_amount: u64,
-    processor_stack_mutation_amount: u64,
-    death_rate: u32,
-    frequencies: Frequencies,
-    dump: bool,
-    text_ui: bool,
+    pub instructions_per_update: usize,
+    // how many ticks between mutations
+    pub mutation_frequency: Ticks,
+    pub mutation: Mutation,
+    pub death: Death,
+    pub metabolism: Metabolism,
+    pub autosave: Autosave,
+    // how many milliseconds between redraws
+    pub redraw_frequency: Duration,
+    pub text_ui: bool,
+    pub server: bool,
 }
 
-impl Simulation {
-    pub fn new(
-        instructions_per_update: usize,
-        memory_mutation_amount: u64,
-        processor_stack_mutation_amount: u64,
-        death_rate: u32,
-        frequencies: Frequencies,
-        dump: bool,
-        text_ui: bool,
-    ) -> Simulation {
+impl From<&Run> for Simulation {
+    fn from(cli: &Run) -> Self {
         Simulation {
-            instructions_per_update,
-            memory_mutation_amount,
-            processor_stack_mutation_amount,
-            death_rate,
-            frequencies,
-            dump,
-            text_ui,
+            instructions_per_update: cli.instructions_per_update,
+            mutation_frequency: cli.mutation_frequency,
+            mutation: Mutation {
+                overwrite_amount: cli.memory_overwrite_mutation_amount,
+                insert_amount: cli.memory_insert_mutation_amount,
+                delete_amount: cli.memory_delete_mutation_amount,
+                stack_amount: cli.processor_stack_mutation_amount,
+            },
+            death: Death {
+                rate: cli.death_rate,
+                memory_size: cli.death_memory_size,
+            },
+            metabolism: Metabolism {
+                max_eat_amount: cli.max_eat_amount,
+                max_grow_amount: cli.max_grow_amount,
+                max_shrink_amount: cli.max_shrink_amount,
+            },
+            autosave: Autosave {
+                enabled: cli.autosave,
+                // how many milliseconds between autosaves
+                frequency: Duration::from_millis(cli.save_frequency),
+            },
+            redraw_frequency: Duration::from_millis(cli.redraw_frequency),
+            text_ui: cli.text_ui,
+            server: !cli.no_server,
         }
     }
+}
 
-    pub async fn run(
-        &self,
-        world: &mut World,
-        small_rng: &mut SmallRng,
-        world_info_tx: mpsc::Sender<WorldInfo>,
-        client_command_rx: &mut mpsc::Receiver<ClientCommand>,
-    ) -> Result<(), Box<dyn Error>> {
-        if self.text_ui {
-            render_start();
-        }
-        let mut i: u64 = 0;
-        let mut save_nr = 0;
-
-        let frequencies = &self.frequencies;
-
-        loop {
-            let redraw = i % frequencies.redraw_frequency == 0;
-            let mutate = i % frequencies.mutation_frequency == 0;
-            let save = i % frequencies.save_frequency == 0;
-            let receive_command = i % frequencies.redraw_frequency == 0;
-
-            world.update(small_rng, self.instructions_per_update, self.death_rate);
-            if mutate {
-                world.mutate_memory(small_rng, self.memory_mutation_amount);
-                world.mutate_memory_insert(small_rng);
-                // world.mutate_memory_delete(small_rng);
-                world.mutate_processor_stack(small_rng, self.processor_stack_mutation_amount)
-            }
-            if save && self.dump {
-                let file = BufWriter::new(File::create(format!("apilar-dump{:06}.cbor", save_nr))?);
-                serde_cbor::to_writer(file, &world)?;
-                save_nr += 1;
-            }
-
-            if self.text_ui && redraw {
-                render_update();
-                println!("{}", world);
-            }
-
-            if redraw {
-                // XXX does try send work?
-                let _ = world_info_tx.try_send(WorldInfo::new(world)); // .await?;
-            }
-
-            if receive_command {
-                if let Ok(ClientCommand::Stop) = client_command_rx.try_recv() {
-                    loop {
-                        if let Some(ClientCommand::Start) = client_command_rx.recv().await {
-                            break;
-                        }
-                    }
-                }
-            }
-            i = i.wrapping_add(1);
+impl From<&Load> for Simulation {
+    fn from(cli: &Load) -> Self {
+        Simulation {
+            instructions_per_update: cli.instructions_per_update,
+            mutation_frequency: cli.mutation_frequency,
+            mutation: Mutation {
+                overwrite_amount: cli.memory_overwrite_mutation_amount,
+                insert_amount: cli.memory_insert_mutation_amount,
+                delete_amount: cli.memory_delete_mutation_amount,
+                stack_amount: cli.processor_stack_mutation_amount,
+            },
+            death: Death {
+                rate: cli.death_rate,
+                memory_size: cli.death_memory_size,
+            },
+            metabolism: Metabolism {
+                max_eat_amount: cli.max_eat_amount,
+                max_grow_amount: cli.max_grow_amount,
+                max_shrink_amount: cli.max_shrink_amount,
+            },
+            autosave: Autosave {
+                enabled: cli.autosave,
+                // how many milliseconds between autosaves
+                frequency: Duration::from_millis(cli.autosave_frequency),
+            },
+            redraw_frequency: Duration::from_millis(cli.redraw_frequency),
+            text_ui: cli.text_ui,
+            server: !cli.no_server,
         }
     }
 }

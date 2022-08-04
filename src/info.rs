@@ -4,7 +4,7 @@ use serde_derive::Serialize;
 
 // info useful for the UI
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WorldInfo {
     width: usize,
@@ -17,14 +17,14 @@ pub struct WorldInfo {
     locations: Vec<Vec<LocationInfo>>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct LocationInfo {
     free_resources: u64,
     computer: Option<ComputerInfo>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ComputerInfo {
     memory_size: usize,

@@ -4,6 +4,7 @@ use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::direction::Direction;
+use crate::instruction::Metabolism;
 use crate::memory::Memory;
 use crate::processor::Processor;
 
@@ -77,11 +78,21 @@ impl Computer {
         self.processors.push(Processor::new(index));
     }
 
-    pub fn execute(&mut self, rng: &mut SmallRng, amount_per_processor: usize) -> usize {
+    pub fn execute(
+        &mut self,
+        rng: &mut SmallRng,
+        instructions_per_update: usize,
+        metabolism: &Metabolism,
+    ) -> usize {
         // execute amount of instructions per processor
         let mut total = 0;
         for processor in &mut self.processors {
-            total += processor.execute_amount(&mut self.memory, rng, amount_per_processor);
+            total += processor.execute_amount(
+                &mut self.memory,
+                rng,
+                instructions_per_update,
+                metabolism,
+            );
         }
 
         // obtain any start instructions
@@ -144,14 +155,12 @@ impl Computer {
         total
     }
 
-    pub fn mutate_memory(&mut self, rng: &mut SmallRng, amount: u64) {
+    pub fn mutate_memory_overwrite(&mut self, rng: &mut SmallRng) {
         if self.memory.values.is_empty() {
             return;
         }
-        for _ in 0..amount {
-            let address = rng.gen_range(0..self.memory.values.len());
-            self.memory.values[address] = rng.gen::<u8>();
-        }
+        let address = rng.gen_range(0..self.memory.values.len());
+        self.memory.values[address] = rng.gen::<u8>();
     }
 
     pub fn mutate_memory_insert(&mut self, rng: &mut SmallRng) {
@@ -182,15 +191,13 @@ impl Computer {
         }
     }
 
-    pub fn mutate_processors(&mut self, rng: &mut SmallRng, amount: u64) {
-        for _ in 0..amount {
-            let choice = self.processors.choose_mut(rng);
-            if let Some(processor) = choice {
-                if rng.gen_ratio(1, 5) {
-                    processor.pop();
-                } else {
-                    processor.push(rng.gen::<u8>() as u64);
-                }
+    pub fn mutate_processors(&mut self, rng: &mut SmallRng) {
+        let choice = self.processors.choose_mut(rng);
+        if let Some(processor) = choice {
+            if rng.gen_ratio(1, 5) {
+                processor.pop();
+            } else {
+                processor.push(rng.gen::<u8>() as u64);
             }
         }
     }
@@ -327,10 +334,19 @@ mod tests {
 
         let mut computer = Computer::new(1024, 10, 100);
         assembler.assemble_words(words.clone(), &mut computer.memory, 0);
-        let mut small_rng = SmallRng::from_seed([0; 32]);
+        let mut rng = SmallRng::from_seed([0; 32]);
 
         computer.add_processor(0);
-        computer.execute(&mut small_rng, words_amount * 64);
+
+        computer.execute(
+            &mut rng,
+            words_amount * 64,
+            &Metabolism {
+                max_eat_amount: 0,
+                max_grow_amount: 0,
+                max_shrink_amount: 0,
+            },
+        );
 
         let disassembled =
             assembler.disassemble_to_words(&computer.memory.values[64..64 + words_amount]);

@@ -7,9 +7,12 @@ use crate::memory::Memory;
 use crate::processor::Processor;
 
 const MAX_MOVE_HEAD_AMOUNT: usize = 1024;
-const MAX_EAT_AMOUNT: u64 = 128;
-const MAX_GROW_AMOUNT: u64 = 16;
-const MAX_SHRINK_AMOUNT: u64 = 16;
+
+pub struct Metabolism {
+    pub max_eat_amount: u64,
+    pub max_grow_amount: u64,
+    pub max_shrink_amount: u64,
+}
 
 #[derive(EnumIter, Debug, PartialEq, Display, FromPrimitive, ToPrimitive)]
 pub enum Instruction {
@@ -91,7 +94,13 @@ impl Instruction {
         num::FromPrimitive::from_u8(value)
     }
 
-    pub fn execute(&self, processor: &mut Processor, memory: &mut Memory, rng: &mut SmallRng) {
+    pub fn execute(
+        &self,
+        processor: &mut Processor,
+        memory: &mut Memory,
+        rng: &mut SmallRng,
+        metabolism: &Metabolism,
+    ) {
         match self {
             // Instruction::PRINT0 => {
             //     println!("P0 {:?}", processor.current_stack());
@@ -362,15 +371,15 @@ impl Instruction {
 
             // resources
             Instruction::EAT => {
-                let amount = processor.pop_clamped(MAX_EAT_AMOUNT);
+                let amount = processor.pop_clamped(metabolism.max_eat_amount);
                 processor.want_eat = Some(amount);
             }
             Instruction::GROW => {
-                let amount = processor.pop_clamped(MAX_GROW_AMOUNT);
+                let amount = processor.pop_clamped(metabolism.max_grow_amount);
                 processor.want_grow = Some(amount);
             }
             Instruction::SHRINK => {
-                let amount = processor.pop_clamped(MAX_SHRINK_AMOUNT);
+                let amount = processor.pop_clamped(metabolism.max_shrink_amount);
                 processor.want_shrink = Some(amount);
             }
             Instruction::MEMORY => {
@@ -613,8 +622,16 @@ mod tests {
         let mut exec = execute("N1 N2");
         assert_eq!(exec.processor.current_stack(), [1, 2]);
         // execute two more
-        exec.processor
-            .execute_amount(&mut exec.memory, &mut exec.small_rng, 1002);
+        exec.processor.execute_amount(
+            &mut exec.memory,
+            &mut exec.rng,
+            1002,
+            &Metabolism {
+                max_eat_amount: 0,
+                max_grow_amount: 0,
+                max_shrink_amount: 0,
+            },
+        );
         assert_eq!(exec.processor.current_stack(), [1, 2]);
         assert!(!exec.processor.alive);
     }
@@ -654,8 +671,13 @@ mod tests {
 
         exec.processor.execute_amount(
             &mut exec.memory,
-            &mut exec.small_rng,
+            &mut exec.rng,
             (words_amount - 1) * words_amount,
+            &Metabolism {
+                max_eat_amount: 0,
+                max_grow_amount: 0,
+                max_shrink_amount: 0,
+            },
         );
 
         assert_eq!(

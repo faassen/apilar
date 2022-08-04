@@ -1,10 +1,9 @@
 use crate::computer::Computer;
 use crate::direction::Direction;
+use crate::simulation::Simulation;
 use rand::rngs::SmallRng;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
-
-const MAX_MEMORY_SIZE: usize = 5120;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Location {
@@ -16,14 +15,25 @@ pub struct Location {
 pub struct World {
     pub width: usize,
     pub height: usize,
-    eat_amount: u64,
     pub rows: Vec<Vec<Location>>,
+}
+
+pub struct Mutation {
+    pub overwrite_amount: u64,
+    pub insert_amount: u64,
+    pub delete_amount: u64,
+    pub stack_amount: u64,
+}
+
+pub struct Death {
+    pub rate: u32,
+    pub memory_size: usize,
 }
 
 type Coords = (usize, usize);
 
 impl World {
-    pub fn new(width: usize, height: usize, eat_amount: u64, resources: u64) -> World {
+    pub fn new(width: usize, height: usize, resources: u64) -> World {
         let mut rows: Vec<Vec<Location>> = Vec::new();
         for _ in 0..height {
             let mut column_vec: Vec<Location> = Vec::new();
@@ -34,7 +44,6 @@ impl World {
         }
         World {
             width,
-            eat_amount,
             height,
             rows,
         }
@@ -77,11 +86,11 @@ impl World {
         self.get(coords).computer.is_none()
     }
 
-    pub fn update(&mut self, rng: &mut SmallRng, amount_per_processor: usize, death_rate: u32) {
+    pub fn update(&mut self, rng: &mut SmallRng, simulation: &Simulation) {
         let coords = self.get_random_coords(rng);
 
         let location = self.get_mut(coords);
-        location.update(rng, amount_per_processor);
+        location.update(rng, simulation);
 
         if let Some((neighbor_coords, address)) = self.want_split(coords) {
             self.split(coords, neighbor_coords, address);
@@ -96,45 +105,60 @@ impl World {
         if let Some(amount) = self.want_eat(coords) {
             self.eat(coords, amount);
         }
-        self.death(rng, coords, death_rate);
+        self.death(rng, coords, &simulation.death);
     }
 
-    pub fn mutate_memory(&mut self, rng: &mut SmallRng, amount_memory: u64) {
-        let coords = self.get_random_coords(rng);
-        let location = self.get_mut(coords);
-        if let Some(computer) = &mut location.computer {
-            computer.mutate_memory(rng, amount_memory);
+    pub fn mutate(&mut self, rng: &mut SmallRng, mutation: &Mutation) {
+        self.mutate_memory_overwrite(rng, mutation.overwrite_amount);
+        self.mutate_memory_insert(rng, mutation.insert_amount);
+        self.mutate_memory_delete(rng, mutation.delete_amount);
+        self.mutate_processor_stack(rng, mutation.stack_amount)
+    }
+
+    pub fn mutate_memory_overwrite(&mut self, rng: &mut SmallRng, amount: u64) {
+        for _ in 0..amount {
+            let coords = self.get_random_coords(rng);
+            let location = self.get_mut(coords);
+            if let Some(computer) = &mut location.computer {
+                computer.mutate_memory_overwrite(rng);
+            }
         }
     }
 
-    pub fn mutate_memory_insert(&mut self, rng: &mut SmallRng) {
-        let coords = self.get_random_coords(rng);
-        let location = self.get_mut(coords);
-        if let Some(computer) = &mut location.computer {
-            computer.mutate_memory_insert(rng);
+    pub fn mutate_memory_insert(&mut self, rng: &mut SmallRng, amount: u64) {
+        for _ in 0..amount {
+            let coords = self.get_random_coords(rng);
+            let location = self.get_mut(coords);
+            if let Some(computer) = &mut location.computer {
+                computer.mutate_memory_insert(rng);
+            }
         }
     }
 
-    pub fn mutate_memory_delete(&mut self, rng: &mut SmallRng) {
-        let coords = self.get_random_coords(rng);
-        let location = self.get_mut(coords);
-        if let Some(computer) = &mut location.computer {
-            computer.mutate_memory_delete(rng);
+    pub fn mutate_memory_delete(&mut self, rng: &mut SmallRng, amount: u64) {
+        for _ in 0..amount {
+            let coords = self.get_random_coords(rng);
+            let location = self.get_mut(coords);
+            if let Some(computer) = &mut location.computer {
+                computer.mutate_memory_delete(rng);
+            }
         }
     }
 
-    pub fn mutate_processor_stack(&mut self, rng: &mut SmallRng, amount_processors: u64) {
-        let coords = self.get_random_coords(rng);
-        let location = self.get_mut(coords);
-        if let Some(computer) = &mut location.computer {
-            computer.mutate_processors(rng, amount_processors);
+    pub fn mutate_processor_stack(&mut self, rng: &mut SmallRng, amount: u64) {
+        for _ in 0..amount {
+            let coords = self.get_random_coords(rng);
+            let location = self.get_mut(coords);
+            if let Some(computer) = &mut location.computer {
+                computer.mutate_processors(rng);
+            }
         }
     }
 
-    pub fn death(&mut self, rng: &mut SmallRng, coords: Coords, death_rate: u32) {
+    pub fn death(&mut self, rng: &mut SmallRng, coords: Coords, death: &Death) {
         let location = self.get_mut(coords);
         if let Some(computer) = &mut location.computer {
-            if rng.gen_ratio(1, death_rate) || computer.memory.values.len() > MAX_MEMORY_SIZE {
+            if rng.gen_ratio(1, death.rate) || computer.memory.values.len() > death.memory_size {
                 location.resources += computer.resources + computer.memory.values.len() as u64;
                 location.computer = None;
             }
@@ -229,7 +253,7 @@ impl World {
         let mut free: u64 = 0;
         let mut bound: u64 = 0;
         let mut memory: u64 = 0;
-        let mut with_merge: u64 = 0;
+
         for row in &self.rows {
             for location in row {
                 free += location.resources;
@@ -251,7 +275,7 @@ impl Location {
         }
     }
 
-    pub fn update(&mut self, rng: &mut SmallRng, amount_per_processor: usize) {
+    pub fn update(&mut self, rng: &mut SmallRng, simulation: &Simulation) {
         let mut eliminate_computer: bool = false;
 
         if let Some(computer) = &mut self.computer {
@@ -259,7 +283,11 @@ impl Location {
                 self.resources += computer.resources + computer.memory.values.len() as u64;
                 eliminate_computer = true;
             } else {
-                computer.execute(rng, amount_per_processor);
+                computer.execute(
+                    rng,
+                    simulation.instructions_per_update,
+                    &simulation.metabolism,
+                );
             }
         }
         if eliminate_computer {
@@ -274,7 +302,7 @@ mod tests {
 
     #[test]
     fn test_neighbor_out_of_bounds() {
-        let world = World::new(5, 5, 10, 5);
+        let world = World::new(5, 5, 5);
         assert_eq!(world.neighbor_coords((2, 2), Direction::North), (2, 1));
         assert_eq!(world.neighbor_coords((2, 2), Direction::South), (2, 3));
         assert_eq!(world.neighbor_coords((2, 2), Direction::West), (1, 2));
