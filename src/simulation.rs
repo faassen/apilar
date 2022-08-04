@@ -1,6 +1,6 @@
 use crate::instruction::Metabolism;
 use crate::ticks::Ticks;
-use crate::world::Mutation;
+use crate::world::{Death, Mutation};
 use crate::{Load, Run};
 use std::time::Duration;
 
@@ -16,7 +16,7 @@ pub struct Simulation {
     // how many ticks between mutations
     pub mutation_frequency: Ticks,
     pub mutation: Mutation,
-    pub death_rate: u32,
+    pub death: Death,
     pub metabolism: Metabolism,
     pub frequencies: Frequencies,
     pub dump: bool,
@@ -34,7 +34,10 @@ impl From<&Run> for Simulation {
                 memory_delete_mutation_amount: cli.memory_delete_mutation_amount,
                 processor_stack_mutation_amount: cli.processor_stack_mutation_amount,
             },
-            death_rate: cli.death_rate,
+            death: Death {
+                death_rate: cli.death_rate,
+                death_memory_size: cli.death_memory_size,
+            },
             metabolism: Metabolism {
                 max_eat_amount: cli.max_eat_amount,
                 max_grow_amount: cli.max_grow_amount,
@@ -61,7 +64,10 @@ impl From<&Load> for Simulation {
                 memory_delete_mutation_amount: cli.memory_delete_mutation_amount,
                 processor_stack_mutation_amount: cli.processor_stack_mutation_amount,
             },
-            death_rate: cli.death_rate,
+            death: Death {
+                death_rate: cli.death_rate,
+                death_memory_size: cli.death_memory_size,
+            },
             metabolism: Metabolism {
                 max_eat_amount: cli.max_eat_amount,
                 max_grow_amount: cli.max_grow_amount,

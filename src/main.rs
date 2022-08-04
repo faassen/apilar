@@ -104,6 +104,9 @@ pub struct Run {
     #[clap(long, default_value_t = 20000, value_parser)]
     death_rate: u32,
 
+    #[clap(long, default_value_t = 2usize.pow(13), value_parser)]
+    death_memory_size: usize,
+
     #[clap(long, default_value_t = 128, value_parser)]
     max_eat_amount: u64,
 
@@ -151,6 +154,9 @@ pub struct Load {
 
     #[clap(long, default_value_t = 20000, value_parser)]
     death_rate: u32,
+
+    #[clap(long, default_value_t = 2usize.pow(13), value_parser)]
+    death_memory_size: usize,
 
     #[clap(long, default_value_t = 128, value_parser)]
     max_eat_amount: u64,

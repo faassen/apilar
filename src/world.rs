@@ -1,11 +1,9 @@
+use crate::computer::Computer;
 use crate::direction::Direction;
 use crate::simulation::Simulation;
-use crate::{computer::Computer, ticks::Ticks};
 use rand::rngs::SmallRng;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
-
-const MAX_MEMORY_SIZE: usize = 5120;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Location {
@@ -25,6 +23,11 @@ pub struct Mutation {
     pub memory_insert_mutation_amount: u64,
     pub memory_delete_mutation_amount: u64,
     pub processor_stack_mutation_amount: u64,
+}
+
+pub struct Death {
+    pub death_rate: u32,
+    pub death_memory_size: usize,
 }
 
 type Coords = (usize, usize);
@@ -102,7 +105,7 @@ impl World {
         if let Some(amount) = self.want_eat(coords) {
             self.eat(coords, amount);
         }
-        self.death(rng, coords, simulation.death_rate);
+        self.death(rng, coords, &simulation.death);
     }
 
     pub fn mutate(&mut self, rng: &mut SmallRng, mutation: &Mutation) {
@@ -152,10 +155,12 @@ impl World {
         }
     }
 
-    pub fn death(&mut self, rng: &mut SmallRng, coords: Coords, death_rate: u32) {
+    pub fn death(&mut self, rng: &mut SmallRng, coords: Coords, death: &Death) {
         let location = self.get_mut(coords);
         if let Some(computer) = &mut location.computer {
-            if rng.gen_ratio(1, death_rate) || computer.memory.values.len() > MAX_MEMORY_SIZE {
+            if rng.gen_ratio(1, death.death_rate)
+                || computer.memory.values.len() > death.death_memory_size
+            {
                 location.resources += computer.resources + computer.memory.values.len() as u64;
                 location.computer = None;
             }
