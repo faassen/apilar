@@ -5,7 +5,7 @@ use crate::world::{Death, Mutation};
 use crate::{Load, Run};
 use std::time::Duration;
 
-pub struct Simulation {
+pub struct Configuration {
     pub instructions_per_update: usize,
     // how many ticks between mutations
     pub mutation_frequency: Ticks,
@@ -19,9 +19,9 @@ pub struct Simulation {
     pub server: bool,
 }
 
-impl From<&Run> for Simulation {
+impl From<&Run> for Configuration {
     fn from(cli: &Run) -> Self {
-        Simulation {
+        Configuration {
             instructions_per_update: cli.instructions_per_update,
             mutation_frequency: cli.mutation_frequency,
             mutation: Mutation {
@@ -51,9 +51,9 @@ impl From<&Run> for Simulation {
     }
 }
 
-impl From<&Load> for Simulation {
+impl From<&Load> for Configuration {
     fn from(cli: &Load) -> Self {
-        Simulation {
+        Configuration {
             instructions_per_update: cli.instructions_per_update,
             mutation_frequency: cli.mutation_frequency,
             mutation: Mutation {

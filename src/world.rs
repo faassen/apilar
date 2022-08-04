@@ -1,6 +1,6 @@
 use crate::computer::Computer;
+use crate::configuration::Configuration;
 use crate::direction::Direction;
-use crate::simulation::Simulation;
 use rand::rngs::SmallRng;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
@@ -86,7 +86,7 @@ impl World {
         self.get(coords).computer.is_none()
     }
 
-    pub fn update(&mut self, rng: &mut SmallRng, simulation: &Simulation) {
+    pub fn update(&mut self, rng: &mut SmallRng, simulation: &Configuration) {
         let coords = self.get_random_coords(rng);
 
         let location = self.get_mut(coords);
@@ -275,7 +275,7 @@ impl Location {
         }
     }
 
-    pub fn update(&mut self, rng: &mut SmallRng, simulation: &Simulation) {
+    pub fn update(&mut self, rng: &mut SmallRng, simulation: &Configuration) {
         let mut eliminate_computer: bool = false;
 
         if let Some(computer) = &mut self.computer {

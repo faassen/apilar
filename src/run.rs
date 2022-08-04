@@ -1,10 +1,10 @@
 use crate::assembler::Assembler;
 use crate::client_command::ClientCommand;
 use crate::computer::Computer;
+use crate::configuration::Configuration;
 use crate::info::WorldInfo;
 use crate::render::{render_start, render_update};
 use crate::serve::serve_task;
-use crate::simulation::Simulation;
 use crate::ticks::Ticks;
 use crate::world::World;
 use crate::{Load, Run};
@@ -33,7 +33,7 @@ pub async fn load_command(cli: &Load) -> Result<(), Box<dyn Error + Sync + Send>
 
     let world: Arc<Mutex<World>> = Arc::new(Mutex::new(serde_cbor::from_reader(file)?));
 
-    let simulation: Simulation = Simulation::from(cli);
+    let simulation: Configuration = Configuration::from(cli);
 
     let assembler = Assembler::new();
 
@@ -61,13 +61,13 @@ pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<(), Box<dyn Erro
         .unwrap()
         .set((cli.width / 2, cli.height / 2), computer);
 
-    let simulation = Simulation::from(cli);
+    let simulation = Configuration::from(cli);
 
     run(simulation, world, assembler).await
 }
 
 async fn run(
-    simulation: Simulation,
+    simulation: Configuration,
     world: Arc<Mutex<World>>,
     assembler: Assembler,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
@@ -178,7 +178,7 @@ async fn client_command_task(
 }
 
 fn simulation_task(
-    simulation: Simulation,
+    simulation: Configuration,
     world: Arc<Mutex<World>>,
     rng: &mut SmallRng,
     mut main_loop_control_rx: mpsc::Receiver<bool>,
