@@ -31,6 +31,7 @@ use crate::run::{load_command, run_command};
 use crate::starter::PROGRAM_TEXT;
 use crate::ticks::Ticks;
 use clap::{Args, Parser, Subcommand};
+use run::run_config;
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, Read};
@@ -47,6 +48,7 @@ struct Cli {
 enum Commands {
     Run(Box<Run>),
     Load(Box<Load>),
+    Topology(Box<TopologyConfig>),
     Disassemble {
         #[clap(value_parser)]
         filename: String,
@@ -55,7 +57,6 @@ enum Commands {
         #[clap(value_parser)]
         y: usize,
     },
-    Config,
 }
 
 #[derive(Debug, Args)]
@@ -75,14 +76,14 @@ pub struct Run {
     #[clap(long, default_value_t = 500, value_parser)]
     starting_resources: u64,
 
-    #[clap(long, default_value_t = 10, value_parser)]
-    max_processors: usize,
-
     #[clap(long, default_value_t = 400, value_parser)]
     world_resources: u64,
 
     #[clap(long, default_value_t = 10, value_parser)]
     instructions_per_update: usize,
+
+    #[clap(long, default_value_t = 10, value_parser)]
+    max_processors: usize,
 
     #[clap(long, default_value_t = Ticks(10000), value_parser = Ticks::parse)]
     mutation_frequency: Ticks,
@@ -135,49 +136,34 @@ pub struct Load {
     #[clap(value_parser)]
     filename: String,
 
-    #[clap(long, default_value_t = 10, value_parser)]
-    instructions_per_update: usize,
+    #[clap(long, default_value_t = false, value_parser)]
+    autosave: bool,
 
-    #[clap(long, default_value_t = 10, value_parser)]
-    max_processors: usize,
+    #[clap(long, default_value_t = 1000 * 60, value_parser)]
+    autosave_frequency: u64,
 
-    #[clap(long, default_value_t = Ticks(10000), value_parser = Ticks::parse)]
-    mutation_frequency: Ticks,
+    #[clap(long, default_value_t = 1000 / 8, value_parser)]
+    redraw_frequency: u64,
 
-    #[clap(long, default_value_t = 1, value_parser)]
-    memory_overwrite_mutation_amount: u64,
+    #[clap(long, default_value_t = false, value_parser)]
+    text_ui: bool,
 
-    #[clap(long, default_value_t = 1, value_parser)]
-    memory_insert_mutation_amount: u64,
+    #[clap(long, default_value_t = false, value_parser)]
+    no_server: bool,
+}
 
-    #[clap(long, default_value_t = 0, value_parser)]
-    memory_delete_mutation_amount: u64,
-
-    #[clap(long, default_value_t = 1, value_parser)]
-    processor_stack_mutation_amount: u64,
-
-    #[clap(long, default_value_t = 20000, value_parser)]
-    death_rate: u32,
-
-    #[clap(long, default_value_t = 2usize.pow(13), value_parser)]
-    death_memory_size: usize,
-
-    #[clap(long, default_value_t = 128, value_parser)]
-    max_eat_amount: u64,
-
-    #[clap(long, default_value_t = 16, value_parser)]
-    max_grow_amount: u64,
-
-    #[clap(long, default_value_t = 16, value_parser)]
-    max_shrink_amount: u64,
+#[derive(Debug, Args)]
+pub struct TopologyConfig {
+    #[clap(value_parser)]
+    filename: String,
 
     #[clap(long, default_value_t = false, value_parser)]
     autosave: bool,
 
-    #[clap(long, default_value_t = 100000000, value_parser)]
+    #[clap(long, default_value_t = 1000 * 60, value_parser)]
     autosave_frequency: u64,
 
-    #[clap(long, default_value_t = 100000, value_parser)]
+    #[clap(long, default_value_t = 1000 / 8, value_parser)]
     redraw_frequency: u64,
 
     #[clap(long, default_value_t = false, value_parser)]
@@ -205,6 +191,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
             let words = text_to_words(&contents);
             run_command(cli, words).await?;
         }
+        Commands::Topology(cli) => run_config(cli).await?,
         Commands::Load(cli) => load_command(cli).await?,
         Commands::Disassemble { filename, x, y } => {
             let file = BufReader::new(File::open(filename)?);
@@ -229,9 +216,6 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
                     println!("No computer at this location")
                 }
             }
-        }
-        Commands::Config => {
-            crate::topology::run();
         }
     }
 

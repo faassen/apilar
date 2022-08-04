@@ -16,10 +16,7 @@ use std::{net::SocketAddr, path::PathBuf};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
-use tower_http::{
-    services::ServeDir,
-    trace::{DefaultMakeSpan, TraceLayer},
-};
+use tower_http::services::ServeDir;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 type HabitatInfoSender = broadcast::Sender<HabitatInfo>;

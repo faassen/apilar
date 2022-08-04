@@ -7,11 +7,12 @@ use crate::info::HabitatInfo;
 use crate::render::{render_start, render_update};
 use crate::serve::serve_task;
 use crate::ticks::Ticks;
+use crate::topology::Topology;
 use crate::world::World;
-use crate::{Load, Run};
+use crate::{Load, Run, TopologyConfig};
+use anyhow::Result;
 use rand::rngs::SmallRng;
 use rand::SeedableRng;
-use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufWriter;
@@ -22,6 +23,7 @@ use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use tokio::time;
 
+#[derive(Debug)]
 pub struct Autosave {
     pub enabled: bool,
     pub frequency: Duration,
@@ -29,23 +31,27 @@ pub struct Autosave {
 
 const COMMAND_PROCESS_FREQUENCY: Ticks = Ticks(10000);
 
-pub async fn load_command(cli: &Load) -> Result<(), Box<dyn Error + Sync + Send>> {
+pub async fn load_command(cli: &Load) -> Result<()> {
     let file = BufReader::new(File::open(cli.filename.clone())?);
 
-    let config: Config = Config::from(cli);
-    let habitat = serde_cbor::from_reader(file)?;
-
-    let world: Arc<Mutex<World>> = Arc::new(Mutex::new(World::from_habitat(
-        habitat,
-        config.habitat_config,
-    )));
+    let run_config: RunConfig = RunConfig::from(cli);
+    let world: World = serde_cbor::from_reader(file)?;
 
     let assembler = Assembler::new();
 
-    run(config.run_config, world, assembler).await
+    run(run_config, Arc::new(Mutex::new(world)), assembler).await
 }
 
-pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<(), Box<dyn Error + Sync + Send>> {
+pub async fn run_config(cli: &TopologyConfig) -> Result<()> {
+    let file = BufReader::new(File::open(cli.filename.clone())?);
+    let topology: Topology = serde_json::from_reader(file)?;
+    let world = World::try_from(&topology)?;
+    let run_config = RunConfig::from(cli);
+    let assembler = Assembler::new();
+    run(run_config, Arc::new(Mutex::new(world)), assembler).await
+}
+
+pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<()> {
     let assembler = Assembler::new();
 
     let config = Config::from(cli);
@@ -65,11 +71,7 @@ pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<(), Box<dyn Erro
     run(config.run_config, world, assembler).await
 }
 
-async fn run(
-    run_config: RunConfig,
-    world: Arc<Mutex<World>>,
-    assembler: Assembler,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
+async fn run(run_config: RunConfig, world: Arc<Mutex<World>>, assembler: Assembler) -> Result<()> {
     let mut rng = SmallRng::from_entropy();
 
     let (habitat_info_tx, _) = broadcast::channel(32);
@@ -130,7 +132,7 @@ async fn render_world_task(
 async fn save_world_task(world: Arc<Mutex<World>>, duration: Duration) {
     let mut save_nr = 0;
     loop {
-        let result = save_habitat(&*world.lock().unwrap().habitat(), save_nr);
+        let result = save_world(&*world.lock().unwrap(), save_nr);
         if result.is_err() {
             println!("Could not write save file");
             break;
@@ -203,9 +205,9 @@ fn simulation_task(
     }
 }
 
-fn save_habitat(habitat: &Habitat, save_nr: u64) -> Result<(), serde_cbor::Error> {
+fn save_world(world: &World, save_nr: u64) -> Result<(), serde_cbor::Error> {
     let file = BufWriter::new(File::create(format!("apilar-dump{:06}.cbor", save_nr))?);
-    serde_cbor::to_writer(file, habitat)
+    serde_cbor::to_writer(file, world)
 }
 
 fn disassemble(

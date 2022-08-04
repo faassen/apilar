@@ -6,7 +6,7 @@ use rand::rngs::SmallRng;
 use serde_derive::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rectangle {
     pub x: usize,
     pub y: usize,
@@ -14,7 +14,7 @@ pub struct Rectangle {
     pub h: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Connection {
     pub from_rect: Rectangle,
     pub from_id: usize,
@@ -31,11 +31,11 @@ pub struct Island {
 }
 
 impl Island {
-    pub fn new(habitat: Habitat, config: HabitatConfig) -> Island {
+    pub fn new(habitat: Habitat, config: HabitatConfig, connections: Vec<Connection>) -> Island {
         Island {
             habitat,
             config,
-            connections: Vec::new(),
+            connections,
         }
     }
 

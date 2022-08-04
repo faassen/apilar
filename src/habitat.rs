@@ -5,20 +5,20 @@ use rand::rngs::SmallRng;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Location {
     pub resources: u64,
     pub computer: Option<Computer>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Habitat {
     pub width: usize,
     pub height: usize,
     pub rows: Vec<Vec<Location>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Mutation {
     pub overwrite_amount: u64,
     pub insert_amount: u64,
@@ -26,13 +26,13 @@ pub struct Mutation {
     pub stack_amount: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Death {
     pub rate: u32,
     pub memory_size: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HabitatConfig {
     pub instructions_per_update: usize,
     pub max_processors: usize,

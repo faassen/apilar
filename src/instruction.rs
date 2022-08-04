@@ -8,7 +8,7 @@ use strum_macros::{Display, EnumIter};
 
 const MAX_MOVE_HEAD_AMOUNT: usize = 1024;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metabolism {
     pub max_eat_amount: u64,
     pub max_grow_amount: u64,
