@@ -22,7 +22,7 @@ pub mod world;
 pub mod testutil;
 
 use crate::assembler::{text_to_words, Assembler};
-use crate::run::{load, run};
+use crate::run::{load_command, run_command};
 use crate::starter::PROGRAM_TEXT;
 use crate::world::World;
 use clap::{Args, Parser, Subcommand};
@@ -170,9 +170,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
                 None => PROGRAM_TEXT.to_string(),
             };
             let words = text_to_words(&contents);
-            run(cli, words).await?;
+            run_command(cli, words).await?;
         }
-        Commands::Load(cli) => load(cli).await?,
+        Commands::Load(cli) => load_command(cli).await?,
         Commands::Disassemble { filename, x, y } => {
             let file = BufReader::new(File::open(filename)?);
             let world: World = serde_cbor::from_reader(file)?;
