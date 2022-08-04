@@ -5,11 +5,6 @@ use crate::world::{Death, Mutation};
 use crate::{Load, Run};
 use std::time::Duration;
 
-pub struct Frequencies {
-    // how many milliseconds between redraws
-    pub redraw_frequency: Duration,
-}
-
 pub struct Simulation {
     pub instructions_per_update: usize,
     // how many ticks between mutations
@@ -17,8 +12,9 @@ pub struct Simulation {
     pub mutation: Mutation,
     pub death: Death,
     pub metabolism: Metabolism,
-    pub frequencies: Frequencies,
     pub autosave: Autosave,
+    // how many milliseconds between redraws
+    pub redraw_frequency: Duration,
     pub text_ui: bool,
 }
 
@@ -42,14 +38,12 @@ impl From<&Run> for Simulation {
                 max_grow_amount: cli.max_grow_amount,
                 max_shrink_amount: cli.max_shrink_amount,
             },
-            frequencies: Frequencies {
-                redraw_frequency: Duration::from_millis(cli.redraw_frequency),
-            },
             autosave: Autosave {
                 enabled: cli.autosave,
                 // how many milliseconds between autosaves
                 frequency: Duration::from_millis(cli.save_frequency),
             },
+            redraw_frequency: Duration::from_millis(cli.redraw_frequency),
             text_ui: cli.text_ui,
         }
     }
@@ -75,14 +69,12 @@ impl From<&Load> for Simulation {
                 max_grow_amount: cli.max_grow_amount,
                 max_shrink_amount: cli.max_shrink_amount,
             },
-            frequencies: Frequencies {
-                redraw_frequency: Duration::from_millis(cli.redraw_frequency),
-            },
             autosave: Autosave {
                 enabled: cli.autosave,
                 // how many milliseconds between autosaves
                 frequency: Duration::from_millis(cli.autosave_frequency),
             },
+            redraw_frequency: Duration::from_millis(cli.redraw_frequency),
             text_ui: cli.text_ui,
         }
     }

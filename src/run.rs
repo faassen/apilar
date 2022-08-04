@@ -81,7 +81,7 @@ async fn run(
     tokio::spawn(render_world_task(
         Arc::clone(&world),
         world_info_tx.clone(),
-        simulation.frequencies.redraw_frequency,
+        simulation.redraw_frequency,
     ));
 
     let (main_loop_control_tx, main_loop_control_rx) = mpsc::channel::<bool>(32);
@@ -104,7 +104,7 @@ async fn run(
         render_start();
         tokio::spawn(text_ui_task(
             Arc::clone(&world),
-            simulation.frequencies.redraw_frequency,
+            simulation.redraw_frequency,
         ));
     }
 
