@@ -8,9 +8,9 @@ pub mod client_command;
 pub mod computer;
 pub mod config;
 pub mod direction;
+pub mod habitat;
 pub mod info;
 pub mod instruction;
-pub mod island;
 pub mod memory;
 pub mod processor;
 pub mod render;
@@ -24,7 +24,7 @@ pub mod world;
 pub mod testutil;
 
 use crate::assembler::{text_to_words, Assembler};
-use crate::island::Island;
+use crate::habitat::Habitat;
 use crate::run::{load_command, run_command};
 use crate::starter::PROGRAM_TEXT;
 use crate::ticks::Ticks;
@@ -202,17 +202,17 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         Commands::Load(cli) => load_command(cli).await?,
         Commands::Disassemble { filename, x, y } => {
             let file = BufReader::new(File::open(filename)?);
-            let island: Island = serde_cbor::from_reader(file)?;
-            if *x >= island.width {
+            let habitat: Habitat = serde_cbor::from_reader(file)?;
+            if *x >= habitat.width {
                 println!("x out of range");
                 return Ok(());
             }
-            if *y >= island.height {
+            if *y >= habitat.height {
                 println!("y out of range");
                 return Ok(());
             }
 
-            let location = island.get((*x, *y));
+            let location = habitat.get((*x, *y));
             match &location.computer {
                 Some(computer) => {
                     let assembler = Assembler::new();

@@ -12,7 +12,7 @@ pub struct Location {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Island {
+pub struct Habitat {
     pub width: usize,
     pub height: usize,
     pub rows: Vec<Vec<Location>>,
@@ -33,7 +33,7 @@ pub struct Death {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct IslandConfig {
+pub struct HabitatConfig {
     pub instructions_per_update: usize,
     // how many ticks between mutations
     pub mutation_frequency: Ticks,
@@ -44,8 +44,8 @@ pub struct IslandConfig {
 
 type Coords = (usize, usize);
 
-impl Island {
-    pub fn new(width: usize, height: usize, resources: u64) -> Island {
+impl Habitat {
+    pub fn new(width: usize, height: usize, resources: u64) -> Habitat {
         let mut rows: Vec<Vec<Location>> = Vec::new();
         for _ in 0..height {
             let mut column_vec: Vec<Location> = Vec::new();
@@ -54,7 +54,7 @@ impl Island {
             }
             rows.push(column_vec);
         }
-        Island {
+        Habitat {
             width,
             height,
             rows,
@@ -98,7 +98,7 @@ impl Island {
         self.get(coords).computer.is_none()
     }
 
-    pub fn update(&mut self, rng: &mut SmallRng, config: &IslandConfig) {
+    pub fn update(&mut self, rng: &mut SmallRng, config: &HabitatConfig) {
         let coords = self.get_random_coords(rng);
 
         let location = self.get_mut(coords);
@@ -287,7 +287,7 @@ impl Location {
         }
     }
 
-    pub fn update(&mut self, rng: &mut SmallRng, config: &IslandConfig) {
+    pub fn update(&mut self, rng: &mut SmallRng, config: &HabitatConfig) {
         let mut eliminate_computer: bool = false;
 
         if let Some(computer) = &mut self.computer {
@@ -310,7 +310,7 @@ mod tests {
 
     #[test]
     fn test_neighbor_out_of_bounds() {
-        let island = Island::new(5, 5, 5);
+        let island = Habitat::new(5, 5, 5);
         assert_eq!(island.neighbor_coords((2, 2), Direction::North), (2, 1));
         assert_eq!(island.neighbor_coords((2, 2), Direction::South), (2, 3));
         assert_eq!(island.neighbor_coords((2, 2), Direction::West), (1, 2));

@@ -1,12 +1,12 @@
 use crate::computer::Computer;
-use crate::island::{Island, Location};
+use crate::habitat::{Habitat, Location};
 use serde_derive::Serialize;
 
 // info useful for the UI
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct IslandInfo {
+pub struct HabitatInfo {
     width: usize,
     height: usize,
     total_free_resources: u64,
@@ -32,16 +32,16 @@ pub struct ComputerInfo {
     bound_resources: u64,
 }
 
-impl IslandInfo {
-    pub fn new(island: &Island) -> IslandInfo {
+impl HabitatInfo {
+    pub fn new(habitat: &Habitat) -> HabitatInfo {
         let (total_free_resources, total_bound_resources, total_memory_resources) =
-            island.resources_amounts();
-        let total_computers = island.computers_amount();
-        let total_processors = island.processors_amount();
+            habitat.resources_amounts();
+        let total_computers = habitat.computers_amount();
+        let total_processors = habitat.processors_amount();
 
         let mut locations: Vec<Vec<LocationInfo>> = Vec::new();
 
-        for row in &island.rows {
+        for row in &habitat.rows {
             let mut row_locations: Vec<LocationInfo> = Vec::new();
             for location in row {
                 row_locations.push(LocationInfo::new(location))
@@ -49,9 +49,9 @@ impl IslandInfo {
             locations.push(row_locations);
         }
 
-        IslandInfo {
-            width: island.width,
-            height: island.height,
+        HabitatInfo {
+            width: habitat.width,
+            height: habitat.height,
             total_free_resources,
             total_bound_resources,
             total_memory_resources,

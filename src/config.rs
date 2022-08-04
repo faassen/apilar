@@ -1,11 +1,11 @@
+use crate::habitat::{Death, HabitatConfig, Mutation};
 use crate::instruction::Metabolism;
-use crate::island::{Death, IslandConfig, Mutation};
 use crate::run::Autosave;
 use crate::{Load, Run};
 use std::time::Duration;
 
 pub struct Config {
-    pub island_config: IslandConfig,
+    pub habitat_config: HabitatConfig,
     pub autosave: Autosave,
     // how many milliseconds between redraws
     pub redraw_frequency: Duration,
@@ -16,7 +16,7 @@ pub struct Config {
 impl From<&Run> for Config {
     fn from(cli: &Run) -> Self {
         Config {
-            island_config: IslandConfig {
+            habitat_config: HabitatConfig {
                 instructions_per_update: cli.instructions_per_update,
                 mutation_frequency: cli.mutation_frequency,
                 mutation: Mutation {
@@ -50,7 +50,7 @@ impl From<&Run> for Config {
 impl From<&Load> for Config {
     fn from(cli: &Load) -> Self {
         Config {
-            island_config: IslandConfig {
+            habitat_config: HabitatConfig {
                 instructions_per_update: cli.instructions_per_update,
                 mutation_frequency: cli.mutation_frequency,
                 mutation: Mutation {
