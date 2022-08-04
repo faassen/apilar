@@ -155,14 +155,12 @@ impl Computer {
         total
     }
 
-    pub fn mutate_memory(&mut self, rng: &mut SmallRng, amount: u64) {
+    pub fn mutate_memory_overwrite(&mut self, rng: &mut SmallRng) {
         if self.memory.values.is_empty() {
             return;
         }
-        for _ in 0..amount {
-            let address = rng.gen_range(0..self.memory.values.len());
-            self.memory.values[address] = rng.gen::<u8>();
-        }
+        let address = rng.gen_range(0..self.memory.values.len());
+        self.memory.values[address] = rng.gen::<u8>();
     }
 
     pub fn mutate_memory_insert(&mut self, rng: &mut SmallRng) {
@@ -193,15 +191,13 @@ impl Computer {
         }
     }
 
-    pub fn mutate_processors(&mut self, rng: &mut SmallRng, amount: u64) {
-        for _ in 0..amount {
-            let choice = self.processors.choose_mut(rng);
-            if let Some(processor) = choice {
-                if rng.gen_ratio(1, 5) {
-                    processor.pop();
-                } else {
-                    processor.push(rng.gen::<u8>() as u64);
-                }
+    pub fn mutate_processors(&mut self, rng: &mut SmallRng) {
+        let choice = self.processors.choose_mut(rng);
+        if let Some(processor) = choice {
+            if rng.gen_ratio(1, 5) {
+                processor.pop();
+            } else {
+                processor.push(rng.gen::<u8>() as u64);
             }
         }
     }

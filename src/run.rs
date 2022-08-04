@@ -179,16 +179,15 @@ fn simulation_task(
     let mut ticks = Ticks(0);
 
     loop {
-        let mutate = ticks.is_at(simulation.frequencies.mutation_frequency);
+        let mutate = ticks.is_at(simulation.mutation_frequency);
         let receive_command = ticks.is_at(COMMAND_PROCESS_FREQUENCY);
 
         world.lock().unwrap().update(small_rng, &simulation);
         if mutate {
-            let mut world = world.lock().unwrap();
-            world.mutate_memory(small_rng, simulation.memory_mutation_amount);
-            world.mutate_memory_insert(small_rng);
-            // world.mutate_memory_delete(small_rng);
-            world.mutate_processor_stack(small_rng, simulation.processor_stack_mutation_amount)
+            world
+                .lock()
+                .unwrap()
+                .mutate(small_rng, &simulation.mutation);
         }
 
         if receive_command {

@@ -83,17 +83,23 @@ pub struct Run {
     #[clap(long, default_value_t = Ticks(10000), value_parser = Ticks::parse)]
     mutation_frequency: Ticks,
 
+    #[clap(long, default_value_t = 1, value_parser)]
+    memory_overwrite_mutation_amount: u64,
+
+    #[clap(long, default_value_t = 1, value_parser)]
+    memory_insert_mutation_amount: u64,
+
+    #[clap(long, default_value_t = 0, value_parser)]
+    memory_delete_mutation_amount: u64,
+
+    #[clap(long, default_value_t = 1, value_parser)]
+    processor_stack_mutation_amount: u64,
+
     #[clap(long, default_value_t = 1000 / 8, value_parser)]
     redraw_frequency: u64,
 
     #[clap(long, default_value_t = 1000 * 60, value_parser)]
     save_frequency: u64,
-
-    #[clap(long, default_value_t = 1, value_parser)]
-    memory_mutation_amount: u64,
-
-    #[clap(long, default_value_t = 1, value_parser)]
-    processor_stack_mutation_amount: u64,
 
     #[clap(long, default_value_t = 20000, value_parser)]
     death_rate: u32,
@@ -125,17 +131,23 @@ pub struct Load {
     #[clap(long, default_value_t = Ticks(10000), value_parser = Ticks::parse)]
     mutation_frequency: Ticks,
 
+    #[clap(long, default_value_t = 1, value_parser)]
+    memory_overwrite_mutation_amount: u64,
+
+    #[clap(long, default_value_t = 1, value_parser)]
+    memory_insert_mutation_amount: u64,
+
+    #[clap(long, default_value_t = 0, value_parser)]
+    memory_delete_mutation_amount: u64,
+
+    #[clap(long, default_value_t = 1, value_parser)]
+    processor_stack_mutation_amount: u64,
+
     #[clap(long, default_value_t = 100000, value_parser)]
     redraw_frequency: u64,
 
     #[clap(long, default_value_t = 100000000, value_parser)]
     save_frequency: u64,
-
-    #[clap(long, default_value_t = 1, value_parser)]
-    memory_mutation_amount: u64,
-
-    #[clap(long, default_value_t = 1, value_parser)]
-    processor_stack_mutation_amount: u64,
 
     #[clap(long, default_value_t = 20000, value_parser)]
     death_rate: u32,

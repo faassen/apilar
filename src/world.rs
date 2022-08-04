@@ -1,6 +1,6 @@
-use crate::computer::Computer;
 use crate::direction::Direction;
 use crate::simulation::Simulation;
+use crate::{computer::Computer, ticks::Ticks};
 use rand::rngs::SmallRng;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
@@ -18,6 +18,13 @@ pub struct World {
     pub width: usize,
     pub height: usize,
     pub rows: Vec<Vec<Location>>,
+}
+
+pub struct Mutation {
+    pub memory_overwrite_mutation_amount: u64,
+    pub memory_insert_mutation_amount: u64,
+    pub memory_delete_mutation_amount: u64,
+    pub processor_stack_mutation_amount: u64,
 }
 
 type Coords = (usize, usize);
@@ -98,35 +105,50 @@ impl World {
         self.death(rng, coords, simulation.death_rate);
     }
 
-    pub fn mutate_memory(&mut self, rng: &mut SmallRng, amount_memory: u64) {
-        let coords = self.get_random_coords(rng);
-        let location = self.get_mut(coords);
-        if let Some(computer) = &mut location.computer {
-            computer.mutate_memory(rng, amount_memory);
+    pub fn mutate(&mut self, rng: &mut SmallRng, mutation: &Mutation) {
+        self.mutate_memory_overwrite(rng, mutation.memory_overwrite_mutation_amount);
+        self.mutate_memory_insert(rng, mutation.memory_insert_mutation_amount);
+        self.mutate_memory_delete(rng, mutation.memory_delete_mutation_amount);
+        self.mutate_processor_stack(rng, mutation.processor_stack_mutation_amount)
+    }
+
+    pub fn mutate_memory_overwrite(&mut self, rng: &mut SmallRng, amount: u64) {
+        for _ in 0..amount {
+            let coords = self.get_random_coords(rng);
+            let location = self.get_mut(coords);
+            if let Some(computer) = &mut location.computer {
+                computer.mutate_memory_overwrite(rng);
+            }
         }
     }
 
-    pub fn mutate_memory_insert(&mut self, rng: &mut SmallRng) {
-        let coords = self.get_random_coords(rng);
-        let location = self.get_mut(coords);
-        if let Some(computer) = &mut location.computer {
-            computer.mutate_memory_insert(rng);
+    pub fn mutate_memory_insert(&mut self, rng: &mut SmallRng, amount: u64) {
+        for _ in 0..amount {
+            let coords = self.get_random_coords(rng);
+            let location = self.get_mut(coords);
+            if let Some(computer) = &mut location.computer {
+                computer.mutate_memory_insert(rng);
+            }
         }
     }
 
-    pub fn mutate_memory_delete(&mut self, rng: &mut SmallRng) {
-        let coords = self.get_random_coords(rng);
-        let location = self.get_mut(coords);
-        if let Some(computer) = &mut location.computer {
-            computer.mutate_memory_delete(rng);
+    pub fn mutate_memory_delete(&mut self, rng: &mut SmallRng, amount: u64) {
+        for _ in 0..amount {
+            let coords = self.get_random_coords(rng);
+            let location = self.get_mut(coords);
+            if let Some(computer) = &mut location.computer {
+                computer.mutate_memory_delete(rng);
+            }
         }
     }
 
-    pub fn mutate_processor_stack(&mut self, rng: &mut SmallRng, amount_processors: u64) {
-        let coords = self.get_random_coords(rng);
-        let location = self.get_mut(coords);
-        if let Some(computer) = &mut location.computer {
-            computer.mutate_processors(rng, amount_processors);
+    pub fn mutate_processor_stack(&mut self, rng: &mut SmallRng, amount: u64) {
+        for _ in 0..amount {
+            let coords = self.get_random_coords(rng);
+            let location = self.get_mut(coords);
+            if let Some(computer) = &mut location.computer {
+                computer.mutate_processors(rng);
+            }
         }
     }
 
