@@ -65,6 +65,7 @@ pub async fn serve_task(world_info_tx: WorldInfoSender, client_command_tx: Clien
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
 
+    println!("Apilar server started on {}", addr);
     // tracing::debug!("listening on {}", addr);
 
     // run it with hyper

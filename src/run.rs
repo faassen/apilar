@@ -76,7 +76,9 @@ async fn run(
     let (world_info_tx, _) = broadcast::channel(32);
     let (client_command_tx, client_command_rx) = mpsc::channel(32);
 
-    tokio::spawn(serve_task(world_info_tx.clone(), client_command_tx));
+    if simulation.server {
+        tokio::spawn(serve_task(world_info_tx.clone(), client_command_tx));
+    }
 
     tokio::spawn(render_world_task(
         Arc::clone(&world),

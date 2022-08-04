@@ -16,6 +16,7 @@ pub struct Simulation {
     // how many milliseconds between redraws
     pub redraw_frequency: Duration,
     pub text_ui: bool,
+    pub server: bool,
 }
 
 impl From<&Run> for Simulation {
@@ -45,6 +46,7 @@ impl From<&Run> for Simulation {
             },
             redraw_frequency: Duration::from_millis(cli.redraw_frequency),
             text_ui: cli.text_ui,
+            server: !cli.no_server,
         }
     }
 }
@@ -76,6 +78,7 @@ impl From<&Load> for Simulation {
             },
             redraw_frequency: Duration::from_millis(cli.redraw_frequency),
             text_ui: cli.text_ui,
+            server: !cli.no_server,
         }
     }
 }

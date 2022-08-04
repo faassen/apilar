@@ -121,6 +121,9 @@ pub struct Run {
 
     #[clap(long, default_value_t = false, value_parser)]
     text_ui: bool,
+
+    #[clap(long, default_value_t = false, value_parser)]
+    no_server: bool,
 }
 
 #[derive(Debug, Args)]
@@ -172,6 +175,9 @@ pub struct Load {
 
     #[clap(long, default_value_t = false, value_parser)]
     text_ui: bool,
+
+    #[clap(long, default_value_t = false, value_parser)]
+    no_server: bool,
 }
 
 #[tokio::main]
