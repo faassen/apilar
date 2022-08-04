@@ -25,7 +25,7 @@ pub async fn load_command(cli: &Load) -> Result<(), Box<dyn Error + Sync + Send>
 
     let world: Arc<Mutex<World>> = Arc::new(Mutex::new(serde_cbor::from_reader(file)?));
 
-    let simulation: Arc<Simulation> = Arc::new(Simulation::from(cli));
+    let simulation: Simulation = Simulation::from(cli);
 
     run(simulation, world).await
 }
@@ -51,13 +51,13 @@ pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<(), Box<dyn Erro
         .unwrap()
         .set((cli.width / 2, cli.height / 2), computer);
 
-    let simulation = Arc::new(Simulation::from(cli));
+    let simulation = Simulation::from(cli);
 
     run(simulation, world).await
 }
 
 async fn run(
-    simulation: Arc<Simulation>,
+    simulation: Simulation,
     world: Arc<Mutex<World>>,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     let mut small_rng = SmallRng::from_entropy();
@@ -69,7 +69,7 @@ async fn run(
 
     tokio::spawn(render_world_task(Arc::clone(&world), world_info_tx.clone()));
 
-    let (main_loop_control_tx, mut main_loop_control_rx) = mpsc::channel::<bool>(32);
+    let (main_loop_control_tx, main_loop_control_rx) = mpsc::channel::<bool>(32);
 
     tokio::spawn(client_command_task(
         Arc::clone(&world),
@@ -87,39 +87,15 @@ async fn run(
     }
 
     tokio::task::spawn_blocking(move || {
-        let mut tick: u64 = 0;
-
-        loop {
-            let mutate = tick % simulation.frequencies.mutation_frequency == 0;
-            let receive_command = tick % simulation.frequencies.redraw_frequency == 0;
-
-            world.lock().unwrap().update(&mut small_rng, &simulation);
-            if mutate {
-                let mut world = world.lock().unwrap();
-                world.mutate_memory(&mut small_rng, simulation.memory_mutation_amount);
-                world.mutate_memory_insert(&mut small_rng);
-                // world.mutate_memory_delete(small_rng);
-                world.mutate_processor_stack(
-                    &mut small_rng,
-                    simulation.processor_stack_mutation_amount,
-                )
-            }
-
-            if receive_command {
-                if let Ok(started) = main_loop_control_rx.try_recv() {
-                    if !started {
-                        while let Some(started) = main_loop_control_rx.blocking_recv() {
-                            if started {
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            tick = tick.wrapping_add(1);
-        }
+        simulation_task(
+            simulation,
+            Arc::clone(&world),
+            &mut small_rng,
+            main_loop_control_rx,
+        )
     })
-    .await?
+    .await?;
+    Ok(())
 }
 
 async fn render_world_task(world: Arc<Mutex<World>>, tx: broadcast::Sender<WorldInfo>) {
@@ -169,6 +145,42 @@ async fn client_command_task(
                     .unwrap();
             }
         }
+    }
+}
+
+fn simulation_task(
+    simulation: Simulation,
+    world: Arc<Mutex<World>>,
+    small_rng: &mut SmallRng,
+    mut main_loop_control_rx: mpsc::Receiver<bool>,
+) {
+    let mut tick: u64 = 0;
+
+    loop {
+        let mutate = tick % simulation.frequencies.mutation_frequency == 0;
+        let receive_command = tick % simulation.frequencies.redraw_frequency == 0;
+
+        world.lock().unwrap().update(small_rng, &simulation);
+        if mutate {
+            let mut world = world.lock().unwrap();
+            world.mutate_memory(small_rng, simulation.memory_mutation_amount);
+            world.mutate_memory_insert(small_rng);
+            // world.mutate_memory_delete(small_rng);
+            world.mutate_processor_stack(small_rng, simulation.processor_stack_mutation_amount)
+        }
+
+        if receive_command {
+            if let Ok(started) = main_loop_control_rx.try_recv() {
+                if !started {
+                    while let Some(started) = main_loop_control_rx.blocking_recv() {
+                        if started {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        tick = tick.wrapping_add(1);
     }
 }
 
