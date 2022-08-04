@@ -21,6 +21,11 @@ use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use tokio::time;
 
+pub struct Autosave {
+    pub autosave: bool,
+    pub autosave_frequency: Duration,
+}
+
 const COMMAND_PROCESS_FREQUENCY: Ticks = Ticks(10000);
 
 pub async fn load_command(cli: &Load) -> Result<(), Box<dyn Error + Sync + Send>> {
@@ -88,10 +93,10 @@ async fn run(
         main_loop_control_tx,
     ));
 
-    if simulation.dump {
+    if simulation.autosave.autosave {
         tokio::spawn(save_world_task(
             Arc::clone(&world),
-            simulation.frequencies.save_frequency,
+            simulation.autosave.autosave_frequency,
         ));
     }
 

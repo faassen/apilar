@@ -1,4 +1,5 @@
 use crate::instruction::Metabolism;
+use crate::run::Autosave;
 use crate::ticks::Ticks;
 use crate::world::{Death, Mutation};
 use crate::{Load, Run};
@@ -7,8 +8,6 @@ use std::time::Duration;
 pub struct Frequencies {
     // how many milliseconds between redraws
     pub redraw_frequency: Duration,
-    // how many milliseconds between saves
-    pub save_frequency: Duration,
 }
 
 pub struct Simulation {
@@ -19,7 +18,7 @@ pub struct Simulation {
     pub death: Death,
     pub metabolism: Metabolism,
     pub frequencies: Frequencies,
-    pub dump: bool,
+    pub autosave: Autosave,
     pub text_ui: bool,
 }
 
@@ -45,9 +44,12 @@ impl From<&Run> for Simulation {
             },
             frequencies: Frequencies {
                 redraw_frequency: Duration::from_millis(cli.redraw_frequency),
-                save_frequency: Duration::from_millis(cli.save_frequency),
             },
-            dump: cli.dump,
+            autosave: Autosave {
+                autosave: cli.autosave,
+                // how many milliseconds between autosaves
+                autosave_frequency: Duration::from_millis(cli.save_frequency),
+            },
             text_ui: cli.text_ui,
         }
     }
@@ -75,9 +77,12 @@ impl From<&Load> for Simulation {
             },
             frequencies: Frequencies {
                 redraw_frequency: Duration::from_millis(cli.redraw_frequency),
-                save_frequency: Duration::from_millis(cli.save_frequency),
             },
-            dump: cli.dump,
+            autosave: Autosave {
+                autosave: cli.autosave,
+                // how many milliseconds between autosaves
+                autosave_frequency: Duration::from_millis(cli.autosave_frequency),
+            },
             text_ui: cli.text_ui,
         }
     }

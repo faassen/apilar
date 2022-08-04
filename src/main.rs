@@ -95,12 +95,6 @@ pub struct Run {
     #[clap(long, default_value_t = 1, value_parser)]
     processor_stack_mutation_amount: u64,
 
-    #[clap(long, default_value_t = 1000 / 8, value_parser)]
-    redraw_frequency: u64,
-
-    #[clap(long, default_value_t = 1000 * 60, value_parser)]
-    save_frequency: u64,
-
     #[clap(long, default_value_t = 20000, value_parser)]
     death_rate: u32,
 
@@ -117,7 +111,13 @@ pub struct Run {
     max_shrink_amount: u64,
 
     #[clap(long, default_value_t = false, value_parser)]
-    dump: bool,
+    autosave: bool,
+
+    #[clap(long, default_value_t = 1000 * 60, value_parser)]
+    save_frequency: u64,
+
+    #[clap(long, default_value_t = 1000 / 8, value_parser)]
+    redraw_frequency: u64,
 
     #[clap(long, default_value_t = false, value_parser)]
     text_ui: bool,
@@ -146,12 +146,6 @@ pub struct Load {
     #[clap(long, default_value_t = 1, value_parser)]
     processor_stack_mutation_amount: u64,
 
-    #[clap(long, default_value_t = 100000, value_parser)]
-    redraw_frequency: u64,
-
-    #[clap(long, default_value_t = 100000000, value_parser)]
-    save_frequency: u64,
-
     #[clap(long, default_value_t = 20000, value_parser)]
     death_rate: u32,
 
@@ -168,7 +162,13 @@ pub struct Load {
     max_shrink_amount: u64,
 
     #[clap(long, default_value_t = false, value_parser)]
-    dump: bool,
+    autosave: bool,
+
+    #[clap(long, default_value_t = 100000000, value_parser)]
+    autosave_frequency: u64,
+
+    #[clap(long, default_value_t = 100000, value_parser)]
+    redraw_frequency: u64,
 
     #[clap(long, default_value_t = false, value_parser)]
     text_ui: bool,
