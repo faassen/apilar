@@ -624,7 +624,7 @@ mod tests {
         // execute two more
         exec.processor.execute_amount(
             &mut exec.memory,
-            &mut exec.small_rng,
+            &mut exec.rng,
             1002,
             &Metabolism {
                 max_eat_amount: 0,
@@ -671,7 +671,7 @@ mod tests {
 
         exec.processor.execute_amount(
             &mut exec.memory,
-            &mut exec.small_rng,
+            &mut exec.rng,
             (words_amount - 1) * words_amount,
             &Metabolism {
                 max_eat_amount: 0,

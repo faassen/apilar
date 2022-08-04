@@ -334,12 +334,12 @@ mod tests {
 
         let mut computer = Computer::new(1024, 10, 100);
         assembler.assemble_words(words.clone(), &mut computer.memory, 0);
-        let mut small_rng = SmallRng::from_seed([0; 32]);
+        let mut rng = SmallRng::from_seed([0; 32]);
 
         computer.add_processor(0);
 
         computer.execute(
-            &mut small_rng,
+            &mut rng,
             words_amount * 64,
             &Metabolism {
                 max_eat_amount: 0,

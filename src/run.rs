@@ -66,7 +66,7 @@ async fn run(
     world: Arc<Mutex<World>>,
     assembler: Assembler,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
-    let mut small_rng = SmallRng::from_entropy();
+    let mut rng = SmallRng::from_entropy();
 
     let (world_info_tx, _) = broadcast::channel(32);
     let (client_command_tx, client_command_rx) = mpsc::channel(32);
@@ -107,7 +107,7 @@ async fn run(
         simulation_task(
             simulation,
             Arc::clone(&world),
-            &mut small_rng,
+            &mut rng,
             main_loop_control_rx,
         )
     })
@@ -173,7 +173,7 @@ async fn client_command_task(
 fn simulation_task(
     simulation: Simulation,
     world: Arc<Mutex<World>>,
-    small_rng: &mut SmallRng,
+    rng: &mut SmallRng,
     mut main_loop_control_rx: mpsc::Receiver<bool>,
 ) {
     let mut ticks = Ticks(0);
@@ -182,12 +182,9 @@ fn simulation_task(
         let mutate = ticks.is_at(simulation.mutation_frequency);
         let receive_command = ticks.is_at(COMMAND_PROCESS_FREQUENCY);
 
-        world.lock().unwrap().update(small_rng, &simulation);
+        world.lock().unwrap().update(rng, &simulation);
         if mutate {
-            world
-                .lock()
-                .unwrap()
-                .mutate(small_rng, &simulation.mutation);
+            world.lock().unwrap().mutate(rng, &simulation.mutation);
         }
 
         if receive_command {
