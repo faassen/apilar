@@ -1,15 +1,22 @@
-import { Accessor, Show } from "solid-js";
+import { Accessor, Setter, Show } from "solid-js";
 
 import { World } from "./world";
+import IslandSelect from "./IslandSelect";
 
 function Sidebar(props: {
   world: Accessor<World | undefined>;
   islandId: Accessor<number>;
+  setIslandId: Setter<number>;
   code: Accessor<string | undefined>;
   codeError: Accessor<string | undefined>;
 }) {
   return (
     <Show when={props.world() != null}>
+      <IslandSelect
+        world={props.world as Accessor<World>}
+        islandId={props.islandId}
+        setIslandId={props.setIslandId}
+      />
       <Info
         world={props.world as Accessor<World>}
         islandId={props.islandId}

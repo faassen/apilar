@@ -75,15 +75,6 @@ const App: Component = () => {
       <div class="shrink flex-grow-0 basis-auto flex gap-3">
         <button onClick={handleStop}>Stop</button>
         <button onClick={handleStart}>Start</button>
-        <Show when={world()}>
-          {() => (
-            <IslandSelect
-              world={world as Accessor<World>}
-              islandId={islandId}
-              setIslandId={setIslandId}
-            />
-          )}
-        </Show>
       </div>
       <div class="shrink flex-grow basis-auto overflow-y-auto flex flex-row w-full">
         <div class="w-4/6">
@@ -99,6 +90,7 @@ const App: Component = () => {
           <Sidebar
             world={world}
             islandId={islandId}
+            setIslandId={setIslandId}
             code={code}
             codeError={codeError}
           />

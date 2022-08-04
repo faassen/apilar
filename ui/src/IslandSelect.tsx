@@ -1,4 +1,4 @@
-import { Accessor, Setter, For } from "solid-js";
+import { Accessor, Setter, Index } from "solid-js";
 
 import { World } from "./world";
 
@@ -9,13 +9,13 @@ function IslandSelect(props: {
 }) {
   return (
     <select onChange={(e) => props.setIslandId(Number(e.currentTarget.value))}>
-      <For each={props.world().islands}>
+      <Index each={props.world().islands}>
         {(_, id) => (
-          <option selected={id() == props.islandId()} value={id().toString()}>
-            {id}
+          <option selected={id == props.islandId()} value={id.toString()}>
+            {id.toString().padStart(5, "0")}
           </option>
         )}
-      </For>
+      </Index>
     </select>
   );
 }
