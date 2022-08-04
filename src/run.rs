@@ -1,9 +1,9 @@
 use crate::assembler::Assembler;
 use crate::client_command::ClientCommand;
 use crate::computer::Computer;
-use crate::configuration::Configuration;
+use crate::config::Config;
 use crate::info::IslandInfo;
-use crate::island::Island;
+use crate::island::{Island, IslandConfig};
 use crate::render::{render_start, render_update};
 use crate::serve::serve_task;
 use crate::ticks::Ticks;
@@ -33,7 +33,7 @@ pub async fn load_command(cli: &Load) -> Result<(), Box<dyn Error + Sync + Send>
 
     let island: Arc<Mutex<Island>> = Arc::new(Mutex::new(serde_cbor::from_reader(file)?));
 
-    let config: Configuration = Configuration::from(cli);
+    let config: Config = Config::from(cli);
 
     let assembler = Assembler::new();
 
@@ -61,13 +61,13 @@ pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<(), Box<dyn Erro
         .unwrap()
         .set((cli.width / 2, cli.height / 2), computer);
 
-    let config = Configuration::from(cli);
+    let config = Config::from(cli);
 
     run(config, island, assembler).await
 }
 
 async fn run(
-    config: Configuration,
+    config: Config,
     island: Arc<Mutex<Island>>,
     assembler: Assembler,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
@@ -108,7 +108,12 @@ async fn run(
     }
 
     tokio::task::spawn_blocking(move || {
-        simulation_task(config, Arc::clone(&island), &mut rng, main_loop_control_rx)
+        simulation_task(
+            config.island_config,
+            Arc::clone(&island),
+            &mut rng,
+            main_loop_control_rx,
+        )
     })
     .await?;
     Ok(())
@@ -170,7 +175,7 @@ async fn client_command_task(
 }
 
 fn simulation_task(
-    config: Configuration,
+    config: IslandConfig,
     island: Arc<Mutex<Island>>,
     rng: &mut SmallRng,
     mut main_loop_control_rx: mpsc::Receiver<bool>,

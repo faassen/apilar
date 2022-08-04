@@ -1,6 +1,7 @@
+use serde_derive::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Deserialize, Serialize)]
 pub struct Ticks(pub u64);
 
 impl fmt::Display for Ticks {

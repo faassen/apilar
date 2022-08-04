@@ -1,6 +1,7 @@
-use crate::computer::Computer;
-use crate::configuration::Configuration;
+use crate::config::Config;
 use crate::direction::Direction;
+use crate::instruction::Metabolism;
+use crate::{computer::Computer, ticks::Ticks};
 use rand::rngs::SmallRng;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
@@ -18,6 +19,7 @@ pub struct Island {
     pub rows: Vec<Vec<Location>>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Mutation {
     pub overwrite_amount: u64,
     pub insert_amount: u64,
@@ -25,9 +27,20 @@ pub struct Mutation {
     pub stack_amount: u64,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Death {
     pub rate: u32,
     pub memory_size: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct IslandConfig {
+    pub instructions_per_update: usize,
+    // how many ticks between mutations
+    pub mutation_frequency: Ticks,
+    pub mutation: Mutation,
+    pub death: Death,
+    pub metabolism: Metabolism,
 }
 
 type Coords = (usize, usize);
@@ -86,7 +99,7 @@ impl Island {
         self.get(coords).computer.is_none()
     }
 
-    pub fn update(&mut self, rng: &mut SmallRng, config: &Configuration) {
+    pub fn update(&mut self, rng: &mut SmallRng, config: &IslandConfig) {
         let coords = self.get_random_coords(rng);
 
         let location = self.get_mut(coords);
@@ -275,7 +288,7 @@ impl Location {
         }
     }
 
-    pub fn update(&mut self, rng: &mut SmallRng, config: &Configuration) {
+    pub fn update(&mut self, rng: &mut SmallRng, config: &IslandConfig) {
         let mut eliminate_computer: bool = false;
 
         if let Some(computer) = &mut self.computer {

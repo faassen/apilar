@@ -6,7 +6,7 @@ extern crate serde_big_array;
 pub mod assembler;
 pub mod client_command;
 pub mod computer;
-pub mod configuration;
+pub mod config;
 pub mod direction;
 pub mod info;
 pub mod instruction;
@@ -18,6 +18,7 @@ pub mod run;
 pub mod serve;
 pub mod starter;
 pub mod ticks;
+pub mod world;
 
 #[cfg(test)]
 pub mod testutil;
