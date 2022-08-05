@@ -31,8 +31,6 @@ pub struct Autosave {
     pub frequency: Duration,
 }
 
-const COMMAND_PROCESS_FREQUENCY: Ticks = Ticks(10000);
-
 pub async fn load_command(cli: &RunConfigArgs) -> Result<()> {
     let file = BufReader::new(File::open(cli.filename.clone())?);
 
@@ -63,8 +61,6 @@ pub async fn run_command(cli: &RunConfigArgs) -> Result<()> {
 }
 
 async fn run(run_config: RunConfig, world: Arc<Mutex<World>>, assembler: Assembler) -> Result<()> {
-    let mut rng = SmallRng::from_entropy();
-
     let (habitat_info_tx, _) = broadcast::channel(32);
     let (client_command_tx, client_command_rx) = mpsc::channel(32);
 
@@ -74,17 +70,14 @@ async fn run(run_config: RunConfig, world: Arc<Mutex<World>>, assembler: Assembl
 
     tokio::spawn(render_world_task(
         Arc::clone(&world),
-        habitat_info_tx.clone(),
+        habitat_info_tx,
         run_config.redraw_frequency,
     ));
-
-    let (main_loop_control_tx, main_loop_control_rx) = mpsc::channel::<bool>(32);
 
     tokio::spawn(client_command_task(
         Arc::clone(&world),
         assembler,
         client_command_rx,
-        main_loop_control_tx,
     ));
 
     if run_config.autosave.enabled {
@@ -169,15 +162,14 @@ async fn client_command_task(
     world: Arc<Mutex<World>>,
     assembler: Assembler,
     mut rx: mpsc::Receiver<ClientCommand>,
-    tx: mpsc::Sender<bool>,
-) {
+) -> Result<()> {
     while let Some(cmd) = rx.recv().await {
         match cmd {
             ClientCommand::Stop => {
-                tx.send(false).await.unwrap();
+                // tx.send(false).await;
             }
             ClientCommand::Start => {
-                tx.send(true).await.unwrap();
+                // tx.send(true).await;
             }
             ClientCommand::Observe { island_id } => {
                 world.lock().unwrap().set_observed(island_id);
@@ -191,31 +183,14 @@ async fn client_command_task(
             }
         }
     }
+    Ok(())
 }
 
-fn island_simulation_task(
-    island: Arc<Mutex<Island>>,
-    // mut main_loop_control_rx: mpsc::Receiver<bool>,
-) {
+fn island_simulation_task(island: Arc<Mutex<Island>>) {
     let mut ticks = Ticks(0);
     let mut rng = SmallRng::from_entropy();
     loop {
-        // let receive_command = ticks.is_at(COMMAND_PROCESS_FREQUENCY);
         island.lock().unwrap().update(ticks, &mut rng);
-        // if receive_command {
-        //     if let Ok(started) = main_loop_control_rx.try_recv() {
-        //         if !started {
-        //             while let Some(started) = main_loop_control_rx.blocking_recv() {
-        //                 if started {
-        //                     break;
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
-        // if ticks.is_at(Ticks(100000)) {
-        //     std::thread::sleep(Duration::from_millis(100));
-        // }
         ticks = ticks.tick();
     }
 }
@@ -229,7 +204,6 @@ fn connection_task(
     duration: Duration,
 ) {
     let mut rng = SmallRng::from_entropy();
-    println!("connection task!");
     loop {
         transfer(
             Arc::clone(&world),

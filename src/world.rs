@@ -1,11 +1,10 @@
 use crate::assembler::{text_to_words, Assembler};
 use crate::computer::Computer;
-use crate::habitat::{Habitat, HabitatConfig};
+use crate::habitat::Habitat;
 use crate::island::Island;
-use crate::ticks::Ticks;
 use crate::topology::Topology;
 use anyhow::Result;
-use rand::rngs::SmallRng;
+
 use serde_derive::{Deserialize, Serialize};
 
 use std::fs::File;
