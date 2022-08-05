@@ -8,6 +8,7 @@ use crate::ticks::Ticks;
 use crate::topology::Topology;
 use crate::world::World;
 use crate::RunConfigArgs;
+use anyhow::anyhow;
 use anyhow::Result;
 use rand::rngs::SmallRng;
 use rand::SeedableRng;
@@ -32,8 +33,17 @@ const COMMAND_PROCESS_FREQUENCY: Ticks = Ticks(10000);
 pub async fn load_command(cli: &RunConfigArgs) -> Result<()> {
     let file = BufReader::new(File::open(cli.filename.clone())?);
 
+    let mut archive = zip::ZipArchive::new(file).unwrap();
+
+    let cbor_file = match archive.by_name("data.cbor") {
+        Ok(file) => file,
+        Err(_) => {
+            return Err(anyhow!("data.cbor not found in archive"));
+        }
+    };
+
     let run_config: RunConfig = RunConfig::from(cli);
-    let world: World = serde_cbor::from_reader(file)?;
+    let world: World = serde_cbor::from_reader(cbor_file)?;
 
     let assembler = Assembler::new();
 
@@ -170,9 +180,15 @@ fn simulation_task(
     }
 }
 
-fn save_world(world: &World, save_nr: u64) -> Result<(), serde_cbor::Error> {
-    let file = BufWriter::new(File::create(format!("apilar-dump{:06}.cbor", save_nr))?);
-    serde_cbor::to_writer(file, world)
+fn save_world(world: &World, save_nr: u64) -> Result<()> {
+    let file = BufWriter::new(File::create(format!("apilar-dump{:06}.aplr", save_nr))?);
+
+    let mut zip = zip::ZipWriter::new(file);
+
+    zip.start_file("data.cbor", zip::write::FileOptions::default())?;
+    serde_cbor::to_writer(&mut zip, &world)?;
+    zip.finish()?;
+    Ok(())
 }
 
 fn disassemble(

@@ -27,3 +27,4 @@ tower-http = {version = "0.3.4", features = ["full"] }
 tracing-subscriber = {version = "0.3.15", features = ["env-filter"]}
 futures = "0.3"
 anyhow = "1.0.59"
+zip = "0.6.2"
