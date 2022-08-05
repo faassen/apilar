@@ -3,8 +3,6 @@ import {
   onCleanup,
   onMount,
   createSignal,
-  Show,
-  Accessor,
   createEffect,
 } from "solid-js";
 
@@ -12,7 +10,6 @@ import { World, Location } from "./world";
 import { renderWorld, updateWorld, getWorldDimensions } from "./renderWorld";
 import RenderCanvas from "./RenderCanvas";
 import Sidebar from "./Sidebar";
-import IslandSelect from "./IslandSelect";
 
 const socket = new WebSocket("ws://localhost:3000/ws");
 

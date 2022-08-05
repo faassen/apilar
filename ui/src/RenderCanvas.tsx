@@ -17,6 +17,7 @@ function RenderCanvas<T, R, C>(props: {
     width: number,
     height: number
   ) => {
+    app.stage.removeChildren();
     // we have to constrain screenWidth and screenHeight to the world width
     // otherwise it bounces up and down for some reason.
     let screenWidth = Math.min(app.view.width, width);
@@ -58,6 +59,8 @@ function RenderCanvas<T, R, C>(props: {
     pixiContainer.appendChild(app.view);
 
     let renderData: R | undefined;
+    let renderWidth: number | undefined = undefined;
+    let renderHeight: number | undefined = undefined;
 
     createEffect(() => {
       let data = props.data();
@@ -65,7 +68,13 @@ function RenderCanvas<T, R, C>(props: {
         return;
       }
       const [width, height] = props.getDimensions(data);
-      if (renderData == null) {
+      if (
+        renderData == null ||
+        renderWidth !== width ||
+        renderHeight !== height
+      ) {
+        renderWidth = width;
+        renderHeight = height;
         const viewport = createViewport(app, width, height);
         renderData = props.render(viewport, data, props.onClick);
       } else {
