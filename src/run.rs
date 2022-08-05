@@ -106,12 +106,15 @@ fn spawn_islands(world: Arc<Mutex<World>>) -> Vec<std::thread::JoinHandle<()>> {
 }
 
 fn spawn_connection_tasks(world: Arc<Mutex<World>>) -> Vec<std::thread::JoinHandle<()>> {
+    let connection_lock = Arc::new(Mutex::new(()));
+
     let mut handles = Vec::new();
     let islands_amount = world.lock().unwrap().islands.len();
     for from_island_id in 0..islands_amount {
         let connections = get_connections(Arc::clone(&world), from_island_id);
         for connection in connections {
             let world = Arc::clone(&world);
+            let connection_lock = Arc::clone(&connection_lock);
             let handle = std::thread::spawn(move || {
                 connection_task(
                     world,
@@ -120,6 +123,7 @@ fn spawn_connection_tasks(world: Arc<Mutex<World>>) -> Vec<std::thread::JoinHand
                     connection.to_id,
                     &connection.to_rect,
                     connection.transmit_frequency,
+                    connection_lock,
                 )
             });
             handles.push(handle);
@@ -202,9 +206,11 @@ fn connection_task(
     to_island_id: usize,
     to_rect: &Rectangle,
     duration: Duration,
+    connection_lock: Arc<Mutex<()>>,
 ) {
     let mut rng = SmallRng::from_entropy();
     loop {
+        let connection_lock = Arc::clone(&connection_lock);
         transfer(
             Arc::clone(&world),
             from_island_id,
@@ -212,6 +218,7 @@ fn connection_task(
             to_island_id,
             to_rect,
             &mut rng,
+            connection_lock,
         );
         std::thread::sleep(duration);
     }
@@ -224,7 +231,13 @@ fn transfer(
     to_island_id: usize,
     to_rect: &Rectangle,
     rng: &mut SmallRng,
+    connection_lock: Arc<Mutex<()>>,
 ) {
+    // hold connection lock. only one transfer at the time can hold this,
+    // hopefully preventing deadlocks when it locks one island to send,
+    // and in another thread, the other island to receive.
+    let _lock = connection_lock.lock().unwrap();
+
     let islands = &world
         .lock()
         .unwrap()
@@ -237,6 +250,7 @@ fn transfer(
         to_rect,
         &to_island.lock().unwrap().habitat,
     );
+
     if let Some((from_coords, to_coords, computer)) = transfer {
         from_island
             .lock()

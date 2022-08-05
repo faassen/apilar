@@ -56,7 +56,7 @@
       },
       "width": 50,
       "height": 50,
-      "resources": 300,
+      "resources": 200,
       "connections": [
         {
           "from_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
@@ -95,7 +95,7 @@
       },
       "width": 50,
       "height": 50,
-      "resources": 200,
+      "resources": 100,
       "connections": [
         {
           "from_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
@@ -134,7 +134,7 @@
       },
       "width": 50,
       "height": 50,
-      "resources": 100,
+      "resources": 50,
       "connections": [
         {
           "from_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
@@ -173,19 +173,19 @@
       },
       "width": 50,
       "height": 50,
-      "resources": 200,
+      "resources": 100,
       "connections": [
         {
           "from_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
           "to_rect": { "x": 10, "y": 0, "w": 10, "h": 10 },
           "to_id": 5,
-          "transmit_frequency": 10000000
+          "transmit_frequency": 120
         },
         {
           "from_rect": { "x": 10, "y": 20, "w": 10, "h": 10 },
           "to_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
           "to_id": 3,
-          "transmit_frequency": 10000000
+          "transmit_frequency": 120
         }
       ]
     },
@@ -212,19 +212,19 @@
       },
       "width": 50,
       "height": 50,
-      "resources": 300,
+      "resources": 200,
       "connections": [
         {
           "from_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
           "to_rect": { "x": 10, "y": 0, "w": 10, "h": 10 },
           "to_id": 6,
-          "transmit_frequency": 10000000
+          "transmit_frequency": 120
         },
         {
           "from_rect": { "x": 10, "y": 20, "w": 10, "h": 10 },
           "to_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
           "to_id": 4,
-          "transmit_frequency": 10000000
+          "transmit_frequency": 120
         }
       ]
     },
@@ -257,7 +257,7 @@
           "from_rect": { "x": 10, "y": 20, "w": 10, "h": 10 },
           "to_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
           "to_id": 5,
-          "transmit_frequency": 10000000
+          "transmit_frequency": 120
         }
       ]
     }
