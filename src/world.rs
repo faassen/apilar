@@ -89,7 +89,7 @@ impl World {
                 }
             }
         }
-        return false;
+        false
     }
 
     pub fn set_observed(&mut self, island_id: usize) {
