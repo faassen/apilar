@@ -15,7 +15,6 @@ pub mod island;
 pub mod memory;
 pub mod processor;
 pub mod rectangle;
-pub mod render;
 pub mod run;
 pub mod serve;
 pub mod ticks;
@@ -56,9 +55,6 @@ pub struct RunConfigArgs {
 
     #[clap(long, default_value_t = 1000 / 8, value_parser)]
     redraw_frequency: u64,
-
-    #[clap(long, default_value_t = false, value_parser)]
-    text_ui: bool,
 
     #[clap(long, default_value_t = false, value_parser)]
     no_server: bool,

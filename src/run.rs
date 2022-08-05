@@ -3,7 +3,6 @@ use crate::client_command::ClientCommand;
 use crate::config::RunConfig;
 use crate::habitat::Habitat;
 use crate::info::WorldInfo;
-use crate::render::{render_start, render_update};
 use crate::serve::serve_task;
 use crate::ticks::Ticks;
 use crate::topology::Topology;
@@ -82,14 +81,6 @@ async fn run(run_config: RunConfig, world: Arc<Mutex<World>>, assembler: Assembl
         ));
     }
 
-    if run_config.text_ui {
-        render_start();
-        tokio::spawn(text_ui_task(
-            Arc::clone(&world),
-            run_config.redraw_frequency,
-        ));
-    }
-
     tokio::task::spawn_blocking(move || {
         simulation_task(Arc::clone(&world), &mut rng, main_loop_control_rx)
     })
@@ -117,14 +108,6 @@ async fn save_world_task(world: Arc<Mutex<World>>, duration: Duration) {
             break;
         }
         save_nr += 1;
-        time::sleep(duration).await;
-    }
-}
-
-async fn text_ui_task(world: Arc<Mutex<World>>, duration: Duration) {
-    loop {
-        render_update();
-        println!("{}", world.lock().unwrap().habitat());
         time::sleep(duration).await;
     }
 }

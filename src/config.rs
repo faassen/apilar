@@ -7,7 +7,6 @@ pub struct RunConfig {
     pub autosave: Autosave,
     // how many milliseconds between redraws
     pub redraw_frequency: Duration,
-    pub text_ui: bool,
     pub server: bool,
 }
 
@@ -20,7 +19,6 @@ impl From<&RunConfigArgs> for RunConfig {
                 frequency: Duration::from_millis(cli.autosave_frequency),
             },
             redraw_frequency: Duration::from_millis(cli.redraw_frequency),
-            text_ui: cli.text_ui,
             server: !cli.no_server,
         }
     }
