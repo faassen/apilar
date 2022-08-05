@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use crate::rectangle::Rectangle;
 use crate::{
     habitat::{Habitat, HabitatConfig},
@@ -7,12 +5,16 @@ use crate::{
 };
 use rand::rngs::SmallRng;
 use serde_derive::{Deserialize, Serialize};
+use serde_with::serde_as;
+use std::time::Duration;
 
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Connection {
     pub from_rect: Rectangle,
     pub to_rect: Rectangle,
     pub to_id: usize,
+    #[serde_as(as = "serde_with::DurationSeconds<u64>")]
     pub transmit_frequency: Duration,
 }
 

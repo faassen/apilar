@@ -29,7 +29,7 @@
           "from_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
           "to_rect": { "x": 10, "y": 0, "w": 10, "h": 10 },
           "to_id": 1,
-          "transmit_frequency": {}
+          "transmit_frequency": 120
         }
       ]
     },
@@ -62,13 +62,13 @@
           "from_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
           "to_rect": { "x": 10, "y": 0, "w": 10, "h": 10 },
           "to_id": 2,
-          "transmit_frequency": 10000000
+          "transmit_frequency": 120
         },
         {
           "from_rect": { "x": 10, "y": 20, "w": 10, "h": 10 },
           "to_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
           "to_id": 0,
-          "transmit_frequency": 10000000
+          "transmit_frequency": 120
         }
       ]
     },
@@ -101,13 +101,13 @@
           "from_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
           "to_rect": { "x": 10, "y": 0, "w": 10, "h": 10 },
           "to_id": 3,
-          "transmit_frequency": 10000000
+          "transmit_frequency": 120
         },
         {
           "from_rect": { "x": 10, "y": 20, "w": 10, "h": 10 },
           "to_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
           "to_id": 1,
-          "transmit_frequency": 10000000
+          "transmit_frequency": 120
         }
       ]
     },
@@ -140,13 +140,13 @@
           "from_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
           "to_rect": { "x": 10, "y": 0, "w": 10, "h": 10 },
           "to_id": 4,
-          "transmit_frequency": 10000000
+          "transmit_frequency": 120
         },
         {
           "from_rect": { "x": 10, "y": 20, "w": 10, "h": 10 },
           "to_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
           "to_id": 2,
-          "transmit_frequency": 10000000
+          "transmit_frequency": 120
         }
       ]
     },
