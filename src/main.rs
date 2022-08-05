@@ -14,6 +14,7 @@ pub mod instruction;
 pub mod island;
 pub mod memory;
 pub mod processor;
+pub mod rectangle;
 pub mod render;
 pub mod run;
 pub mod serve;

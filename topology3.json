@@ -74,13 +74,6 @@
       "x": 35,
       "y": 20,
       "resources": 400
-    },
-    {
-      "island_id": 1,
-      "filename": "sample_code/head-world-replicator.apil",
-      "x": 10,
-      "y": 10,
-      "resources": 400
     }
   ]
 }

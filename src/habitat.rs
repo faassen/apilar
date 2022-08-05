@@ -1,9 +1,12 @@
 use crate::direction::Direction;
 use crate::instruction::Metabolism;
+use crate::rectangle::Rectangle;
 use crate::{computer::Computer, ticks::Ticks};
 use rand::rngs::SmallRng;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
+
+const CONNECTION_SAMPLING_TRIES: u64 = 2u64.pow(5);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Location {
@@ -43,7 +46,7 @@ pub struct HabitatConfig {
     pub metabolism: Metabolism,
 }
 
-type Coords = (usize, usize);
+pub type Coords = (usize, usize);
 
 impl Habitat {
     pub fn new(width: usize, height: usize, resources: u64) -> Habitat {
@@ -288,6 +291,57 @@ impl Habitat {
             }
         }
         (free, bound, memory)
+    }
+
+    pub fn take_sample(
+        &self,
+        rng: &mut SmallRng,
+        from_rect: &Rectangle,
+        max_tries: u64,
+    ) -> Option<(Computer, Coords)> {
+        for _ in 0..max_tries {
+            let coords = from_rect.random_coords(rng);
+            if !self.is_empty(coords) {
+                let location = self.get(coords);
+                if let Some(computer) = &location.computer {
+                    return Some((computer.clone(), coords));
+                }
+            }
+        }
+        None
+    }
+
+    pub fn get_place_sample_coords(
+        &self,
+        rng: &mut SmallRng,
+        to_rect: &Rectangle,
+        max_tries: u64,
+    ) -> Option<(usize, usize)> {
+        for _ in 0..max_tries {
+            let coords = to_rect.random_coords(rng);
+            if self.is_empty(coords) {
+                return Some(coords);
+            }
+        }
+        None
+    }
+
+    pub fn get_connection_transfer(
+        &self,
+        rng: &mut SmallRng,
+        from_rect: &Rectangle,
+        to_rect: &Rectangle,
+        destination: &Habitat,
+    ) -> Option<(Coords, Coords, Computer)> {
+        let destination_coords =
+            destination.get_place_sample_coords(rng, to_rect, CONNECTION_SAMPLING_TRIES);
+        if let Some(destination_coords) = destination_coords {
+            let computer = self.take_sample(rng, from_rect, CONNECTION_SAMPLING_TRIES);
+            if let Some((computer, from_coords)) = computer {
+                return Some((from_coords, destination_coords, computer));
+            }
+        }
+        None
     }
 }
 
