@@ -1,7 +1,6 @@
 use crate::assembler::Assembler;
 use crate::client_command::ClientCommand;
-use crate::computer::Computer;
-use crate::config::{Config, RunConfig};
+use crate::config::RunConfig;
 use crate::habitat::Habitat;
 use crate::info::WorldInfo;
 use crate::render::{render_start, render_update};
@@ -9,7 +8,7 @@ use crate::serve::serve_task;
 use crate::ticks::Ticks;
 use crate::topology::Topology;
 use crate::world::World;
-use crate::{Load, Run, TopologyConfig};
+use crate::RunConfigArgs;
 use anyhow::Result;
 use rand::rngs::SmallRng;
 use rand::SeedableRng;
@@ -31,7 +30,7 @@ pub struct Autosave {
 
 const COMMAND_PROCESS_FREQUENCY: Ticks = Ticks(10000);
 
-pub async fn load_command(cli: &Load) -> Result<()> {
+pub async fn load_command(cli: &RunConfigArgs) -> Result<()> {
     let file = BufReader::new(File::open(cli.filename.clone())?);
 
     let run_config: RunConfig = RunConfig::from(cli);
@@ -42,33 +41,13 @@ pub async fn load_command(cli: &Load) -> Result<()> {
     run(run_config, Arc::new(Mutex::new(world)), assembler).await
 }
 
-pub async fn run_config(cli: &TopologyConfig) -> Result<()> {
+pub async fn run_command(cli: &RunConfigArgs) -> Result<()> {
     let file = BufReader::new(File::open(cli.filename.clone())?);
     let topology: Topology = serde_json::from_reader(file)?;
     let world = World::try_from(&topology)?;
     let run_config = RunConfig::from(cli);
     let assembler = Assembler::new();
     run(run_config, Arc::new(Mutex::new(world)), assembler).await
-}
-
-pub async fn run_command(cli: &Run, words: Vec<&str>) -> Result<()> {
-    let assembler = Assembler::new();
-
-    let config = Config::from(cli);
-
-    let mut habitat = Habitat::new(cli.width, cli.height, cli.world_resources);
-
-    let mut computer = Computer::new(cli.starting_memory_size, cli.starting_resources);
-    assembler.assemble_words(words, &mut computer.memory, 0);
-    computer.add_processor(0);
-    habitat.set((cli.width / 2, cli.height / 2), computer);
-
-    let world: Arc<Mutex<World>> = Arc::new(Mutex::new(World::from_habitat(
-        habitat,
-        config.habitat_config,
-    )));
-
-    run(config.run_config, world, assembler).await
 }
 
 async fn run(run_config: RunConfig, world: Arc<Mutex<World>>, assembler: Assembler) -> Result<()> {

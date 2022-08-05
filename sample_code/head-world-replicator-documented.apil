@@ -1,4 +1,3 @@
-pub const PROGRAM_TEXT: &str = "
 # This is a full-on replicator that can be used
 # to see the simulation. It replicates itself, 
 # tries to grow memory, splits into two
@@ -59,4 +58,4 @@ RND   # random direction
 SPLIT # split 2 positions earlier
 N0
 HEAD
-JMP   # jump to first addr";
+JMP   # jump to first addr"
