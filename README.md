@@ -38,7 +38,7 @@ Processors can disappear if:
 
 - they run an explicit "END" instruction.
 
-Computers exist in a 2d world. The world is a grid of locations, and each
+Computers exist in a 2d habitat. The habitat is a grid of locations, and each
 location has resources and potentially a computer. Programs can cause a
 computer to split into two pieces (into a neighbor), or merge a neighbor into
 itself.
@@ -57,6 +57,9 @@ random computer's memory is mutated.
 This is usually not very useful, but sometimes a mutation may help a replicator
 survive or replicate better.
 
+More than a single 2d habitat can exist, and each can have its own dimensions
+and configuration. This is defined in a config JSON file.
+
 Apilar is inspired by the famous alife simulation
 [Tierra](<https://en.wikipedia.org/wiki/Tierra_(computer_simulation)>).
 
@@ -65,48 +68,54 @@ Apilar is inspired by the famous alife simulation
 You need to have a recent stable Rust installed. Then:
 
 ```
-cargo run --release -- run
+cargo run --release -- run simple-config.json
 ```
 
-This creates a world, seeds it with a single hard-coded replicator, and then
+You also want to start the UI, for now this is:
+
+```
+cd ui
+npm install
+npm run dev
+```
+
+And then connect to http://localhost:3000
+
+This creates a habitat, seeds it with a single hard-coded replicator, and then
 lets it run. You can see the world evolve in the terminal, so you please make
 your terminal window big enough.
 
-The `#` on the map are computers. Anything else doesn't contain a computer
-and contains an indicator of the amount of free resources available there:
-nothing, '.', a little, 'x' or 'X' for a lot.
+The red squares on the map are computers. The blue is the free resources in a
+location -- darker blue has less.
 
-Sometimes the worlds are duds and growth stops. Sometimes growth is slow.
-Sometimes growth accelerates; it all depends on what mutations occurred. I did
-one longer run run for a few hours, and I came back to a world somehow filled
-with processors but very few computers; and it looked dead.
+Sometimes after starting a replicator growth stops due to back luck; you want
+to restart Apilar then and reload the web page.
+
+Sometimes growth is slow. Sometimes growth accelerates; it all depends on what
+mutations occurred. Sometimes everything dies out after a long time.
 
 If you want to see a new world, just `ctrl-C` to stop and run again.
 
-Is your terminal confused after you break out of the simulation? For me typing
-the `reset` command helps.
-
-There are also a lot of command line arguments to configure the simulation, see:
+There are also command line arguments to configure the simulation, see:
 
 ```
-cargo run -- run -h
+cargo run --release -- run -h
+```
+
+`--autosave` dumps save files on a regular basis that you can load from again:
+
+```
+cargo run --release -- load <mydumpfile>
 ```
 
 What is going on in these worlds? It's a bit of a mystery without more careful
-analysis.
-
-To do some analysis, you can cause dump files to be created regularly during a
-run using the `--dump true` flag. You can then disassemble the memory in
-particular locations using commands like:
-
-```
-cargo run -- disassemble apilar-dump2.cbor 35 10
-```
+analysis. You can click on individual computers to see their disassembled
+memory, and you can try to read what's going on. To understand the
+instructions, see the [Apilar language reference](doc/language.md).
 
 ## sample code
 
-You can find a few sample programs in the `sample_code` directory. You can run
-them or your own code by passing a file argument to the `run` command.
+You can find a few sample programs in the `sample_code` directory.
 
 ## langjam 3
 
