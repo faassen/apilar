@@ -47,11 +47,11 @@ impl WorldInfo {
     pub fn new(world: &World) -> WorldInfo {
         let mut islands = Vec::new();
         for island in &world.islands {
-            islands.push(IslandInfo::new(island));
+            islands.push(IslandInfo::new(&island.lock().unwrap()));
         }
         let mut locations: Vec<Vec<LocationInfo>> = Vec::new();
 
-        let habitat = world.habitat();
+        let habitat = &world.islands[world.observed_island].lock().unwrap().habitat;
 
         for row in &habitat.rows {
             let mut row_locations: Vec<LocationInfo> = Vec::new();

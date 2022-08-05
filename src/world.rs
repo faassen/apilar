@@ -10,86 +10,30 @@ use serde_derive::{Deserialize, Serialize};
 
 use std::fs::File;
 use std::io::{BufReader, Read};
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct World {
-    pub islands: Vec<Island>,
+    pub islands: Vec<Arc<Mutex<Island>>>,
     pub observed_island: usize,
 }
 
 impl World {
     pub fn new(islands: Vec<Island>) -> World {
         World {
-            islands,
+            islands: islands
+                .into_iter()
+                .map(|island| Arc::new(Mutex::new(island)))
+                .collect(),
             observed_island: 0,
         }
     }
 
-    pub fn from_island(island: Island) -> World {
-        World {
-            islands: vec![island],
-            observed_island: 0,
-        }
-    }
-
-    pub fn from_habitat(habitat: Habitat, config: HabitatConfig) -> World {
-        Self::from_island(Island::new(habitat, config, Vec::new()))
-    }
-
-    pub fn update(&mut self, ticks: Ticks, rng: &mut SmallRng) {
-        for island in &mut self.islands {
-            island.update(ticks, rng);
-        }
-        // guard against allocation in the common case where no connection
-        // needs to transfmit
-        if self.needs_transmit(ticks) {
-            self.update_connections(ticks, rng)
-        }
-    }
-
-    pub fn update_connections(&mut self, ticks: Ticks, rng: &mut SmallRng) {
-        let mut transfers = Vec::new();
-        for from_id in 0..self.islands.len() {
-            let island = &self.islands[from_id];
-            for connection in &island.connections {
-                // check again if we need to transmit
-                let transmit = ticks.is_at(connection.transmit_frequency);
-                if !transmit {
-                    continue;
-                };
-                let transfer = island.habitat.get_connection_transfer(
-                    rng,
-                    &connection.from_rect,
-                    &connection.to_rect,
-                    &self.islands[connection.to_id].habitat,
-                );
-                if let Some(transfer) = transfer {
-                    let (from_coords, to_coords, computer) = transfer;
-
-                    transfers.push((from_id, from_coords, connection.to_id, to_coords, computer));
-                }
-            }
-        }
-        for transfer in transfers {
-            let (from_id, from_coords, to_id, to_coords, computer) = transfer;
-            let from_island = &mut self.islands[from_id];
-            from_island.habitat.get_mut(from_coords).computer = None;
-            let to_island = &mut self.islands[to_id];
-            to_island.habitat.get_mut(to_coords).computer = Some(computer);
-        }
-    }
-
-    pub fn needs_transmit(&self, ticks: Ticks) -> bool {
-        for from_id in 0..self.islands.len() {
-            let island = &self.islands[from_id];
-            for connection in &island.connections {
-                let transmit = ticks.is_at(connection.transmit_frequency);
-                if transmit {
-                    return true;
-                }
-            }
-        }
-        false
+    pub fn get_islands(&self, island_ids: &[usize]) -> Vec<Arc<Mutex<Island>>> {
+        island_ids
+            .iter()
+            .map(|id| Arc::clone(&self.islands[*id]))
+            .collect()
     }
 
     pub fn set_observed(&mut self, island_id: usize) {
@@ -98,10 +42,6 @@ impl World {
             return;
         }
         self.observed_island = island_id;
-    }
-
-    pub fn habitat(&self) -> &Habitat {
-        &self.islands[self.observed_island].habitat
     }
 }
 

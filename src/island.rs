@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::rectangle::Rectangle;
 use crate::{
     habitat::{Habitat, HabitatConfig},
@@ -11,7 +13,7 @@ pub struct Connection {
     pub from_rect: Rectangle,
     pub to_rect: Rectangle,
     pub to_id: usize,
-    pub transmit_frequency: Ticks,
+    pub transmit_frequency: Duration,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

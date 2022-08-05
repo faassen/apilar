@@ -29,7 +29,7 @@
           "from_rect": { "x": 60, "y": 0, "w": 10, "h": 40 },
           "to_rect": { "x": 0, "y": 0, "w": 10, "h": 40 },
           "to_id": 1,
-          "transmit_frequency": 100000
+          "transmit_frequency": { "secs": 10, "nanos": 0 }
         }
       ]
     },
@@ -62,7 +62,7 @@
           "from_rect": { "x": 0, "y": 0, "w": 10, "h": 40 },
           "to_rect": { "x": 60, "y": 0, "w": 10, "h": 40 },
           "to_id": 0,
-          "transmit_frequency": 100000
+          "transmit_frequency": { "secs": 10, "nanos": 0 }
         }
       ]
     }

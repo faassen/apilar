@@ -3,6 +3,9 @@ use crate::client_command::ClientCommand;
 use crate::config::RunConfig;
 use crate::habitat::Habitat;
 use crate::info::WorldInfo;
+use crate::island::Connection;
+use crate::island::Island;
+use crate::rectangle::Rectangle;
 use crate::serve::serve_task;
 use crate::ticks::Ticks;
 use crate::topology::Topology;
@@ -91,11 +94,51 @@ async fn run(run_config: RunConfig, world: Arc<Mutex<World>>, assembler: Assembl
         ));
     }
 
-    tokio::task::spawn_blocking(move || {
-        simulation_task(Arc::clone(&world), &mut rng, main_loop_control_rx)
-    })
-    .await?;
+    let mut handles = spawn_connection_tasks(Arc::clone(&world));
+    handles.extend(spawn_islands(Arc::clone(&world)));
+    for handle in handles {
+        handle.join().unwrap();
+    }
     Ok(())
+}
+
+fn spawn_islands(world: Arc<Mutex<World>>) -> Vec<std::thread::JoinHandle<()>> {
+    let mut handles = Vec::new();
+    for island in &Arc::clone(&world).lock().unwrap().islands {
+        let island = Arc::clone(island);
+        let handle = std::thread::spawn(move || island_simulation_task(island));
+        handles.push(handle);
+    }
+    handles
+}
+
+fn spawn_connection_tasks(world: Arc<Mutex<World>>) -> Vec<std::thread::JoinHandle<()>> {
+    let mut handles = Vec::new();
+    let islands_amount = world.lock().unwrap().islands.len();
+    for from_island_id in 0..islands_amount {
+        let connections = get_connections(Arc::clone(&world), from_island_id);
+        for connection in connections {
+            let world = Arc::clone(&world);
+            let handle = std::thread::spawn(move || {
+                connection_task(
+                    world,
+                    from_island_id,
+                    &connection.from_rect,
+                    connection.to_id,
+                    &connection.to_rect,
+                    connection.transmit_frequency,
+                )
+            });
+            handles.push(handle);
+        }
+    }
+    handles
+}
+
+fn get_connections(world: Arc<Mutex<World>>, from_island_id: usize) -> Vec<Connection> {
+    let from_island = &world.lock().unwrap().islands[from_island_id];
+    // XXX clone is a bit of a hack
+    return from_island.lock().unwrap().connections.clone();
 }
 
 async fn render_world_task(
@@ -140,43 +183,99 @@ async fn client_command_task(
                 world.lock().unwrap().set_observed(island_id);
             }
             ClientCommand::Disassemble { x, y, respond } => {
+                let world = world.lock().unwrap();
+                let island = world.islands[world.observed_island].lock().unwrap();
                 respond
-                    .send(disassemble(
-                        &*world.lock().unwrap().habitat(),
-                        &assembler,
-                        x,
-                        y,
-                    ))
+                    .send(disassemble(&island.habitat, &assembler, x, y))
                     .unwrap();
             }
         }
     }
 }
 
-fn simulation_task(
-    world: Arc<Mutex<World>>,
-    rng: &mut SmallRng,
-    mut main_loop_control_rx: mpsc::Receiver<bool>,
+fn island_simulation_task(
+    island: Arc<Mutex<Island>>,
+    // mut main_loop_control_rx: mpsc::Receiver<bool>,
 ) {
     let mut ticks = Ticks(0);
-
+    let mut rng = SmallRng::from_entropy();
     loop {
-        let receive_command = ticks.is_at(COMMAND_PROCESS_FREQUENCY);
-
-        world.lock().unwrap().update(ticks, rng);
-
-        if receive_command {
-            if let Ok(started) = main_loop_control_rx.try_recv() {
-                if !started {
-                    while let Some(started) = main_loop_control_rx.blocking_recv() {
-                        if started {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+        // let receive_command = ticks.is_at(COMMAND_PROCESS_FREQUENCY);
+        island.lock().unwrap().update(ticks, &mut rng);
+        // if receive_command {
+        //     if let Ok(started) = main_loop_control_rx.try_recv() {
+        //         if !started {
+        //             while let Some(started) = main_loop_control_rx.blocking_recv() {
+        //                 if started {
+        //                     break;
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+        // if ticks.is_at(Ticks(100000)) {
+        //     std::thread::sleep(Duration::from_millis(100));
+        // }
         ticks = ticks.tick();
+    }
+}
+
+fn connection_task(
+    world: Arc<Mutex<World>>,
+    from_island_id: usize,
+    from_rect: &Rectangle,
+    to_island_id: usize,
+    to_rect: &Rectangle,
+    duration: Duration,
+) {
+    let mut rng = SmallRng::from_entropy();
+    println!("connection task!");
+    loop {
+        transfer(
+            Arc::clone(&world),
+            from_island_id,
+            from_rect,
+            to_island_id,
+            to_rect,
+            &mut rng,
+        );
+        std::thread::sleep(duration);
+    }
+}
+
+fn transfer(
+    world: Arc<Mutex<World>>,
+    from_island_id: usize,
+    from_rect: &Rectangle,
+    to_island_id: usize,
+    to_rect: &Rectangle,
+    rng: &mut SmallRng,
+) {
+    let islands = &world
+        .lock()
+        .unwrap()
+        .get_islands(&[from_island_id, to_island_id]);
+    let from_island = &islands[0];
+    let to_island = &islands[1];
+    let transfer = from_island.lock().unwrap().habitat.get_connection_transfer(
+        rng,
+        from_rect,
+        to_rect,
+        &to_island.lock().unwrap().habitat,
+    );
+    if let Some((from_coords, to_coords, computer)) = transfer {
+        from_island
+            .lock()
+            .unwrap()
+            .habitat
+            .get_mut(from_coords)
+            .computer = None;
+        to_island
+            .lock()
+            .unwrap()
+            .habitat
+            .get_mut(to_coords)
+            .computer = Some(computer)
     }
 }
 
