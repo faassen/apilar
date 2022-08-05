@@ -17,6 +17,7 @@ function RenderCanvas<T, R, C>(props: {
     width: number,
     height: number
   ) => {
+    // remove any previous viewport as we might've switched islands
     app.stage.removeChildren();
     // we have to constrain screenWidth and screenHeight to the world width
     // otherwise it bounces up and down for some reason.
