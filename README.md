@@ -68,7 +68,7 @@ Apilar is inspired by the famous alife simulation
 You need to have a recent stable Rust installed. Then:
 
 ```
-cargo run --release -- run simple-config.json
+cargo run --release -- run config/simple-config.json
 ```
 
 You also want to start the UI, for now this is:
@@ -116,6 +116,10 @@ instructions, see the [Apilar language reference](doc/language.md).
 ## sample code
 
 You can find a few sample programs in the `sample_code` directory.
+
+## sample configs
+
+You can find a bunch of sample world configurations in the `config` directory.
 
 ## langjam 3
 
