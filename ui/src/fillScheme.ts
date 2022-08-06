@@ -6,11 +6,11 @@ const WHITE = 0xffffff;
 
 export type FillScheme = (location: Location) => number;
 
-function getDefaultFill(location: Location): number {
+function getComputers(location: Location): number {
   if (location.computer != null) {
     return RED;
   }
-  return getFreeResourcesFill(location);
+  return WHITE;
 }
 
 function convert(colors: number[], value: number, max: number): number {
@@ -18,8 +18,15 @@ function convert(colors: number[], value: number, max: number): number {
   return colors[Math.floor(maxedResources / (max / colors.length))];
 }
 
-function getFreeResourcesFill(location: Location): number {
+function getFreeResources(location: Location): number {
   return convert(sequentialHexes.Blues[9], location.freeResources, 500);
+}
+
+function getBoundResources(location: Location): number {
+  if (location.computer == null) {
+    return WHITE;
+  }
+  return convert(sequentialHexes.Greens[9], location.freeResources, 100);
 }
 
 function getMemoryPerComputer(location: Location): number {
@@ -37,8 +44,9 @@ function getProcessorsPerComputer(location: Location): number {
 }
 
 export const fillSchemes: { [key: string]: FillScheme } = {
-  default: getDefaultFill,
-  "free resources": getFreeResourcesFill,
+  computers: getComputers,
+  "free resources": getFreeResources,
+  "bound resources": getBoundResources,
   "memory per computer": getMemoryPerComputer,
   "processors per computer": getProcessorsPerComputer,
 };

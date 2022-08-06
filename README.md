@@ -85,8 +85,18 @@ This creates a habitat, seeds it with a single hard-coded replicator, and then
 lets it run. You can see the world evolve in the terminal, so you please make
 your terminal window big enough.
 
-The red squares on the map are computers. The blue is the free resources in a
-location -- white is no resources, the more and darker blue the more.
+The red squares on the map are computers. White areas don't have a computer.
+
+You can select different color schemes to see other maps:
+
+- amount of free resources available on location, from white to dark blue.
+
+- amount of bound resources per computer, greens from light to dark. White is
+  no computer.
+
+- amount of memory per computer, reds from light to dark. White is no computer.
+
+- amount of processors per computer, purples from light to dark. White is no computer.
 
 Sometimes after starting a replicator growth stops due to back luck; you want
 to restart Apilar then and reload the web page.

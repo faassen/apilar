@@ -27,7 +27,7 @@ const App: Component = () => {
   const [codeError, setCodeError] = createSignal<string | undefined>();
   const [islandId, setIslandId] = createSignal<number>(0);
   const [fillScheme, setFillScheme] = createSignal<FillScheme>(
-    fillSchemes.default
+    fillSchemes.computers
   );
 
   const handleStop = () => {
