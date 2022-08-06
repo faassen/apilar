@@ -134,9 +134,14 @@ impl World {
         duration: Duration,
     ) {
         loop {
-            let _ = tx.send((&*world_state.lock().unwrap()).into());
+            let _ = tx.send(Self::into_world_state_info(Arc::clone(&world_state)));
             time::sleep(duration).await;
         }
+    }
+
+    fn into_world_state_info(world_state: Arc<Mutex<WorldState>>) -> WorldStateInfo {
+        let world_state = world_state.lock().unwrap();
+        (&*world_state).into()
     }
 
     async fn save_world_task(world_state: Arc<Mutex<WorldState>>, duration: Duration) {
