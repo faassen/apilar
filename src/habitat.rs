@@ -1,3 +1,4 @@
+use crate::assembler::Assembler;
 use crate::direction::Direction;
 use crate::instruction::Metabolism;
 use crate::rectangle::Rectangle;
@@ -362,6 +363,22 @@ impl Habitat {
             }
         }
         None
+    }
+
+    pub fn disassemble(&self, assembler: &Assembler, x: usize, y: usize) -> Result<String, String> {
+        if x >= self.width {
+            return Err("x out of range".to_string());
+        }
+        if y >= self.height {
+            return Err("y out of range".to_string());
+        }
+
+        let location = self.get((x, y));
+        if let Some(computer) = &location.computer {
+            Ok(assembler.line_disassemble(&computer.memory.values))
+        } else {
+            Err("no computer".to_string())
+        }
     }
 }
 

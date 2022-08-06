@@ -25,8 +25,8 @@ pub mod world;
 pub mod testutil;
 
 use crate::run::{load_command, run_command};
+use anyhow::Result;
 use clap::{Args, Parser, Subcommand};
-use std::error::Error;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -61,12 +61,12 @@ pub struct RunConfigArgs {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
+async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Run(cli) => run_command(cli).await?,
-        Commands::Load(cli) => load_command(cli).await?,
+        Commands::Run(cli) => run_command(cli)?,
+        Commands::Load(cli) => load_command(cli)?,
     }
 
     Ok(())

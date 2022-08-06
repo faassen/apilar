@@ -1,5 +1,5 @@
 use crate::client_command::ClientCommand;
-use crate::info::WorldInfo;
+use crate::info::WorldStateInfo;
 use axum::{
     extract::ws::{Message, WebSocket, WebSocketUpgrade},
     extract::{Extension, Query},
@@ -19,12 +19,15 @@ use tokio::sync::oneshot;
 use tower_http::services::ServeDir;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-type WorldInfoSender = broadcast::Sender<WorldInfo>;
-type WorldInfoSharedSender = Arc<WorldInfoSender>;
+type WorldStateInfoSender = broadcast::Sender<WorldStateInfo>;
+type WorldStateInfoSharedSender = Arc<WorldStateInfoSender>;
 
 type ClientCommandSender = mpsc::Sender<ClientCommand>;
 
-pub async fn serve_task(habitat_info_tx: WorldInfoSender, client_command_tx: ClientCommandSender) {
+pub async fn serve_task(
+    world_state_info_tx: WorldStateInfoSender,
+    client_command_tx: ClientCommandSender,
+) {
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(
             std::env::var("RUST_LOG")
@@ -56,7 +59,7 @@ pub async fn serve_task(habitat_info_tx: WorldInfoSender, client_command_tx: Cli
         //     TraceLayer::new_for_http()
         //         .make_span_with(DefaultMakeSpan::default().include_headers(true)),
         // )
-        .layer(Extension(Arc::new(habitat_info_tx)))
+        .layer(Extension(Arc::new(world_state_info_tx)))
         .layer(Extension(client_command_tx));
 
     let port = get_available_port().unwrap();
@@ -134,15 +137,15 @@ async fn observe_handler(
 }
 async fn ws_handler(
     ws: WebSocketUpgrade,
-    Extension(habitat_info_tx): Extension<WorldInfoSharedSender>,
+    Extension(world_state_info_tx): Extension<WorldStateInfoSharedSender>,
     Extension(client_command_tx): Extension<ClientCommandSender>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(|socket| handle_socket(socket, habitat_info_tx, client_command_tx))
+    ws.on_upgrade(|socket| handle_socket(socket, world_state_info_tx, client_command_tx))
 }
 
 async fn handle_socket<'a>(
     socket: WebSocket,
-    habitat_info_tx: WorldInfoSharedSender,
+    world_state_info_tx: WorldStateInfoSharedSender,
     client_command_tx: ClientCommandSender,
 ) {
     let (mut sender, mut receiver) = socket.split();
@@ -159,9 +162,9 @@ async fn handle_socket<'a>(
         }
     });
 
-    let mut habitat_info_rx = habitat_info_tx.subscribe();
+    let mut world_state_info_rx = world_state_info_tx.subscribe();
     loop {
-        if let Ok(value) = habitat_info_rx.recv().await {
+        if let Ok(value) = world_state_info_rx.recv().await {
             // XXX unwrap here, what if this fails?
             let json = serde_json::to_string(&value).unwrap();
 
