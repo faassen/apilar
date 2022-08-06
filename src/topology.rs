@@ -1,4 +1,7 @@
-use crate::{habitat::HabitatConfig, island::Connection};
+use crate::{
+    habitat::HabitatConfig,
+    island::{Connection, Disaster},
+};
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -13,6 +16,7 @@ pub struct IslandDescription {
     pub width: usize,
     pub height: usize,
     pub resources: u64,
+    pub disaster: Option<Disaster>,
     pub connections: Vec<Connection>,
 }
 

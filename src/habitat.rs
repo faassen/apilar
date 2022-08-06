@@ -186,6 +186,26 @@ impl Habitat {
         }
     }
 
+    pub fn die(&mut self, coords: Coords) {
+        let location = self.get_mut(coords);
+        if let Some(computer) = &mut location.computer {
+            location.resources += computer.resources + computer.memory.values.len() as u64;
+            location.computer = None;
+        }
+    }
+
+    pub fn wipeout(&mut self, rng: &mut SmallRng, width: usize, height: usize) {
+        let start_x = rng.gen_range(0..self.width);
+        let start_y = rng.gen_range(0..self.height);
+        for y in start_y..start_y + height {
+            for x in start_x..start_x + width {
+                let rx = x.rem_euclid(self.width);
+                let ry = y.rem_euclid(self.height);
+                self.die((rx, ry));
+            }
+        }
+    }
+
     fn want_split(&self, coords: Coords) -> Option<(Coords, usize)> {
         if let Some(computer) = &self.get(coords).computer {
             if let Some((direction, address)) = computer.want_split() {

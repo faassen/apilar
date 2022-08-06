@@ -1,0 +1,294 @@
+{
+  "islands": [
+    {
+      "config": {
+        "instructions_per_update": 10,
+        "max_processors": 10,
+        "mutation_frequency": 10000,
+        "mutation": {
+          "overwrite_amount": 1,
+          "insert_amount": 1,
+          "delete_amount": 0,
+          "stack_amount": 1
+        },
+        "death": {
+          "rate": 20000,
+          "memory_size": 8192
+        },
+        "metabolism": {
+          "max_eat_amount": 128,
+          "max_grow_amount": 16,
+          "max_shrink_amount": 16
+        }
+      },
+      "width": 50,
+      "height": 50,
+      "resources": 400,
+      "disaster": {
+        "frequency": 5000000,
+        "width": 10,
+        "height": 10
+      },
+      "connections": [
+        {
+          "from_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
+          "to_rect": { "x": 10, "y": 0, "w": 10, "h": 10 },
+          "to_id": 1,
+          "transmit_frequency": 120
+        }
+      ]
+    },
+    {
+      "config": {
+        "instructions_per_update": 10,
+        "max_processors": 10,
+        "mutation_frequency": 10000,
+        "mutation": {
+          "overwrite_amount": 1,
+          "insert_amount": 1,
+          "delete_amount": 0,
+          "stack_amount": 1
+        },
+        "death": {
+          "rate": 20000,
+          "memory_size": 8192
+        },
+        "metabolism": {
+          "max_eat_amount": 128,
+          "max_grow_amount": 16,
+          "max_shrink_amount": 16
+        }
+      },
+      "width": 50,
+      "height": 50,
+      "resources": 200,
+      "disaster": {
+        "frequency": 5000000,
+        "width": 10,
+        "height": 10
+      },
+      "connections": [
+        {
+          "from_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
+          "to_rect": { "x": 10, "y": 0, "w": 10, "h": 10 },
+          "to_id": 2,
+          "transmit_frequency": 120
+        },
+        {
+          "from_rect": { "x": 10, "y": 20, "w": 10, "h": 10 },
+          "to_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
+          "to_id": 0,
+          "transmit_frequency": 120
+        }
+      ]
+    },
+    {
+      "config": {
+        "instructions_per_update": 10,
+        "max_processors": 10,
+        "mutation_frequency": 10000,
+        "mutation": {
+          "overwrite_amount": 1,
+          "insert_amount": 1,
+          "delete_amount": 0,
+          "stack_amount": 1
+        },
+        "death": {
+          "rate": 20000,
+          "memory_size": 8192
+        },
+        "metabolism": {
+          "max_eat_amount": 128,
+          "max_grow_amount": 16,
+          "max_shrink_amount": 16
+        }
+      },
+      "width": 50,
+      "height": 50,
+      "resources": 100,
+      "connections": [
+        {
+          "from_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
+          "to_rect": { "x": 10, "y": 0, "w": 10, "h": 10 },
+          "to_id": 3,
+          "transmit_frequency": 120
+        },
+        {
+          "from_rect": { "x": 10, "y": 20, "w": 10, "h": 10 },
+          "to_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
+          "to_id": 1,
+          "transmit_frequency": 120
+        }
+      ]
+    },
+    {
+      "config": {
+        "instructions_per_update": 10,
+        "max_processors": 10,
+        "mutation_frequency": 10000,
+        "mutation": {
+          "overwrite_amount": 1,
+          "insert_amount": 1,
+          "delete_amount": 0,
+          "stack_amount": 1
+        },
+        "death": {
+          "rate": 20000,
+          "memory_size": 8192
+        },
+        "metabolism": {
+          "max_eat_amount": 128,
+          "max_grow_amount": 16,
+          "max_shrink_amount": 16
+        }
+      },
+      "width": 50,
+      "height": 50,
+      "resources": 50,
+      "connections": [
+        {
+          "from_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
+          "to_rect": { "x": 10, "y": 0, "w": 10, "h": 10 },
+          "to_id": 4,
+          "transmit_frequency": 120
+        },
+        {
+          "from_rect": { "x": 10, "y": 20, "w": 10, "h": 10 },
+          "to_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
+          "to_id": 2,
+          "transmit_frequency": 120
+        }
+      ]
+    },
+    {
+      "config": {
+        "instructions_per_update": 10,
+        "max_processors": 10,
+        "mutation_frequency": 10000,
+        "mutation": {
+          "overwrite_amount": 1,
+          "insert_amount": 1,
+          "delete_amount": 0,
+          "stack_amount": 1
+        },
+        "death": {
+          "rate": 20000,
+          "memory_size": 8192
+        },
+        "metabolism": {
+          "max_eat_amount": 128,
+          "max_grow_amount": 16,
+          "max_shrink_amount": 16
+        }
+      },
+      "width": 50,
+      "height": 50,
+      "resources": 100,
+      "connections": [
+        {
+          "from_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
+          "to_rect": { "x": 10, "y": 0, "w": 10, "h": 10 },
+          "to_id": 5,
+          "transmit_frequency": 120
+        },
+        {
+          "from_rect": { "x": 10, "y": 20, "w": 10, "h": 10 },
+          "to_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
+          "to_id": 3,
+          "transmit_frequency": 120
+        }
+      ]
+    },
+    {
+      "config": {
+        "instructions_per_update": 10,
+        "max_processors": 10,
+        "mutation_frequency": 10000,
+        "mutation": {
+          "overwrite_amount": 1,
+          "insert_amount": 1,
+          "delete_amount": 0,
+          "stack_amount": 1
+        },
+        "death": {
+          "rate": 20000,
+          "memory_size": 8192
+        },
+        "metabolism": {
+          "max_eat_amount": 128,
+          "max_grow_amount": 16,
+          "max_shrink_amount": 16
+        }
+      },
+      "width": 50,
+      "height": 50,
+      "resources": 200,
+      "disaster": {
+        "frequency": 5000000,
+        "width": 10,
+        "height": 10
+      },
+      "connections": [
+        {
+          "from_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
+          "to_rect": { "x": 10, "y": 0, "w": 10, "h": 10 },
+          "to_id": 6,
+          "transmit_frequency": 120
+        },
+        {
+          "from_rect": { "x": 10, "y": 20, "w": 10, "h": 10 },
+          "to_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
+          "to_id": 4,
+          "transmit_frequency": 120
+        }
+      ]
+    },
+    {
+      "config": {
+        "instructions_per_update": 10,
+        "max_processors": 10,
+        "mutation_frequency": 10000,
+        "mutation": {
+          "overwrite_amount": 1,
+          "insert_amount": 1,
+          "delete_amount": 0,
+          "stack_amount": 1
+        },
+        "death": {
+          "rate": 20000,
+          "memory_size": 8192
+        },
+        "metabolism": {
+          "max_eat_amount": 128,
+          "max_grow_amount": 16,
+          "max_shrink_amount": 16
+        }
+      },
+      "width": 50,
+      "height": 50,
+      "resources": 400,
+      "disaster": {
+        "frequency": 5000000,
+        "width": 10,
+        "height": 10
+      },
+      "connections": [
+        {
+          "from_rect": { "x": 10, "y": 20, "w": 10, "h": 10 },
+          "to_rect": { "x": 30, "y": 0, "w": 10, "h": 10 },
+          "to_id": 5,
+          "transmit_frequency": 120
+        }
+      ]
+    }
+  ],
+  "computers": [
+    {
+      "island_id": 0,
+      "filename": "sample_code/head-world-replicator.apil",
+      "x": 35,
+      "y": 20,
+      "resources": 400
+    }
+  ]
+}

@@ -59,6 +59,7 @@ impl TryFrom<&Topology> for World {
             islands.push(Island::new(
                 habitat,
                 island_description.config.clone(),
+                island_description.disaster.clone(),
                 island_description.connections.clone(),
             ))
         }
