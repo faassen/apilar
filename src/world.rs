@@ -20,6 +20,8 @@ use std::time::Duration;
 use tokio::sync::{broadcast, mpsc};
 use tokio::time;
 
+const PAUSE_CHECK: Ticks = Ticks(100000);
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WorldState {
     islands: Vec<Arc<Mutex<Island>>>,
@@ -29,6 +31,10 @@ pub struct WorldState {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct World {
     world_state: Arc<Mutex<WorldState>>,
+}
+
+pub struct Paused {
+    paused: bool,
 }
 
 impl World {
@@ -62,6 +68,8 @@ impl World {
         let (habitat_info_tx, _) = broadcast::channel(32);
         let (client_command_tx, client_command_rx) = mpsc::channel(32);
 
+        let pause = Arc::new(Mutex::new(Paused { paused: false }));
+
         if run_config.server {
             tokio::spawn(serve_task(habitat_info_tx.clone(), client_command_tx));
         }
@@ -74,6 +82,7 @@ impl World {
 
         tokio::spawn(Self::client_command_task(
             Arc::clone(&self.world_state),
+            Arc::clone(&pause),
             assembler,
             client_command_rx,
         ));
@@ -87,18 +96,22 @@ impl World {
 
         self.spawn_connection_tasks();
 
-        let handles = self.spawn_island_tasks();
+        let handles = self.spawn_island_tasks(pause);
         for handle in handles {
             handle.join().unwrap();
         }
         Ok(())
     }
 
-    pub fn spawn_island_tasks(&self) -> Vec<std::thread::JoinHandle<()>> {
+    pub fn spawn_island_tasks(
+        &self,
+        pause: Arc<Mutex<Paused>>,
+    ) -> Vec<std::thread::JoinHandle<()>> {
         let mut handles = Vec::new();
         for island in &self.world_state.lock().unwrap().islands {
             let island = Arc::clone(island);
-            let handle = std::thread::spawn(move || WorldState::island_task(island));
+            let pause = Arc::clone(&pause);
+            let handle = std::thread::spawn(move || WorldState::island_task(island, pause));
             handles.push(handle);
         }
         handles
@@ -159,16 +172,17 @@ impl World {
 
     async fn client_command_task(
         world_state: Arc<Mutex<WorldState>>,
+        pause: Arc<Mutex<Paused>>,
         assembler: Assembler,
         mut rx: mpsc::Receiver<ClientCommand>,
     ) -> Result<()> {
         while let Some(cmd) = rx.recv().await {
             match cmd {
                 ClientCommand::Stop => {
-                    // tx.send(false).await;
+                    pause.lock().unwrap().paused = true;
                 }
                 ClientCommand::Start => {
-                    // tx.send(true).await;
+                    pause.lock().unwrap().paused = false;
                 }
                 ClientCommand::Observe { island_id } => {
                     world_state.lock().unwrap().set_observed(island_id);
@@ -210,12 +224,31 @@ impl World {
 impl WorldState {
     // this is the only task that isn't async but runs in a thread to make use of
     // multiple cores
-    fn island_task(island: Arc<Mutex<Island>>) {
+    fn island_task(island: Arc<Mutex<Island>>, pause: Arc<Mutex<Paused>>) {
         let mut ticks = Ticks(0);
         let mut rng = SmallRng::from_entropy();
         loop {
             island.lock().unwrap().update(ticks, &mut rng);
+
+            if ticks.is_at(PAUSE_CHECK) {
+                let paused = pause.lock().unwrap();
+                if paused.paused {
+                    drop(paused);
+                    Self::pause(Arc::clone(&pause));
+                }
+            }
             ticks = ticks.tick();
+        }
+    }
+
+    fn pause(pause: Arc<Mutex<Paused>>) {
+        loop {
+            let paused = pause.lock().unwrap();
+            if !paused.paused {
+                break;
+            }
+            drop(paused);
+            std::thread::sleep(Duration::from_millis(100));
         }
     }
 
