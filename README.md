@@ -86,7 +86,7 @@ lets it run. You can see the world evolve in the terminal, so you please make
 your terminal window big enough.
 
 The red squares on the map are computers. The blue is the free resources in a
-location -- darker blue has less.
+location -- white is no resources, the more and darker blue the more.
 
 Sometimes after starting a replicator growth stops due to back luck; you want
 to restart Apilar then and reload the web page.

@@ -2,6 +2,7 @@ import * as pixi from "pixi.js";
 
 import { Island, World, Location } from "./world";
 import { Viewport } from "pixi-viewport";
+import { sequential_hexes } from "./colors";
 
 const BOX_SIZE = 20;
 
@@ -79,7 +80,8 @@ function getFill(location: Location): number {
   if (location.computer != null) {
     return RED;
   }
-  const max = 1000;
-  const resources = location.freeResources > max ? max : location.freeResources;
-  return (resources / max) * 50 + (1 - resources / max) * 219;
+  const max = 500;
+  const resources =
+    location.freeResources > max ? max - 1 : location.freeResources;
+  return sequential_hexes.Blues[9][Math.floor(resources / (max / 9))];
 }
