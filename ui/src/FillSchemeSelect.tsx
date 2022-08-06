@@ -1,5 +1,5 @@
 import { Accessor, Setter, For } from "solid-js";
-import { fillSchemes, FillScheme } from "./renderWorld";
+import { fillSchemes, FillScheme } from "./fillScheme";
 
 function FillSchemeSelect(props: {
   fillScheme: Accessor<FillScheme>;

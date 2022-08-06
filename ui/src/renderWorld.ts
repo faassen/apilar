@@ -2,7 +2,6 @@ import * as pixi from "pixi.js";
 
 import { World, Location } from "./world";
 import { Viewport } from "pixi-viewport";
-import { sequential_hexes } from "./colors";
 
 const BOX_SIZE = 20;
 
@@ -76,24 +75,3 @@ function drawBox(
   sprite.width = size;
   sprite.height = size;
 }
-
-export function getDefaultFill(location: Location): number {
-  if (location.computer != null) {
-    return RED;
-  }
-  return getFreeResourcesFill(location);
-}
-
-export function getFreeResourcesFill(location: Location): number {
-  const max = 500;
-  const resources =
-    location.freeResources > max ? max - 1 : location.freeResources;
-  return sequential_hexes.Blues[9][Math.floor(resources / (max / 9))];
-}
-
-export type FillScheme = (location: Location) => number;
-
-export const fillSchemes: { [key: string]: FillScheme } = {
-  default: getDefaultFill,
-  "free-resources": getFreeResourcesFill,
-};

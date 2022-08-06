@@ -12,13 +12,12 @@ import {
   renderWorld,
   updateWorld,
   getWorldDimensions,
-  FillScheme,
-  fillSchemes,
   RenderData,
 } from "./renderWorld";
 import RenderCanvas from "./RenderCanvas";
 import Sidebar from "./Sidebar";
 import { Viewport } from "pixi-viewport";
+import { FillScheme, fillSchemes } from "./fillScheme";
 
 const socket = new WebSocket("ws://localhost:3000/ws");
 

@@ -979,7 +979,7 @@ export const sequential = {
 };
 
 // we want to convert these to plain tint numbers
-export const sequential_hexes = Object.fromEntries(
+export const sequentialHexes = Object.fromEntries(
   Object.entries(sequential).map(([scheme, ranges]) => [
     scheme,
     Object.fromEntries(

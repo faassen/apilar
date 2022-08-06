@@ -1,7 +1,7 @@
 import { Accessor, Setter, Show } from "solid-js";
 
 import { World } from "./world";
-import { FillScheme } from "./renderWorld";
+import { FillScheme } from "./fillScheme";
 import IslandSelect from "./IslandSelect";
 import FillSchemeSelect from "./FillSchemeSelect";
 
