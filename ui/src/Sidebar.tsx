@@ -1,22 +1,32 @@
 import { Accessor, Setter, Show } from "solid-js";
 
 import { World } from "./world";
+import { FillScheme } from "./renderWorld";
 import IslandSelect from "./IslandSelect";
+import FillSchemeSelect from "./FillSchemeSelect";
 
 function Sidebar(props: {
   world: Accessor<World | undefined>;
   islandId: Accessor<number>;
   setIslandId: Setter<number>;
+  fillScheme: Accessor<FillScheme>;
+  setFillScheme: Setter<FillScheme>;
   code: Accessor<string | undefined>;
   codeError: Accessor<string | undefined>;
 }) {
   return (
     <Show when={props.world() != null}>
-      <IslandSelect
-        world={props.world as Accessor<World>}
-        islandId={props.islandId}
-        setIslandId={props.setIslandId}
-      />
+      <div class="flex flex-row gap-3">
+        <IslandSelect
+          world={props.world as Accessor<World>}
+          islandId={props.islandId}
+          setIslandId={props.setIslandId}
+        />
+        <FillSchemeSelect
+          fillScheme={props.fillScheme}
+          setFillScheme={props.setFillScheme}
+        />
+      </div>
       <Info
         world={props.world as Accessor<World>}
         islandId={props.islandId}

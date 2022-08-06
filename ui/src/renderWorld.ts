@@ -1,24 +1,21 @@
 import * as pixi from "pixi.js";
 
-import { Island, World, Location } from "./world";
+import { World, Location } from "./world";
 import { Viewport } from "pixi-viewport";
 import { sequential_hexes } from "./colors";
 
 const BOX_SIZE = 20;
 
-type RenderData = {
+export type RenderData = {
   sprites: pixi.Sprite[][];
 };
 
-const DIM_GREY = 0x696969;
-const GREY = 0x808080;
-const LIGHT_GREY = 0xd3d3d3;
-const BLACK = 0x000000;
 const RED = 0xff0000;
 
 export function renderWorld(
   viewport: Viewport,
   world: World,
+  getFill: (location: Location) => number,
   onClick: (options: { location: Location; x: number; y: number }) => void
 ): RenderData {
   const renderData: RenderData = { sprites: [] };
@@ -42,7 +39,11 @@ export function renderWorld(
   return renderData;
 }
 
-export function updateWorld(world: World, renderData: RenderData) {
+export function updateWorld(
+  world: World,
+  renderData: RenderData,
+  getFill: (location: Location) => number
+) {
   for (let iy = 0; iy < world.locations.length; iy++) {
     const row = world.locations[iy];
     for (let ix = 0; ix < row.length; ix++) {
@@ -76,12 +77,23 @@ function drawBox(
   sprite.height = size;
 }
 
-function getFill(location: Location): number {
+export function getDefaultFill(location: Location): number {
   if (location.computer != null) {
     return RED;
   }
+  return getFreeResourcesFill(location);
+}
+
+export function getFreeResourcesFill(location: Location): number {
   const max = 500;
   const resources =
     location.freeResources > max ? max - 1 : location.freeResources;
   return sequential_hexes.Blues[9][Math.floor(resources / (max / 9))];
 }
+
+export type FillScheme = (location: Location) => number;
+
+export const fillSchemes: { [key: string]: FillScheme } = {
+  default: getDefaultFill,
+  "free-resources": getFreeResourcesFill,
+};

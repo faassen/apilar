@@ -4,12 +4,21 @@ import {
   onMount,
   createSignal,
   createEffect,
+  createMemo,
 } from "solid-js";
 
 import { World, Location } from "./world";
-import { renderWorld, updateWorld, getWorldDimensions } from "./renderWorld";
+import {
+  renderWorld,
+  updateWorld,
+  getWorldDimensions,
+  FillScheme,
+  fillSchemes,
+  RenderData,
+} from "./renderWorld";
 import RenderCanvas from "./RenderCanvas";
 import Sidebar from "./Sidebar";
+import { Viewport } from "pixi-viewport";
 
 const socket = new WebSocket("ws://localhost:3000/ws");
 
@@ -18,6 +27,9 @@ const App: Component = () => {
   const [code, setCode] = createSignal<string | undefined>();
   const [codeError, setCodeError] = createSignal<string | undefined>();
   const [islandId, setIslandId] = createSignal<number>(0);
+  const [fillScheme, setFillScheme] = createSignal<FillScheme>(
+    fillSchemes.default
+  );
 
   const handleStop = () => {
     socket.send("stop");
@@ -67,6 +79,23 @@ const App: Component = () => {
     });
   });
 
+  const renderWorldWithFill = createMemo(() => {
+    const currentGetFill = fillScheme();
+    return (
+      viewport: Viewport,
+      world: World,
+      onClick: (options: { location: Location; x: number; y: number }) => void
+    ) => {
+      return renderWorld(viewport, world, currentGetFill, onClick);
+    };
+  });
+  const updateWorldWithFill = createMemo(() => {
+    const currentGetFill = fillScheme();
+    return (world: World, renderData: RenderData) => {
+      return updateWorld(world, renderData, currentGetFill);
+    };
+  });
+
   return (
     <div class="flex h-screen flex-col">
       <div class="shrink flex-grow-0 basis-auto flex gap-3">
@@ -76,8 +105,8 @@ const App: Component = () => {
       <div class="shrink flex-grow basis-auto overflow-y-auto flex flex-row w-full">
         <div class="w-4/6">
           <RenderCanvas
-            render={renderWorld}
-            update={updateWorld}
+            render={renderWorldWithFill()}
+            update={updateWorldWithFill()}
             data={world}
             getDimensions={getWorldDimensions}
             onClick={handleClick}
@@ -88,6 +117,8 @@ const App: Component = () => {
             world={world}
             islandId={islandId}
             setIslandId={setIslandId}
+            fillScheme={fillScheme}
+            setFillScheme={setFillScheme}
             code={code}
             codeError={codeError}
           />
