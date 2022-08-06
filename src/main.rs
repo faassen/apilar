@@ -5,6 +5,7 @@ extern crate serde_big_array;
 
 pub mod assembler;
 pub mod client_command;
+pub mod command;
 pub mod computer;
 pub mod config;
 pub mod direction;
@@ -15,7 +16,6 @@ pub mod island;
 pub mod memory;
 pub mod processor;
 pub mod rectangle;
-pub mod run;
 pub mod serve;
 pub mod ticks;
 pub mod topology;
@@ -24,7 +24,7 @@ pub mod world;
 #[cfg(test)]
 pub mod testutil;
 
-use crate::run::{load_command, run_command};
+use crate::command::{load_command, run_command};
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand};
 

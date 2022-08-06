@@ -1,4 +1,4 @@
-use crate::run::Autosave;
+use crate::command::Autosave;
 use crate::RunConfigArgs;
 use std::time::Duration;
 
