@@ -234,6 +234,15 @@ impl Processor {
         value % amount
     }
 
+    pub fn pop_max(&mut self, amount: u64) -> u64 {
+        let value = self.pop();
+        if value < amount {
+            value
+        } else {
+            amount
+        }
+    }
+
     pub fn pop_address(&mut self, memory: &Memory) -> Option<usize> {
         if self.stack_pointer == 0 {
             return None;

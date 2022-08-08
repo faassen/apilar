@@ -373,15 +373,15 @@ impl Instruction {
 
             // resources
             Instruction::EAT => {
-                let amount = processor.pop_clamped(metabolism.max_eat_amount);
+                let amount = processor.pop_max(metabolism.max_eat_amount);
                 processor.wants.add(want::want_eat(amount));
             }
             Instruction::GROW => {
-                let amount = processor.pop_clamped(metabolism.max_grow_amount);
+                let amount = processor.pop_max(metabolism.max_grow_amount);
                 processor.wants.add(want::want_grow(amount));
             }
             Instruction::SHRINK => {
-                let amount = processor.pop_clamped(metabolism.max_shrink_amount);
+                let amount = processor.pop_max(metabolism.max_shrink_amount);
                 processor.wants.add(want::want_shrink(amount));
             }
             Instruction::MEMORY => {
