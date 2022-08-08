@@ -1,7 +1,7 @@
 use crate::instruction::Metabolism;
 use crate::memory::Memory;
 use crate::processor::Processor;
-use crate::want;
+use crate::want::Wants;
 use rand::rngs::SmallRng;
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -11,6 +11,7 @@ use serde_derive::{Deserialize, Serialize};
 pub struct Computer {
     pub resources: u64,
     pub memory: Memory,
+    pub wants: Wants,
     pub processors: Vec<Processor>,
 }
 
@@ -19,6 +20,7 @@ impl Computer {
         Computer {
             resources,
             memory: Memory::new(size),
+            wants: Wants::new(),
             processors: Vec::new(),
         }
     }
@@ -55,6 +57,7 @@ impl Computer {
         Some(Computer {
             resources: child_resources,
             memory: Memory::from_values(child_memory_values),
+            wants: Wants::new(),
             processors: child_processors,
         })
     }
@@ -85,10 +88,17 @@ impl Computer {
         instructions_per_update: usize,
         max_processors: usize,
         metabolism: &Metabolism,
-    ) -> want::WantsResult {
+    ) {
+        self.wants.clear();
         // execute amount of instructions per processor
         for processor in &mut self.processors {
-            processor.execute_amount(&mut self.memory, rng, instructions_per_update, metabolism);
+            processor.execute_amount(
+                &mut self.memory,
+                &mut self.wants,
+                rng,
+                instructions_per_update,
+                metabolism,
+            );
         }
 
         // sweep any dead processors
@@ -102,17 +112,15 @@ impl Computer {
             }
         }
 
-        let wants_result = self.wants_result();
-
         // add new processors to start
-        for address in wants_result.want_start() {
+        for address in self.wants.start.get() {
             if self.processors.len() < max_processors {
                 self.processors.push(Processor::new(address));
             }
         }
 
         // grow memory if we want to grow
-        if let Some(amount) = wants_result.want_grow(rng) {
+        if let Some(amount) = self.wants.grow.choose(rng) {
             let amount = if amount <= self.resources {
                 amount
             } else {
@@ -124,14 +132,13 @@ impl Computer {
             self.resources -= amount;
         }
 
-        if let Some(amount) = wants_result.want_shrink(rng) {
+        if let Some(amount) = self.wants.shrink.choose(rng) {
             let amount = amount as usize;
             let amount = if amount < self.memory.values.len() {
                 amount
             } else {
                 self.memory.values.len()
             };
-
             for _ in 0..amount {
                 self.memory.values.pop();
             }
@@ -141,8 +148,6 @@ impl Computer {
             }
             self.resources += amount as u64;
         }
-
-        wants_result
     }
 
     pub fn mutate_memory_overwrite(&mut self, rng: &mut SmallRng) {
@@ -190,10 +195,6 @@ impl Computer {
                 processor.push(rng.gen::<u8>() as u64);
             }
         }
-    }
-
-    pub fn wants_result(&self) -> want::WantsResult {
-        want::Wants::combine(self.processors.iter().map(|processor| &processor.wants))
     }
 }
 

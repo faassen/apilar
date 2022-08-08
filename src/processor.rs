@@ -1,6 +1,6 @@
 use crate::instruction::{Instruction, Metabolism};
 use crate::memory::Memory;
-use crate::want;
+use crate::want::Wants;
 use moveslice::Moveslice;
 use rand::rngs::SmallRng;
 use serde_big_array::BigArray;
@@ -20,7 +20,6 @@ pub struct Processor {
     heads: [Option<usize>; HEADS_AMOUNT],
     #[serde(with = "BigArray")]
     stack: [u64; STACK_SIZE],
-    pub wants: want::Wants,
 }
 
 impl Processor {
@@ -30,7 +29,6 @@ impl Processor {
             current_head: 0,
             heads: [None; HEADS_AMOUNT],
             stack: [0; STACK_SIZE],
-            wants: want::Wants::new(),
             jumped: false,
             alive: true,
             stack_pointer: 0,
@@ -44,6 +42,7 @@ impl Processor {
     pub fn execute(
         &mut self,
         memory: &mut Memory,
+        wants: &mut Wants,
         rng: &mut SmallRng,
         metabolism: &Metabolism,
     ) -> bool {
@@ -56,7 +55,7 @@ impl Processor {
         }
         let value = memory.values[self.ip];
         if let Some(instruction) = Instruction::decode(value) {
-            instruction.execute(self, memory, rng, metabolism);
+            instruction.execute(self, memory, wants, rng, metabolism);
         } // any other instruction is a noop
         if !self.jumped {
             self.ip += 1;
@@ -69,18 +68,14 @@ impl Processor {
     pub fn execute_amount(
         &mut self,
         memory: &mut Memory,
+        wants: &mut Wants,
         rng: &mut SmallRng,
         amount: usize,
         metabolism: &Metabolism,
-    ) -> usize {
-        self.wants.clear();
-        let mut total = 0;
+    ) {
         for _ in 0..amount {
-            if self.execute(memory, rng, metabolism) {
-                total += 1;
-            }
+            self.execute(memory, wants, rng, metabolism);
         }
-        total
     }
 
     pub fn end(&mut self) {
@@ -160,8 +155,6 @@ impl Processor {
             self.alive = false;
         }
 
-        self.wants.address_backward(address, distance);
-
         for i in 0..HEADS_AMOUNT {
             let head = self.heads[i];
             if let Some(head_address) = head {
@@ -174,8 +167,6 @@ impl Processor {
         if self.ip >= address {
             self.ip += distance;
         }
-
-        self.wants.address_forward(address, distance);
 
         for i in 0..HEADS_AMOUNT {
             let head = self.heads[i];
@@ -315,8 +306,6 @@ fn adjust_backward(address: usize, start: usize, distance: usize) -> Option<usiz
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::direction::Direction;
-    use rand::SeedableRng;
 
     #[test]
     fn test_compact_stack() {
@@ -538,20 +527,12 @@ mod tests {
     fn test_adjust_forward() {
         let mut processor = Processor::new(0);
 
-        processor.wants.add(want::want_start(10));
-        processor.wants.add(want::want_split(Direction::North, 20));
-
         processor.heads[0] = Some(15);
         processor.heads[1] = Some(25);
 
         processor.adjust_forward(0, 10);
-        let (counts, _cancels) = processor.wants.counts_cancels();
-
-        let mut rng = SmallRng::from_seed([0; 32]);
 
         assert_eq!(processor.ip, 10);
-        assert_eq!(counts.want_start(), [20]);
-        assert_eq!(counts.want_split(&mut rng), Some((Direction::North, 30)));
         assert_eq!(processor.heads[0], Some(25));
         assert_eq!(processor.heads[1], Some(35));
     }
@@ -560,21 +541,13 @@ mod tests {
     fn test_adjust_forward_from_address() {
         let mut processor = Processor::new(0);
 
-        processor.wants.add(want::want_start(10));
-        processor.wants.add(want::want_split(Direction::North, 20));
-
         processor.heads[0] = Some(15);
         processor.heads[1] = Some(25);
         processor.heads[2] = Some(10);
 
         processor.adjust_forward(15, 10);
-        let (counts, _cancels) = processor.wants.counts_cancels();
-
-        let mut rng = SmallRng::from_seed([0; 32]);
 
         assert_eq!(processor.ip, 0);
-        assert_eq!(counts.want_start(), [10]);
-        assert_eq!(counts.want_split(&mut rng), Some((Direction::North, 30)));
         assert_eq!(processor.heads[0], Some(25));
         assert_eq!(processor.heads[1], Some(35));
         assert_eq!(processor.heads[2], Some(10));
@@ -584,20 +557,12 @@ mod tests {
     fn test_adjust_backward() {
         let mut processor = Processor::new(5);
 
-        processor.wants.add(want::want_start(10));
-        processor.wants.add(want::want_split(Direction::North, 20));
-
         processor.heads[0] = Some(15);
         processor.heads[1] = Some(25);
 
         processor.adjust_backward(0, 5);
-        let (counts, _cancels) = processor.wants.counts_cancels();
-
-        let mut rng = SmallRng::from_seed([0; 32]);
 
         assert_eq!(processor.ip, 0);
-        assert_eq!(counts.want_start(), [5]);
-        assert_eq!(counts.want_split(&mut rng), Some((Direction::North, 15)));
         assert_eq!(processor.heads[0], Some(10));
         assert_eq!(processor.heads[1], Some(20));
     }
@@ -633,30 +598,6 @@ mod tests {
     }
 
     #[test]
-    fn test_adjust_backward_illegal_want_start() {
-        let mut processor = Processor::new(0);
-        processor.wants.add(want::want_start(1));
-
-        processor.adjust_backward(0, 2);
-
-        let (counts, _cancels) = processor.wants.counts_cancels();
-        assert!(counts.want_start().is_empty());
-    }
-
-    #[test]
-    fn test_adjust_backward_illegal_want_split() {
-        let mut processor = Processor::new(0);
-        processor.wants.add(want::want_split(Direction::North, 1));
-
-        processor.adjust_backward(0, 2);
-
-        let (counts, _cancels) = processor.wants.counts_cancels();
-
-        let mut rng = SmallRng::from_seed([0; 32]);
-        assert_eq!(counts.want_split(&mut rng), None);
-    }
-
-    #[test]
     fn test_adjust_backward_illegal_head() {
         let mut processor = Processor::new(0);
         processor.heads[0] = Some(1);
@@ -670,19 +611,11 @@ mod tests {
     fn test_adjust_backward_after_shrink() {
         let mut processor = Processor::new(5);
 
-        processor.wants.add(want::want_start(10));
-        processor.wants.add(want::want_split(Direction::North, 20));
-
         processor.heads[0] = Some(15);
         processor.heads[1] = Some(25);
 
         processor.adjust_backward(6, 30);
-        let (counts, _cancels) = processor.wants.counts_cancels();
-
-        let mut rng = SmallRng::from_seed([0; 32]);
         assert_eq!(processor.ip, 5);
-        assert!(counts.want_start().is_empty());
-        assert_eq!(counts.want_split(&mut rng), None);
         assert_eq!(processor.heads[0], None);
         assert_eq!(processor.heads[1], None);
     }

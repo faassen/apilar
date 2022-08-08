@@ -20,3 +20,9 @@ pub enum Direction {
     South,
     West,
 }
+
+impl Default for Direction {
+    fn default() -> Self {
+        Direction::North
+    }
+}

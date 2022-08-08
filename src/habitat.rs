@@ -2,7 +2,6 @@ use crate::assembler::Assembler;
 use crate::direction::Direction;
 use crate::instruction::Metabolism;
 use crate::rectangle::Rectangle;
-use crate::want;
 use crate::{computer::Computer, ticks::Ticks};
 use rand::rngs::SmallRng;
 use rand::Rng;
@@ -108,27 +107,26 @@ impl Habitat {
         let coords = self.get_random_coords(rng);
 
         let location = self.get_mut(coords);
-        let wants_result = location.update(rng, config);
+        location.update(rng, config);
 
-        if let Some(wants_result) = &wants_result {
-            if let Some((neighbor_coords, address)) = self.want_split(coords, wants_result, rng) {
-                self.split(coords, neighbor_coords, address);
-            }
-            if let Some(neighbor_coords) = self.want_merge(coords, wants_result, rng) {
-                let neighbor_computer = self.get(neighbor_coords).computer.clone();
-                if let Some(neighbor_computer) = neighbor_computer {
-                    self.merge(
-                        coords,
-                        neighbor_coords,
-                        &neighbor_computer,
-                        config.max_processors,
-                    );
-                }
-            }
-            if let Some(amount) = wants_result.want_eat(rng) {
-                self.eat(coords, amount);
+        if let Some((neighbor_coords, address)) = self.want_split(coords, rng) {
+            self.split(coords, neighbor_coords, address);
+        }
+        if let Some(neighbor_coords) = self.want_merge(coords, rng) {
+            let neighbor_computer = self.get(neighbor_coords).computer.clone();
+            if let Some(neighbor_computer) = neighbor_computer {
+                self.merge(
+                    coords,
+                    neighbor_coords,
+                    &neighbor_computer,
+                    config.max_processors,
+                );
             }
         }
+        if let Some(amount) = self.want_eat(coords, rng) {
+            self.eat(coords, amount);
+        }
+
         self.death(rng, coords, &config.death);
     }
 
@@ -209,32 +207,35 @@ impl Habitat {
         }
     }
 
-    fn want_split(
-        &self,
-        coords: Coords,
-        wants_result: &want::WantsResult,
-        rng: &mut SmallRng,
-    ) -> Option<(Coords, usize)> {
-        if let Some((direction, address)) = wants_result.want_split(rng) {
-            let neighbor_coords = self.neighbor_coords(coords, direction);
-            if self.is_empty(neighbor_coords) {
-                return Some((neighbor_coords, address));
+    fn want_split(&self, coords: Coords, rng: &mut SmallRng) -> Option<(Coords, usize)> {
+        let location = self.get(coords);
+        if let Some(computer) = &location.computer {
+            if let Some((direction, address)) = computer.wants.split.choose(rng) {
+                let neighbor_coords = self.neighbor_coords(coords, direction);
+                if self.is_empty(neighbor_coords) {
+                    return Some((neighbor_coords, address));
+                }
             }
         }
         None
     }
 
-    fn want_merge(
-        &self,
-        coords: Coords,
-        wants_result: &want::WantsResult,
-        rng: &mut SmallRng,
-    ) -> Option<Coords> {
-        if let Some(direction) = wants_result.want_merge(rng) {
-            let neighbor_coords = self.neighbor_coords(coords, direction);
-            if !self.is_empty(neighbor_coords) {
-                return Some(neighbor_coords);
+    fn want_merge(&self, coords: Coords, rng: &mut SmallRng) -> Option<Coords> {
+        let location = self.get(coords);
+        if let Some(computer) = &location.computer {
+            if let Some(direction) = computer.wants.merge.choose(rng) {
+                let neighbor_coords = self.neighbor_coords(coords, direction);
+                if !self.is_empty(neighbor_coords) {
+                    return Some(neighbor_coords);
+                }
             }
+        }
+        None
+    }
+
+    fn want_eat(&self, coords: Coords, rng: &mut SmallRng) -> Option<u64> {
+        if let Some(computer) = &self.get(coords).computer {
+            return computer.wants.eat.choose(rng);
         }
         None
     }
@@ -393,33 +394,25 @@ impl Location {
         }
     }
 
-    pub fn update(
-        &mut self,
-        rng: &mut SmallRng,
-        config: &HabitatConfig,
-    ) -> Option<want::WantsResult> {
+    pub fn update(&mut self, rng: &mut SmallRng, config: &HabitatConfig) {
         let mut eliminate_computer: bool = false;
-
-        let mut wants_result: Option<want::WantsResult> = None;
 
         if let Some(computer) = &mut self.computer {
             if computer.processors.is_empty() {
                 self.resources += computer.resources + computer.memory.values.len() as u64;
                 eliminate_computer = true;
             } else {
-                wants_result = Some(computer.execute(
+                computer.execute(
                     rng,
                     config.instructions_per_update,
                     config.max_processors,
                     &config.metabolism,
-                ));
+                );
             }
         }
         if eliminate_computer {
             self.computer = None;
         }
-
-        wants_result
     }
 }
 

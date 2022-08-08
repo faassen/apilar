@@ -1,7 +1,7 @@
 use crate::direction::Direction;
 use crate::memory::Memory;
 use crate::processor::Processor;
-use crate::want;
+use crate::want::Wants;
 use rand::rngs::SmallRng;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
@@ -108,6 +108,7 @@ impl Instruction {
         &self,
         processor: &mut Processor,
         memory: &mut Memory,
+        wants: &mut Wants,
         rng: &mut SmallRng,
         metabolism: &Metabolism,
     ) {
@@ -374,11 +375,11 @@ impl Instruction {
             Instruction::START => {
                 let popped = processor.get_current_head_value();
                 if let Some(address) = popped {
-                    processor.wants.add(want::want_start(address));
+                    wants.start.want(address);
                 }
             }
             Instruction::CANCEL_START => {
-                processor.wants.add_cancel(want::Want::Start);
+                wants.start.cancel();
             }
 
             Instruction::END => {
@@ -388,24 +389,22 @@ impl Instruction {
             // resources
             Instruction::EAT => {
                 let amount = processor.pop_max(metabolism.max_eat_amount);
-                processor.wants.add(want::want_eat(amount));
+                wants.eat.want(amount)
             }
-            Instruction::CANCEL_EAT => {
-                processor.wants.add_cancel(want::Want::Eat);
-            }
+            Instruction::CANCEL_EAT => wants.eat.cancel(),
             Instruction::GROW => {
                 let amount = processor.pop_max(metabolism.max_grow_amount);
-                processor.wants.add(want::want_grow(amount));
+                wants.grow.want(amount);
             }
             Instruction::CANCEL_GROW => {
-                processor.wants.add_cancel(want::Want::Grow);
+                wants.grow.cancel();
             }
             Instruction::SHRINK => {
                 let amount = processor.pop_max(metabolism.max_shrink_amount);
-                processor.wants.add(want::want_shrink(amount));
+                wants.shrink.want(amount);
             }
             Instruction::CANCEL_SHRINK => {
-                processor.wants.add_cancel(want::Want::Shrink);
+                wants.shrink.cancel();
             }
             Instruction::MEMORY => {
                 let length = memory.values.len();
@@ -424,11 +423,11 @@ impl Instruction {
                         // XXX random instead. but shouldn't happen...
                         Direction::North
                     };
-                    processor.wants.add(want::want_split(direction, address));
+                    wants.split.want((direction, address));
                 }
             }
             Instruction::CANCEL_SPLIT => {
-                processor.wants.add_cancel(want::Want::Split);
+                wants.split.cancel();
             }
 
             Instruction::MERGE => {
@@ -440,10 +439,10 @@ impl Instruction {
                         // XXX random instead. but shouldn't happen...
                         Direction::North
                     };
-                processor.wants.add(want::want_merge(direction));
+                wants.merge.want(direction);
             }
             Instruction::CANCEL_MERGE => {
-                processor.wants.add_cancel(want::Want::Merge);
+                wants.merge.cancel();
             }
         }
     }
@@ -655,6 +654,7 @@ mod tests {
         // execute two more
         exec.processor.execute_amount(
             &mut exec.memory,
+            &mut exec.wants,
             &mut exec.rng,
             1002,
             &Metabolism {
@@ -702,6 +702,7 @@ mod tests {
 
         exec.processor.execute_amount(
             &mut exec.memory,
+            &mut exec.wants,
             &mut exec.rng,
             (words_amount - 1) * words_amount,
             &Metabolism {
