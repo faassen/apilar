@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
 use crate::direction::Direction;
 use serde_big_array::BigArray;
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Deserialize, Serialize)]
 pub enum Want {
     Start,
     Shrink,
@@ -14,29 +16,27 @@ pub enum Want {
 
 const WANT_SIZE: usize = 64;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Deserialize, Serialize)]
 pub enum WantArg {
     Address(usize),
+    DirectionAddress(Direction, usize),
     Amount(u64),
     Direction(Direction),
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Deserialize, Serialize)]
 pub enum WantItem {
     Want(Want, WantArg),
     Cancel(Want),
-    // Block(Want, Direction)
+    Invalid, // has become invalid due to an adjust
+             // Block(Want, Direction)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct Wants {
+pub struct Wants {
     #[serde(with = "BigArray")]
     want_items: [WantItem; WANT_SIZE],
     pointer: usize,
-}
-
-struct CombinedWants<'a> {
-    wants: &'a [&'a Wants],
 }
 
 pub fn want_start(address: usize) -> WantItem {
@@ -55,8 +55,8 @@ pub fn want_eat(amount: u64) -> WantItem {
     WantItem::Want(Want::Eat, WantArg::Amount(amount))
 }
 
-pub fn want_split(address: usize) -> WantItem {
-    WantItem::Want(Want::Split, WantArg::Address(address))
+pub fn want_split(direction: Direction, address: usize) -> WantItem {
+    WantItem::Want(Want::Split, WantArg::DirectionAddress(direction, address))
 }
 
 pub fn want_merge(direction: Direction) -> WantItem {
@@ -83,68 +83,126 @@ impl Wants {
         self.pointer = 0;
     }
 
-    fn want_count(&self, want_item: WantItem) -> i32 {
-        let mut count = 0;
+    fn counts_cancels(&self) -> (HashMap<Want, HashMap<WantItem, i32>>, HashMap<Want, i32>) {
+        let mut counts = HashMap::new();
+        let mut cancels = HashMap::new();
+
         for i in 0..self.pointer {
-            if want_item == self.want_items[i] {
-                count += 1;
+            let want_item = self.want_items[i];
+            match want_item {
+                WantItem::Want(want, _arg) => {
+                    *counts
+                        .entry(want)
+                        .or_insert_with(HashMap::new)
+                        .entry(want_item)
+                        .or_insert(0) += 1;
+                }
+                WantItem::Cancel(want) => *cancels.entry(want).or_insert(0) += 1,
+                WantItem::Invalid => {
+                    // no op
+                }
             }
         }
-        count
+        (counts, cancels)
     }
 
-    fn cancel_count(&self, want: Want) -> i32 {
-        let mut count = 0;
-        for i in 0..self.pointer {
-            if self.want_items[i] == WantItem::Cancel(want) {
-                count += 1;
-            }
-        }
-        count
-    }
-
-    pub fn combine<'a>(want_items: &'a [&'a Wants]) -> CombinedWants<'a> {
-        CombinedWants { wants: want_items }
-    }
-}
-
-impl<'a> CombinedWants<'a> {
-    pub fn want_count(&self, want_item: WantItem) -> i32 {
-        match want_item {
-            WantItem::Want(want, arg) => {
-                let mut total: i32 = 0;
-                for wants in self.wants {
-                    let count = wants.want_count(WantItem::Want(want, arg));
-                    if count > 0 {
-                        total += count;
-                    } else {
-                        // if we don't want it, we may want to cancel it
-                        let cancel_count = wants.cancel_count(want);
-                        total -= cancel_count;
+    pub fn combine(combined_wants: &[&Wants]) -> HashMap<Want, HashMap<WantItem, i32>> {
+        let mut result = HashMap::new();
+        for wants in combined_wants {
+            let (counts, cancels) = wants.counts_cancels();
+            for (want, want_items) in counts {
+                for (want_item, count) in want_items {
+                    if let WantItem::Want(_want, _arg) = want_item {
+                        *result
+                            .entry(want)
+                            .or_insert_with(HashMap::new)
+                            .entry(want_item)
+                            .or_insert(0) += count;
                     }
                 }
-                total
             }
-            WantItem::Cancel(want) => {
-                panic!("Wannot count cancels")
+            for (want, cancel_count) in cancels {
+                let sub = result.get_mut(&want);
+                if let Some(sub) = sub {
+                    for count in sub.values_mut() {
+                        *count -= cancel_count;
+                    }
+                }
+            }
+        }
+        result
+    }
+
+    pub fn address_backward(&mut self, start: usize, distance: usize) {
+        for i in 0..self.pointer {
+            match self.want_items[i] {
+                WantItem::Want(want, WantArg::Address(address)) => {
+                    let adjusted = adjust_backward(address, start, distance);
+                    match adjusted {
+                        Some(address) => {
+                            self.want_items[i] = WantItem::Want(want, WantArg::Address(address))
+                        }
+                        None => self.want_items[i] = WantItem::Invalid,
+                    }
+                }
+                WantItem::Want(want, WantArg::DirectionAddress(direction, address)) => {
+                    let adjusted = adjust_backward(address, start, distance);
+                    match adjusted {
+                        Some(address) => {
+                            self.want_items[i] =
+                                WantItem::Want(want, WantArg::DirectionAddress(direction, address))
+                        }
+                        None => self.want_items[i] = WantItem::Invalid,
+                    }
+                }
+                _ => {
+                    // no op
+                }
+            }
+        }
+    }
+
+    pub fn address_forward(&mut self, start: usize, distance: usize) {
+        for i in 0..self.pointer {
+            match self.want_items[i] {
+                WantItem::Want(want, WantArg::Address(address)) => {
+                    if address >= start {
+                        self.want_items[i] =
+                            WantItem::Want(want, WantArg::Address(address + distance));
+                    }
+                }
+                WantItem::Want(want, WantArg::DirectionAddress(direction, address)) => {
+                    if address >= start {
+                        self.want_items[i] = WantItem::Want(
+                            want,
+                            WantArg::DirectionAddress(direction, address + distance),
+                        );
+                    }
+                }
+                _ => {
+                    // no op
+                }
             }
         }
     }
 }
 
-// #[derive(Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
-// enum Want {
-//     // affect computer
-//     Start(usize),
-//     Shrink(u64),
-//     Grow(u64),
-//     // affect location
-//     Eat(u64),
+fn adjust_backward(address: usize, start: usize, distance: usize) -> Option<usize> {
+    if address < start {
+        return Some(address);
+    }
+    if address - start >= distance {
+        Some(address - distance)
+    } else {
+        None
+    }
+}
 
-//     // affect other computers
-//     Split(usize),
-//     Merge(Direction),
-// }
+impl Default for Wants {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -156,9 +214,15 @@ mod tests {
         let mut wants = Wants::new();
         wants.add(want_start(0));
 
-        assert_eq!(wants.want_count(want_start(0)), 1);
-        assert_eq!(wants.want_count(want_start(1)), 0);
-        assert_eq!(wants.want_count(want_split(1)), 0);
+        let a = [&wants];
+
+        let counts = Wants::combine(&a);
+
+        let start_items = counts.get(&Want::Start).unwrap();
+
+        assert_eq!(start_items.get(&want_start(0)), Some(&1));
+        assert_eq!(start_items.get(&want_start(1)), None);
+        assert_eq!(counts.get(&Want::Split), None);
     }
 
     #[test]
@@ -170,9 +234,12 @@ mod tests {
         wants1.add(WantItem::Cancel(Want::Start));
 
         let a = [&wants0, &wants1];
-        let combined = Wants::combine(a.as_slice());
 
-        assert_eq!(combined.want_count(want_start(0)), 0);
+        let counts = Wants::combine(a.as_slice());
+
+        let start_items = counts.get(&Want::Start).unwrap();
+
+        assert_eq!(start_items.get(&want_start(0)), Some(&0));
     }
 
     #[test]
@@ -184,9 +251,11 @@ mod tests {
         wants1.add(WantItem::Cancel(Want::Split));
 
         let a = [&wants0, &wants1];
-        let combined = Wants::combine(a.as_slice());
+        let counts = Wants::combine(a.as_slice());
 
-        assert_eq!(combined.want_count(want_start(0)), 1);
+        let start_items = counts.get(&Want::Start).unwrap();
+
+        assert_eq!(start_items.get(&want_start(0)), Some(&1))
     }
 
     #[test]
@@ -197,10 +266,11 @@ mod tests {
         wants0.add(WantItem::Cancel(Want::Start));
 
         let a = [&wants0];
-        let combined = Wants::combine(a.as_slice());
+        let counts = Wants::combine(a.as_slice());
 
-        // cancel from self has no effect
-        assert_eq!(combined.want_count(want_start(0)), 1);
+        let start_items = counts.get(&Want::Start).unwrap();
+
+        assert_eq!(start_items.get(&want_start(0)), Some(&0));
     }
 
     #[test]
@@ -211,10 +281,12 @@ mod tests {
         wants0.add(WantItem::Cancel(Want::Split));
 
         let a = [&wants0];
-        let combined = Wants::combine(a.as_slice());
+        let counts = Wants::combine(a.as_slice());
 
-        // cancel from self has no effect
-        assert_eq!(combined.want_count(want_start(0)), 1);
+        let start_items = counts.get(&Want::Start).unwrap();
+
+        // cancel of something else has no effect
+        assert_eq!(start_items.get(&want_start(0)), Some(&1));
     }
 
     #[test]
@@ -223,7 +295,12 @@ mod tests {
         wants.add(want_start(0));
         wants.add(want_start(0));
 
-        assert_eq!(wants.want_count(want_start(0)), 2);
+        let a = [&wants];
+        let counts = Wants::combine(a.as_slice());
+
+        let start_items = counts.get(&Want::Start).unwrap();
+
+        assert_eq!(start_items.get(&want_start(0)), Some(&2));
     }
 
     #[test]
@@ -237,32 +314,87 @@ mod tests {
         wants1.add(WantItem::Cancel(Want::Start));
 
         let a = [&wants0, &wants1];
-        let combined = Wants::combine(a.as_slice());
+        let counts = Wants::combine(a.as_slice());
 
-        assert_eq!(combined.want_count(want_start(0)), 1);
+        let start_items = counts.get(&Want::Start).unwrap();
+
+        assert_eq!(start_items.get(&want_start(0)), Some(&1));
     }
     #[test]
     fn test_want_start_too_many() {
         let mut wants = Wants::new();
-        for i in 0..(WANT_SIZE + 1) {
+        for _ in 0..(WANT_SIZE + 1) {
             wants.add(want_start(0));
         }
 
-        assert_eq!(wants.want_count(want_start(0)), WANT_SIZE as i32);
+        let a = [&wants];
+        let counts = Wants::combine(a.as_slice());
+
+        let start_items = counts.get(&Want::Start).unwrap();
+
+        assert_eq!(start_items.get(&want_start(0)), Some(&(WANT_SIZE as i32)));
     }
 
     #[test]
     fn test_clear() {
         let mut wants = Wants::new();
         wants.add(want_start(0));
-        wants.add(want_split(0));
+        wants.add(want_split(Direction::North, 0));
 
-        assert_eq!(wants.want_count(want_start(0)), 1);
-        assert_eq!(wants.want_count(want_split(0)), 1);
+        {
+            let a = [&wants];
+            let counts = Wants::combine(a.as_slice());
 
+            let start_items = counts.get(&Want::Start).unwrap();
+            let split_items = counts.get(&Want::Split).unwrap();
+
+            assert_eq!(start_items.get(&want_start(0)), Some(&1));
+            assert_eq!(split_items.get(&want_split(Direction::North, 0)), Some(&1));
+        }
         wants.clear();
 
-        assert_eq!(wants.want_count(want_start(0)), 0);
-        assert_eq!(wants.want_count(want_split(0)), 0);
+        let a = [&wants];
+        let counts = Wants::combine(a.as_slice());
+
+        assert_eq!(counts.get(&Want::Start), None);
+        assert_eq!(counts.get(&Want::Split), None);
+    }
+
+    #[test]
+    fn test_address_forward() {
+        let mut wants = Wants::new();
+
+        wants.add(want_start(10));
+        wants.add(want_split(Direction::North, 20));
+
+        wants.address_forward(0, 10);
+
+        let a = [&wants];
+        let counts = Wants::combine(a.as_slice());
+
+        let start_items = counts.get(&Want::Start).unwrap();
+        let split_items = counts.get(&Want::Split).unwrap();
+
+        assert_eq!(start_items.get(&want_start(20)), Some(&1));
+        assert_eq!(split_items.get(&want_split(Direction::North, 30)), Some(&1));
+    }
+
+    #[test]
+    fn test_address_backward() {
+        let mut wants = Wants::new();
+
+        wants.add(want_start(10));
+        wants.add(want_split(Direction::North, 20));
+
+        wants.address_backward(0, 5);
+
+        let a = [&wants];
+        let counts = Wants::combine(a.as_slice());
+
+        let start_items = counts.get(&Want::Start).unwrap();
+        let split_items = counts.get(&Want::Split).unwrap();
+
+        assert_eq!(start_items.get(&want_start(5)), Some(&1));
+        assert_eq!(split_items.get(&want_split(Direction::North, 15)), Some(&1));
     }
 }
