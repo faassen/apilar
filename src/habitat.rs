@@ -241,9 +241,11 @@ impl Habitat {
 
     fn split(&mut self, coords: Coords, neighbor_coords: Coords, address: usize) {
         let computer = &mut self.get_mut(coords).computer;
-        let splitted: Option<Computer> = computer.as_mut().map(|computer| computer.split(address));
-        let neighbor_location = self.get_mut(neighbor_coords);
-        neighbor_location.computer = splitted;
+        if let Some(computer) = computer {
+            let splitted = computer.split(address);
+            let neighbor_location = self.get_mut(neighbor_coords);
+            neighbor_location.computer = splitted;
+        }
     }
 
     fn merge(

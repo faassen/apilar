@@ -23,7 +23,12 @@ impl Computer {
         }
     }
 
-    pub fn split(&mut self, address: usize) -> Computer {
+    pub fn split(&mut self, address: usize) -> Option<Computer> {
+        // we cannot split off nothing
+        if address == 0 || address >= self.memory.values.len() {
+            return None;
+        }
+
         let parent_memory_values = self.memory.values[..address].to_vec();
         let child_memory_values = self.memory.values[address..].to_vec();
 
@@ -47,11 +52,11 @@ impl Computer {
         self.processors = parent_processors;
         self.memory = Memory::from_values(parent_memory_values);
 
-        Computer {
+        Some(Computer {
             resources: child_resources,
             memory: Memory::from_values(child_memory_values),
             processors: child_processors,
-        }
+        })
     }
 
     pub fn merge(&mut self, other: &Computer, max_processors: usize) {
@@ -300,7 +305,7 @@ mod tests {
         computer.processors[0].set_current_head_value(0);
         computer.processors[1].set_current_head_value(2);
 
-        let splitted = computer.split(2);
+        let splitted = computer.split(2).unwrap();
         assert_eq!(computer.memory.values, [1, 2]);
         assert_eq!(computer.resources, 50);
         assert_eq!(computer.processors.len(), 1);
@@ -312,6 +317,60 @@ mod tests {
         assert_eq!(splitted.processors.len(), 1);
         assert_eq!(splitted.processors[0].ip, 0);
         assert_eq!(splitted.processors[0].get_current_head_value(), Some(0));
+    }
+
+    #[test]
+    fn test_split_at_start_doesnt_split() {
+        let assembler = Assembler::new();
+
+        let text = "
+        N1
+        N2
+        N3
+        N4
+        ";
+        let words = text_to_words(text);
+
+        let mut computer = Computer::new(4, 100);
+        assembler.assemble_words(words.clone(), &mut computer.memory, 0);
+        computer.add_processor(0);
+        computer.add_processor(2);
+        computer.processors[0].set_current_head_value(0);
+        computer.processors[1].set_current_head_value(2);
+
+        let splitted = computer.split(0);
+        assert!(splitted.is_none());
+
+        assert_eq!(computer.memory.values, [1, 2, 3, 4]);
+        assert_eq!(computer.resources, 100);
+        assert_eq!(computer.processors.len(), 2);
+    }
+
+    #[test]
+    fn test_split_beyond_end_doesnt_split() {
+        let assembler = Assembler::new();
+
+        let text = "
+        N1
+        N2
+        N3
+        N4
+        ";
+        let words = text_to_words(text);
+
+        let mut computer = Computer::new(4, 100);
+        assembler.assemble_words(words.clone(), &mut computer.memory, 0);
+        computer.add_processor(0);
+        computer.add_processor(2);
+        computer.processors[0].set_current_head_value(0);
+        computer.processors[1].set_current_head_value(2);
+
+        let splitted = computer.split(4);
+        assert!(splitted.is_none());
+
+        assert_eq!(computer.memory.values, [1, 2, 3, 4]);
+        assert_eq!(computer.resources, 100);
+        assert_eq!(computer.processors.len(), 2);
     }
 
     #[test]
@@ -339,7 +398,7 @@ mod tests {
         computer.processors[2].set_current_head_value(0); // oob
         computer.processors[3].set_current_head_value(2);
 
-        let splitted = computer.split(2);
+        let splitted = computer.split(2).unwrap();
         assert_eq!(computer.memory.values, [1, 2]);
         assert_eq!(computer.resources, 50);
         assert_eq!(computer.processors.len(), 2);
@@ -377,7 +436,7 @@ mod tests {
         computer.processors[0].set_current_head_value(0);
         computer.processors[1].set_current_head_value(2);
 
-        let splitted = computer.split(2);
+        let splitted = computer.split(2).unwrap();
         assert_eq!(computer.memory.values, [1, 2]);
         assert_eq!(computer.resources, 54);
         assert_eq!(computer.processors.len(), 1);
@@ -410,7 +469,7 @@ mod tests {
         computer.processors[0].set_current_head_value(0);
         computer.processors[1].set_current_head_value(2);
 
-        let splitted = computer.split(2);
+        let splitted = computer.split(2).unwrap();
         computer.merge(&splitted, 10);
 
         assert_eq!(computer.memory.values, [1, 2, 3, 4]);
@@ -440,7 +499,7 @@ mod tests {
         computer.add_processor(1);
         computer.add_processor(2);
 
-        let mut splitted = computer.split(2);
+        let mut splitted = computer.split(2).unwrap();
         splitted.add_processor(2);
         computer.merge(&splitted, 3);
 
