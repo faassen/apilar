@@ -33,7 +33,7 @@ pub struct World {
     world_state: Arc<Mutex<WorldState>>,
 }
 
-pub struct Paused {
+pub struct LoopControl {
     paused: bool,
 }
 
@@ -68,7 +68,7 @@ impl World {
         let (habitat_info_tx, _) = broadcast::channel(32);
         let (client_command_tx, client_command_rx) = mpsc::channel(32);
 
-        let pause = Arc::new(Mutex::new(Paused { paused: false }));
+        let loop_control = Arc::new(Mutex::new(LoopControl { paused: false }));
 
         if run_config.server {
             tokio::spawn(serve_task(habitat_info_tx.clone(), client_command_tx));
@@ -82,7 +82,7 @@ impl World {
 
         tokio::spawn(Self::client_command_task(
             Arc::clone(&self.world_state),
-            Arc::clone(&pause),
+            Arc::clone(&loop_control),
             assembler,
             client_command_rx,
         ));
@@ -96,7 +96,7 @@ impl World {
 
         self.spawn_connection_tasks();
 
-        let handles = self.spawn_island_tasks(pause);
+        let handles = self.spawn_island_tasks(loop_control);
         for handle in handles {
             handle.join().unwrap();
         }
@@ -105,13 +105,13 @@ impl World {
 
     pub fn spawn_island_tasks(
         &self,
-        pause: Arc<Mutex<Paused>>,
+        loop_control: Arc<Mutex<LoopControl>>,
     ) -> Vec<std::thread::JoinHandle<()>> {
         let mut handles = Vec::new();
         for island in &self.world_state.lock().unwrap().islands {
             let island = Arc::clone(island);
-            let pause = Arc::clone(&pause);
-            let handle = std::thread::spawn(move || WorldState::island_task(island, pause));
+            let loop_control = Arc::clone(&loop_control);
+            let handle = std::thread::spawn(move || WorldState::island_task(island, loop_control));
             handles.push(handle);
         }
         handles
@@ -172,17 +172,17 @@ impl World {
 
     async fn client_command_task(
         world_state: Arc<Mutex<WorldState>>,
-        pause: Arc<Mutex<Paused>>,
+        loop_control: Arc<Mutex<LoopControl>>,
         assembler: Assembler,
         mut rx: mpsc::Receiver<ClientCommand>,
     ) -> Result<()> {
         while let Some(cmd) = rx.recv().await {
             match cmd {
                 ClientCommand::Stop => {
-                    pause.lock().unwrap().paused = true;
+                    loop_control.lock().unwrap().paused = true;
                 }
                 ClientCommand::Start => {
-                    pause.lock().unwrap().paused = false;
+                    loop_control.lock().unwrap().paused = false;
                 }
                 ClientCommand::Observe { island_id } => {
                     world_state.lock().unwrap().set_observed(island_id);
@@ -224,30 +224,30 @@ impl World {
 impl WorldState {
     // this is the only task that isn't async but runs in a thread to make use of
     // multiple cores
-    fn island_task(island: Arc<Mutex<Island>>, pause: Arc<Mutex<Paused>>) {
+    fn island_task(island: Arc<Mutex<Island>>, loop_control: Arc<Mutex<LoopControl>>) {
         let mut ticks = Ticks(0);
         let mut rng = SmallRng::from_entropy();
         loop {
             island.lock().unwrap().update(ticks, &mut rng);
 
             if ticks.is_at(PAUSE_CHECK) {
-                let paused = pause.lock().unwrap();
-                if paused.paused {
-                    drop(paused);
-                    Self::pause(Arc::clone(&pause));
+                let control = loop_control.lock().unwrap();
+                if control.paused {
+                    drop(control);
+                    Self::pause(Arc::clone(&loop_control));
                 }
             }
             ticks = ticks.tick();
         }
     }
 
-    fn pause(pause: Arc<Mutex<Paused>>) {
+    fn pause(loop_control: Arc<Mutex<LoopControl>>) {
         loop {
-            let paused = pause.lock().unwrap();
-            if !paused.paused {
+            let control = loop_control.lock().unwrap();
+            if !control.paused {
                 break;
             }
-            drop(paused);
+            drop(control);
             std::thread::sleep(Duration::from_millis(100));
         }
     }
