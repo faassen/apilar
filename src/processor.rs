@@ -223,7 +223,7 @@ impl Processor {
 
     pub fn pop(&mut self) -> u64 {
         if self.stack_pointer == 0 {
-            return u64::MAX;
+            return 0;
         }
         self.stack_pointer -= 1;
         self.stack[self.stack_pointer]
@@ -353,7 +353,7 @@ mod tests {
         let mut processor = Processor::new(0);
         processor.push(10);
         assert_eq!(processor.pop(), 10);
-        assert_eq!(processor.pop(), u64::MAX);
+        assert_eq!(processor.pop(), 0);
     }
 
     #[test]
@@ -363,7 +363,7 @@ mod tests {
         assert_eq!(processor.pop_clamped(6), 5);
         processor.push(10);
         assert_eq!(processor.pop_clamped(6), 4);
-        assert_eq!(processor.pop_clamped(6), 3);
+        assert_eq!(processor.pop_clamped(6), 0);
     }
 
     #[test]
@@ -373,7 +373,7 @@ mod tests {
         assert_eq!(processor.pop_max(6), 5);
         processor.push(10);
         assert_eq!(processor.pop_max(6), 6);
-        assert_eq!(processor.pop_max(6), 6);
+        assert_eq!(processor.pop_max(6), 0);
     }
 
     #[test]
@@ -383,7 +383,7 @@ mod tests {
         assert_eq!(processor.pop_head_nr(), 5);
         processor.push(10);
         assert_eq!(processor.pop_head_nr(), 2);
-        assert_eq!(processor.pop_head_nr(), 7);
+        assert_eq!(processor.pop_head_nr(), 0);
     }
 
     #[test]
@@ -523,7 +523,7 @@ mod tests {
         processor.push(1);
         processor.over();
         assert_eq!(processor.pop(), 1);
-        assert_eq!(processor.pop(), u64::MAX);
+        assert_eq!(processor.pop(), 0);
     }
 
     #[test]
