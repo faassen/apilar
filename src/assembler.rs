@@ -1,16 +1,16 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use strum::IntoEnumIterator;
 
 use crate::instruction::Instruction;
 use crate::memory::Memory;
 
 pub struct Assembler {
-    instructions: HashMap<String, Instruction>,
+    instructions: FxHashMap<String, Instruction>,
 }
 
 impl Assembler {
     pub fn new() -> Assembler {
-        let mut instructions = HashMap::new();
+        let mut instructions = FxHashMap::default();
         for instruction in Instruction::iter() {
             instructions.insert(instruction.to_string(), instruction);
         }

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 use crate::direction::Direction;
 use rand::rngs::SmallRng;
@@ -41,7 +41,7 @@ pub struct Wants {
     pointer: usize,
 }
 
-pub struct WantsResult(HashMap<Want, HashMap<WantItem, i32>>);
+pub struct WantsResult(FxHashMap<Want, FxHashMap<WantItem, i32>>);
 
 pub fn want_start(address: usize) -> WantItem {
     WantItem::Want(Want::Start, WantArg::Address(address))
@@ -91,9 +91,9 @@ impl Wants {
         self.pointer = 0;
     }
 
-    pub fn counts_cancels(&self) -> (WantsResult, HashMap<Want, i32>) {
-        let mut counts = HashMap::new();
-        let mut cancels = HashMap::new();
+    pub fn counts_cancels(&self) -> (WantsResult, FxHashMap<Want, i32>) {
+        let mut counts = FxHashMap::default();
+        let mut cancels = FxHashMap::default();
 
         for i in 0..self.pointer {
             let want_item = self.want_items[i];
@@ -101,7 +101,7 @@ impl Wants {
                 WantItem::Want(want, _arg) => {
                     *counts
                         .entry(want)
-                        .or_insert_with(HashMap::new)
+                        .or_insert_with(FxHashMap::default)
                         .entry(want_item)
                         .or_insert(0) += 1;
                 }
@@ -118,7 +118,7 @@ impl Wants {
     where
         T: IntoIterator<Item = &'a Wants>,
     {
-        let mut result = HashMap::new();
+        let mut result = FxHashMap::default();
         for wants in combined_wants {
             let (WantsResult(counts), cancels) = wants.counts_cancels();
             for (want, want_items) in counts {
@@ -126,7 +126,7 @@ impl Wants {
                     if let WantItem::Want(_want, _arg) = want_item {
                         *result
                             .entry(want)
-                            .or_insert_with(HashMap::new)
+                            .or_insert_with(FxHashMap::default)
                             .entry(want_item)
                             .or_insert(0) += count;
                     }
@@ -216,15 +216,15 @@ impl WantsResult {
     }
 
     fn get_one(&self, want: Want, rng: &mut SmallRng) -> Option<&WantArg> {
-        let mut want_args = self.get_all(want);
+        let want_args = self.get_all(want);
         if want_args.is_empty() {
             return None;
         }
-        // without this, the test would sometimes fail, the hashtable isn't
-        // returning stable results
-        want_args.sort();
         Some(want_args[rng.gen_range(0..want_args.len())])
     }
+
+    // a faster implementation
+    // go through all the wants and count specifically,
 
     pub fn want_start(&self) -> Vec<usize> {
         self.get_all(Want::Start)
@@ -334,7 +334,7 @@ mod tests {
 
         let mut rng = SmallRng::from_seed([0; 32]);
 
-        assert_eq!(result.want_split(&mut rng), Some((Direction::North, 0)));
+        assert_eq!(result.want_split(&mut rng), Some((Direction::South, 10)));
     }
 
     #[test]

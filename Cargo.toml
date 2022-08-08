@@ -29,4 +29,5 @@ futures = "0.3"
 anyhow = "1.0.59"
 zip = "0.6.2"
 serde_with = "2.0.0"
+rustc-hash = "1.1.0"
 
