@@ -7,7 +7,7 @@ const MAX_ARGS: usize = 16;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Counts<T: Eq> {
-    wants: [(i32, Option<T>); MAX_ARGS],
+    wants: [(i32, T); MAX_ARGS],
     pointer: usize,
 }
 
@@ -24,14 +24,14 @@ pub struct Wants {
 impl<T: Eq + Copy + Default> Counts<T> {
     fn new() -> Counts<T> {
         Counts {
-            wants: [(0, None); MAX_ARGS],
+            wants: [(0, T::default()); MAX_ARGS],
             pointer: 0,
         }
     }
 
     pub fn want(&mut self, value: T) {
         for i in 0..self.pointer {
-            if self.wants[i].1 == Some(value) {
+            if self.wants[i].1 == value {
                 self.wants[i].0 += 1;
                 return;
             }
@@ -40,7 +40,7 @@ impl<T: Eq + Copy + Default> Counts<T> {
             return;
         }
         self.wants[self.pointer].0 += 1;
-        self.wants[self.pointer].1 = Some(value);
+        self.wants[self.pointer].1 = value;
         self.pointer += 1;
     }
 
@@ -50,29 +50,20 @@ impl<T: Eq + Copy + Default> Counts<T> {
         }
     }
 
-    fn update(&mut self, f: impl Fn(T) -> Option<T>) {
-        for i in 0..self.pointer {
-            self.wants[i].1 = match self.wants[i].1 {
-                Some(value) => f(value),
-                None => None,
-            };
-        }
-    }
-
     pub fn clear(&mut self) {
         self.pointer = 0;
     }
 
     pub fn get(&self) -> impl Iterator<Item = T> + '_ {
-        self.wants[0..self.pointer]
-            .iter()
-            .filter_map(|(count, value)| {
+        self.wants[0..self.pointer].iter().filter_map(
+            |(count, value)| {
                 if *count > 0 {
-                    value.as_ref().copied()
+                    Some(*value)
                 } else {
                     None
                 }
-            })
+            },
+        )
     }
 
     pub fn choose(&self, rng: &mut SmallRng) -> Option<T> {
@@ -99,42 +90,6 @@ impl Wants {
         self.eat.clear();
         self.split.clear();
         self.merge.clear();
-    }
-
-    pub fn address_forward(&mut self, start: usize, distance: usize) {
-        self.start
-            .update(|address| Some(adjust_forward(address, start, distance)));
-        self.split.update(|(direction, address)| {
-            Some((direction, adjust_forward(address, start, distance)))
-        });
-    }
-
-    pub fn address_backward(&mut self, start: usize, distance: usize) {
-        self.start
-            .update(|address| adjust_backward(address, start, distance));
-        self.split.update(|(direction, address)| {
-            let adjusted = adjust_backward(address, start, distance);
-            adjusted.map(|address| (direction, address))
-        });
-    }
-}
-
-fn adjust_forward(address: usize, start: usize, distance: usize) -> usize {
-    if address >= start {
-        address + distance
-    } else {
-        address
-    }
-}
-
-fn adjust_backward(address: usize, start: usize, distance: usize) -> Option<usize> {
-    if address < start {
-        return Some(address);
-    }
-    if address - start >= distance {
-        Some(address - distance)
-    } else {
-        None
     }
 }
 
@@ -214,9 +169,9 @@ mod tests {
         let mut wants = Wants::new();
         wants.start.want(0);
         wants.start.want(0);
-        assert_eq!(wants.start.wants[0], (2, Some(0)));
+        assert_eq!(wants.start.wants[0], (2, 0));
         wants.start.cancel();
-        assert_eq!(wants.start.wants[0], (1, Some(0)));
+        assert_eq!(wants.start.wants[0], (1, 0));
         assert_eq!(wants.start.get().collect::<Result>(), vec![0]);
     }
     #[test]
@@ -251,35 +206,5 @@ mod tests {
 
         assert!(wants.start.get().next().is_none());
         assert_eq!(wants.split.choose(&mut rng), None);
-    }
-
-    #[test]
-    fn test_address_forward() {
-        let mut wants = Wants::new();
-
-        wants.start.want(10);
-        wants.split.want((Direction::North, 20));
-
-        wants.address_forward(0, 10);
-
-        let mut rng = SmallRng::from_seed([0; 32]);
-
-        assert_eq!(wants.start.get().collect::<Result>(), vec![20]);
-        assert_eq!(wants.split.choose(&mut rng), Some((Direction::North, 30)));
-    }
-
-    #[test]
-    fn test_address_backward() {
-        let mut wants = Wants::new();
-
-        wants.start.want(10);
-        wants.split.want((Direction::North, 20));
-
-        wants.address_backward(0, 5);
-
-        let mut rng = SmallRng::from_seed([0; 32]);
-
-        assert_eq!(wants.start.get().collect::<Vec<usize>>(), vec![5]);
-        assert_eq!(wants.split.choose(&mut rng), Some((Direction::North, 15)));
     }
 }
