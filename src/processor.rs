@@ -367,6 +367,16 @@ mod tests {
     }
 
     #[test]
+    fn test_pop_max() {
+        let mut processor = Processor::new(0);
+        processor.push(5);
+        assert_eq!(processor.pop_max(6), 5);
+        processor.push(10);
+        assert_eq!(processor.pop_max(6), 6);
+        assert_eq!(processor.pop_max(6), 6);
+    }
+
+    #[test]
     fn test_pop_head_nr() {
         let mut processor = Processor::new(0);
         processor.push(5);
