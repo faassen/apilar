@@ -19,6 +19,7 @@ pub mod rectangle;
 pub mod serve;
 pub mod ticks;
 pub mod topology;
+pub mod want;
 pub mod world;
 
 #[cfg(test)]
