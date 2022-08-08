@@ -1,9 +1,8 @@
-use moveslice::Moveslice;
-use rand::rngs::SmallRng;
-
 use crate::direction::Direction;
 use crate::instruction::{Instruction, Metabolism};
 use crate::memory::Memory;
+use moveslice::Moveslice;
+use rand::rngs::SmallRng;
 use serde_big_array::BigArray;
 use serde_derive::{Deserialize, Serialize};
 
