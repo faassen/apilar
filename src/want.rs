@@ -83,6 +83,10 @@ impl Wants {
         self.pointer += 1;
     }
 
+    pub fn add_cancel(&mut self, want: Want) {
+        self.add(WantItem::Cancel(want));
+    }
+
     pub fn clear(&mut self) {
         self.pointer = 0;
     }

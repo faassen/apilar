@@ -83,10 +83,6 @@ impl Processor {
         total
     }
 
-    pub fn start(&mut self, address: usize) {
-        self.wants.add(want::want_start(address));
-    }
-
     pub fn end(&mut self) {
         self.alive = false;
     }

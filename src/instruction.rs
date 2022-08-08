@@ -16,6 +16,7 @@ pub struct Metabolism {
     pub max_shrink_amount: u64,
 }
 
+#[allow(non_camel_case_types)]
 #[derive(EnumIter, Debug, PartialEq, Display, FromPrimitive, ToPrimitive)]
 pub enum Instruction {
     // Numbers
@@ -28,6 +29,7 @@ pub enum Instruction {
     N6,
     N7,
     N8,
+    N9,
     RND, // Random number
 
     // stack operators
@@ -75,16 +77,22 @@ pub enum Instruction {
 
     // processors
     START, // start a new processor given a starting point (only 1 can started in execution block)
-    END,   // end this processor's existence
+    CANCEL_START,
+    END, // end this processor's existence
 
     // split and merge
     SPLIT,
+    CANCEL_SPLIT,
     MERGE,
+    CANCEL_MERGE,
 
     // resources
     EAT,
+    CANCEL_EAT,
     GROW,
+    CANCEL_GROW,
     SHRINK,
+    CANCEL_SHRINK,
     MEMORY,
 
     // Noop
@@ -143,6 +151,9 @@ impl Instruction {
             }
             Instruction::N8 => {
                 processor.push(8);
+            }
+            Instruction::N9 => {
+                processor.push(9);
             }
             Instruction::RND => {
                 processor.push(rng.gen::<u8>() as u64);
@@ -363,8 +374,11 @@ impl Instruction {
             Instruction::START => {
                 let popped = processor.get_current_head_value();
                 if let Some(address) = popped {
-                    processor.start(address);
+                    processor.wants.add(want::want_start(address));
                 }
+            }
+            Instruction::CANCEL_START => {
+                processor.wants.add_cancel(want::Want::Start);
             }
 
             Instruction::END => {
@@ -376,13 +390,22 @@ impl Instruction {
                 let amount = processor.pop_max(metabolism.max_eat_amount);
                 processor.wants.add(want::want_eat(amount));
             }
+            Instruction::CANCEL_EAT => {
+                processor.wants.add_cancel(want::Want::Eat);
+            }
             Instruction::GROW => {
                 let amount = processor.pop_max(metabolism.max_grow_amount);
                 processor.wants.add(want::want_grow(amount));
             }
+            Instruction::CANCEL_GROW => {
+                processor.wants.add_cancel(want::Want::Grow);
+            }
             Instruction::SHRINK => {
                 let amount = processor.pop_max(metabolism.max_shrink_amount);
                 processor.wants.add(want::want_shrink(amount));
+            }
+            Instruction::CANCEL_SHRINK => {
+                processor.wants.add_cancel(want::Want::Shrink);
             }
             Instruction::MEMORY => {
                 let length = memory.values.len();
@@ -404,6 +427,9 @@ impl Instruction {
                     processor.wants.add(want::want_split(direction, address));
                 }
             }
+            Instruction::CANCEL_SPLIT => {
+                processor.wants.add_cancel(want::Want::Split);
+            }
 
             Instruction::MERGE => {
                 let direction = processor.pop();
@@ -415,6 +441,9 @@ impl Instruction {
                         Direction::North
                     };
                 processor.wants.add(want::want_merge(direction));
+            }
+            Instruction::CANCEL_MERGE => {
+                processor.wants.add_cancel(want::Want::Merge);
             }
         }
     }
