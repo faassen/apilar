@@ -1,6 +1,7 @@
 use crate::direction::Direction;
 use crate::memory::Memory;
 use crate::processor::Processor;
+use crate::want;
 use rand::rngs::SmallRng;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
@@ -373,15 +374,15 @@ impl Instruction {
             // resources
             Instruction::EAT => {
                 let amount = processor.pop_clamped(metabolism.max_eat_amount);
-                processor.want_eat = Some(amount);
+                processor.wants.add(want::want_eat(amount));
             }
             Instruction::GROW => {
                 let amount = processor.pop_clamped(metabolism.max_grow_amount);
-                processor.want_grow = Some(amount);
+                processor.wants.add(want::want_grow(amount));
             }
             Instruction::SHRINK => {
                 let amount = processor.pop_clamped(metabolism.max_shrink_amount);
-                processor.want_shrink = Some(amount);
+                processor.wants.add(want::want_shrink(amount));
             }
             Instruction::MEMORY => {
                 let length = memory.values.len();
@@ -400,7 +401,7 @@ impl Instruction {
                         // XXX random instead. but shouldn't happen...
                         Direction::North
                     };
-                    processor.want_split = Some((direction, address));
+                    processor.wants.add(want::want_split(direction, address));
                 }
             }
 
@@ -413,7 +414,7 @@ impl Instruction {
                         // XXX random instead. but shouldn't happen...
                         Direction::North
                     };
-                processor.want_merge = Some(direction);
+                processor.wants.add(want::want_merge(direction));
             }
         }
     }

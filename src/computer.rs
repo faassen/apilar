@@ -1,12 +1,11 @@
+use crate::instruction::Metabolism;
+use crate::memory::Memory;
+use crate::processor::Processor;
+use crate::want;
 use rand::rngs::SmallRng;
 use rand::seq::SliceRandom;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
-
-use crate::direction::Direction;
-use crate::instruction::Metabolism;
-use crate::memory::Memory;
-use crate::processor::Processor;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Computer {
@@ -81,24 +80,10 @@ impl Computer {
         instructions_per_update: usize,
         max_processors: usize,
         metabolism: &Metabolism,
-    ) -> usize {
+    ) -> want::WantsResult {
         // execute amount of instructions per processor
-        let mut total = 0;
         for processor in &mut self.processors {
-            total += processor.execute_amount(
-                &mut self.memory,
-                rng,
-                instructions_per_update,
-                metabolism,
-            );
-        }
-
-        // obtain any start instructions
-        let mut to_start: Vec<usize> = Vec::new();
-        for processor in &self.processors {
-            if let Some(address) = processor.want_start {
-                to_start.push(address);
-            }
+            processor.execute_amount(&mut self.memory, rng, instructions_per_update, metabolism);
         }
 
         // sweep any dead processors
@@ -111,15 +96,18 @@ impl Computer {
                 i += 1;
             }
         }
+
+        let wants_result = self.wants_result();
+
         // add new processors to start
-        for address in to_start {
+        for address in wants_result.want_start() {
             if self.processors.len() < max_processors {
                 self.processors.push(Processor::new(address));
             }
         }
 
         // grow memory if we want to grow
-        if let Some(amount) = self.want_grow() {
+        if let Some(amount) = wants_result.want_grow(rng) {
             let amount = if amount <= self.resources {
                 amount
             } else {
@@ -131,8 +119,7 @@ impl Computer {
             self.resources -= amount;
         }
 
-        // shrink memory if we want to shrink
-        if let Some(amount) = self.want_shrink() {
+        if let Some(amount) = wants_result.want_shrink(rng) {
             let amount = amount as usize;
             let amount = if amount < self.memory.values.len() {
                 amount
@@ -150,7 +137,7 @@ impl Computer {
             self.resources += amount as u64;
         }
 
-        total
+        wants_result
     }
 
     pub fn mutate_memory_overwrite(&mut self, rng: &mut SmallRng) {
@@ -200,70 +187,8 @@ impl Computer {
         }
     }
 
-    pub fn want_split(&self) -> Option<(Direction, usize)> {
-        for processor in &self.processors {
-            if let Some(want_split) = processor.want_split {
-                return Some(want_split);
-            }
-        }
-        None
-    }
-
-    pub fn want_merge(&self) -> Option<Direction> {
-        for processor in &self.processors {
-            if let Some(want_merge) = processor.want_merge {
-                return Some(want_merge);
-            }
-        }
-        None
-    }
-
-    pub fn want_eat(&self) -> Option<u64> {
-        let mut max = 0;
-        for processor in &self.processors {
-            if let Some(amount) = processor.want_eat {
-                if amount > max {
-                    max = amount;
-                }
-            }
-        }
-        if max > 0 {
-            Some(max)
-        } else {
-            None
-        }
-    }
-
-    pub fn want_grow(&self) -> Option<u64> {
-        let mut max = 0;
-        for processor in &self.processors {
-            if let Some(amount) = processor.want_grow {
-                if amount > max {
-                    max = amount;
-                }
-            }
-        }
-        if max > 0 {
-            Some(max)
-        } else {
-            None
-        }
-    }
-
-    pub fn want_shrink(&self) -> Option<u64> {
-        let mut max = 0;
-        for processor in &self.processors {
-            if let Some(amount) = processor.want_shrink {
-                if amount > max {
-                    max = amount;
-                }
-            }
-        }
-        if max > 0 {
-            Some(max)
-        } else {
-            None
-        }
+    pub fn wants_result(&self) -> want::WantsResult {
+        want::Wants::combine(self.processors.iter().map(|processor| &processor.wants))
     }
 }
 

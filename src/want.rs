@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
 use crate::direction::Direction;
+use rand::rngs::SmallRng;
+use rand::Rng;
 use serde_big_array::BigArray;
 use serde_derive::{Deserialize, Serialize};
 
@@ -16,7 +18,7 @@ pub enum Want {
 
 const WANT_SIZE: usize = 64;
 
-#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Hash, Eq, PartialEq, Deserialize, Serialize)]
 pub enum WantArg {
     Address(usize),
     DirectionAddress(Direction, usize),
@@ -38,6 +40,8 @@ pub struct Wants {
     want_items: [WantItem; WANT_SIZE],
     pointer: usize,
 }
+
+pub struct WantsResult(HashMap<Want, HashMap<WantItem, i32>>);
 
 pub fn want_start(address: usize) -> WantItem {
     WantItem::Want(Want::Start, WantArg::Address(address))
@@ -83,7 +87,7 @@ impl Wants {
         self.pointer = 0;
     }
 
-    fn counts_cancels(&self) -> (HashMap<Want, HashMap<WantItem, i32>>, HashMap<Want, i32>) {
+    pub fn counts_cancels(&self) -> (WantsResult, HashMap<Want, i32>) {
         let mut counts = HashMap::new();
         let mut cancels = HashMap::new();
 
@@ -103,13 +107,16 @@ impl Wants {
                 }
             }
         }
-        (counts, cancels)
+        (WantsResult(counts), cancels)
     }
 
-    pub fn combine(combined_wants: &[&Wants]) -> HashMap<Want, HashMap<WantItem, i32>> {
+    pub fn combine<'a, T>(combined_wants: T) -> WantsResult
+    where
+        T: IntoIterator<Item = &'a Wants>,
+    {
         let mut result = HashMap::new();
         for wants in combined_wants {
-            let (counts, cancels) = wants.counts_cancels();
+            let (WantsResult(counts), cancels) = wants.counts_cancels();
             for (want, want_items) in counts {
                 for (want_item, count) in want_items {
                     if let WantItem::Want(_want, _arg) = want_item {
@@ -130,7 +137,7 @@ impl Wants {
                 }
             }
         }
-        result
+        WantsResult(result)
     }
 
     pub fn address_backward(&mut self, start: usize, distance: usize) {
@@ -187,6 +194,85 @@ impl Wants {
     }
 }
 
+impl WantsResult {
+    fn get_all(&self, want: Want) -> Vec<&WantArg> {
+        self.0
+            .get(&want)
+            .map(|want_items| {
+                want_items
+                    .iter()
+                    .filter(|(_, count)| *count > &0)
+                    .map(|(want_item, _count)| match want_item {
+                        WantItem::Want(_, arg) => arg,
+                        _ => panic!("WantsResult::get_all: want_item is not Want"),
+                    })
+                    .collect()
+            })
+            .unwrap_or_else(Vec::new)
+    }
+
+    fn get_one(&self, want: Want, rng: &mut SmallRng) -> Option<&WantArg> {
+        let mut want_args = self.get_all(want);
+        if want_args.is_empty() {
+            return None;
+        }
+        // without this, the test would sometimes fail, the hashtable isn't
+        // returning stable results
+        want_args.sort();
+        Some(want_args[rng.gen_range(0..want_args.len())])
+    }
+
+    pub fn want_start(&self) -> Vec<usize> {
+        self.get_all(Want::Start)
+            .iter()
+            .map(|want_item| match want_item {
+                WantArg::Address(address) => *address,
+                _ => panic!("want_start called on non-start want"),
+            })
+            .collect()
+    }
+
+    pub fn want_shrink(&self, rng: &mut SmallRng) -> Option<u64> {
+        self.get_one(Want::Shrink, rng)
+            .map(|want_item| match want_item {
+                WantArg::Amount(amount) => *amount,
+                _ => panic!("want_shrink called on non-shrink want"),
+            })
+    }
+
+    pub fn want_grow(&self, rng: &mut SmallRng) -> Option<u64> {
+        self.get_one(Want::Grow, rng)
+            .map(|want_item| match want_item {
+                WantArg::Amount(amount) => *amount,
+                _ => panic!("want_grow called on non-grow want"),
+            })
+    }
+
+    pub fn want_eat(&self, rng: &mut SmallRng) -> Option<u64> {
+        self.get_one(Want::Eat, rng)
+            .map(|want_item| match want_item {
+                WantArg::Amount(amount) => *amount,
+                _ => panic!("want_eat called on non-eat want"),
+            })
+    }
+
+    pub fn want_split(&self, rng: &mut SmallRng) -> Option<(Direction, usize)> {
+        self.get_one(Want::Split, rng)
+            .map(|want_item| match want_item {
+                WantArg::DirectionAddress(direction, address) => (*direction, *address),
+                _ => panic!("want_split called on non-split want"),
+            })
+    }
+
+    pub fn want_merge(&self, rng: &mut SmallRng) -> Option<Direction> {
+        self.get_one(Want::Merge, rng)
+            .map(|want_item| match want_item {
+                WantArg::Direction(direction) => *direction,
+                _ => panic!("want_merge called on non-merge want"),
+            })
+    }
+}
+
 fn adjust_backward(address: usize, start: usize, distance: usize) -> Option<usize> {
     if address < start {
         return Some(address);
@@ -208,21 +294,43 @@ impl Default for Wants {
 mod tests {
 
     use super::*;
+    use rand::SeedableRng;
 
     #[test]
     fn test_want_start() {
         let mut wants = Wants::new();
         wants.add(want_start(0));
 
-        let a = [&wants];
+        let result = Wants::combine([&wants]);
 
-        let counts = Wants::combine(&a);
+        assert_eq!(result.want_start(), vec![0]);
+        assert!(result.get_all(Want::Split).is_empty());
+    }
 
-        let start_items = counts.get(&Want::Start).unwrap();
+    #[test]
+    fn test_want_start_multiple() {
+        let mut wants = Wants::new();
+        wants.add(want_start(0));
+        wants.add(want_start(10));
 
-        assert_eq!(start_items.get(&want_start(0)), Some(&1));
-        assert_eq!(start_items.get(&want_start(1)), None);
-        assert_eq!(counts.get(&Want::Split), None);
+        let result = Wants::combine(&[wants]);
+
+        let mut want_items = result.want_start();
+        want_items.sort();
+        assert_eq!(want_items, vec![0, 10]);
+    }
+
+    #[test]
+    fn test_want_split_multiple() {
+        let mut wants = Wants::new();
+        wants.add(want_split(Direction::North, 0));
+        wants.add(want_split(Direction::South, 10));
+
+        let result = Wants::combine(&[wants]);
+
+        let mut rng = SmallRng::from_seed([0; 32]);
+
+        assert_eq!(result.want_split(&mut rng), Some((Direction::North, 0)));
     }
 
     #[test]
@@ -233,13 +341,9 @@ mod tests {
         wants0.add(want_start(0));
         wants1.add(WantItem::Cancel(Want::Start));
 
-        let a = [&wants0, &wants1];
+        let result = Wants::combine([&wants0, &wants1]);
 
-        let counts = Wants::combine(a.as_slice());
-
-        let start_items = counts.get(&Want::Start).unwrap();
-
-        assert_eq!(start_items.get(&want_start(0)), Some(&0));
+        assert!(result.want_start().is_empty());
     }
 
     #[test]
@@ -250,12 +354,9 @@ mod tests {
         wants0.add(want_start(0));
         wants1.add(WantItem::Cancel(Want::Split));
 
-        let a = [&wants0, &wants1];
-        let counts = Wants::combine(a.as_slice());
+        let result = Wants::combine([&wants0, &wants1]);
 
-        let start_items = counts.get(&Want::Start).unwrap();
-
-        assert_eq!(start_items.get(&want_start(0)), Some(&1))
+        assert_eq!(result.want_start(), vec![0]);
     }
 
     #[test]
@@ -265,12 +366,9 @@ mod tests {
         wants0.add(want_start(0));
         wants0.add(WantItem::Cancel(Want::Start));
 
-        let a = [&wants0];
-        let counts = Wants::combine(a.as_slice());
+        let result = Wants::combine([&wants0]);
 
-        let start_items = counts.get(&Want::Start).unwrap();
-
-        assert_eq!(start_items.get(&want_start(0)), Some(&0));
+        assert!(result.want_start().is_empty());
     }
 
     #[test]
@@ -280,13 +378,9 @@ mod tests {
         wants0.add(want_start(0));
         wants0.add(WantItem::Cancel(Want::Split));
 
-        let a = [&wants0];
-        let counts = Wants::combine(a.as_slice());
+        let result = Wants::combine([&wants0]);
 
-        let start_items = counts.get(&Want::Start).unwrap();
-
-        // cancel of something else has no effect
-        assert_eq!(start_items.get(&want_start(0)), Some(&1));
+        assert_eq!(result.want_start(), vec![0]);
     }
 
     #[test]
@@ -295,12 +389,9 @@ mod tests {
         wants.add(want_start(0));
         wants.add(want_start(0));
 
-        let a = [&wants];
-        let counts = Wants::combine(a.as_slice());
+        let result = Wants::combine([&wants]);
 
-        let start_items = counts.get(&Want::Start).unwrap();
-
-        assert_eq!(start_items.get(&want_start(0)), Some(&2));
+        assert_eq!(result.want_start(), vec![0]);
     }
 
     #[test]
@@ -313,26 +404,26 @@ mod tests {
 
         wants1.add(WantItem::Cancel(Want::Start));
 
-        let a = [&wants0, &wants1];
-        let counts = Wants::combine(a.as_slice());
+        let result = Wants::combine([&wants0, &wants1]);
 
-        let start_items = counts.get(&Want::Start).unwrap();
-
-        assert_eq!(start_items.get(&want_start(0)), Some(&1));
+        assert_eq!(result.want_start(), vec![0]);
     }
     #[test]
     fn test_want_start_too_many() {
         let mut wants = Wants::new();
-        for _ in 0..(WANT_SIZE + 1) {
+        wants.add(want_start(10));
+        for _ in 0..WANT_SIZE - 1 {
             wants.add(want_start(0));
         }
+        // this is not accepted
+        wants.add(want_start(20));
 
-        let a = [&wants];
-        let counts = Wants::combine(a.as_slice());
+        let result = Wants::combine([&wants]);
 
-        let start_items = counts.get(&Want::Start).unwrap();
+        let mut items = result.want_start();
+        items.sort();
 
-        assert_eq!(start_items.get(&want_start(0)), Some(&(WANT_SIZE as i32)));
+        assert_eq!(items, vec![0, 10]);
     }
 
     #[test]
@@ -341,23 +432,20 @@ mod tests {
         wants.add(want_start(0));
         wants.add(want_split(Direction::North, 0));
 
+        let mut rng = SmallRng::from_seed([0; 32]);
+
         {
-            let a = [&wants];
-            let counts = Wants::combine(a.as_slice());
+            let result = Wants::combine([&wants]);
 
-            let start_items = counts.get(&Want::Start).unwrap();
-            let split_items = counts.get(&Want::Split).unwrap();
-
-            assert_eq!(start_items.get(&want_start(0)), Some(&1));
-            assert_eq!(split_items.get(&want_split(Direction::North, 0)), Some(&1));
+            assert_eq!(result.want_start(), vec![0]);
+            assert_eq!(result.want_split(&mut rng), Some((Direction::North, 0)));
         }
         wants.clear();
 
-        let a = [&wants];
-        let counts = Wants::combine(a.as_slice());
+        let result = Wants::combine([&wants]);
 
-        assert_eq!(counts.get(&Want::Start), None);
-        assert_eq!(counts.get(&Want::Split), None);
+        assert!(result.want_start().is_empty());
+        assert_eq!(result.want_split(&mut rng), None);
     }
 
     #[test]
@@ -369,14 +457,11 @@ mod tests {
 
         wants.address_forward(0, 10);
 
-        let a = [&wants];
-        let counts = Wants::combine(a.as_slice());
+        let result = Wants::combine([&wants]);
+        let mut rng = SmallRng::from_seed([0; 32]);
 
-        let start_items = counts.get(&Want::Start).unwrap();
-        let split_items = counts.get(&Want::Split).unwrap();
-
-        assert_eq!(start_items.get(&want_start(20)), Some(&1));
-        assert_eq!(split_items.get(&want_split(Direction::North, 30)), Some(&1));
+        assert_eq!(result.want_start(), vec![20]);
+        assert_eq!(result.want_split(&mut rng), Some((Direction::North, 30)));
     }
 
     #[test]
@@ -388,13 +473,10 @@ mod tests {
 
         wants.address_backward(0, 5);
 
-        let a = [&wants];
-        let counts = Wants::combine(a.as_slice());
+        let result = Wants::combine([&wants]);
+        let mut rng = SmallRng::from_seed([0; 32]);
 
-        let start_items = counts.get(&Want::Start).unwrap();
-        let split_items = counts.get(&Want::Split).unwrap();
-
-        assert_eq!(start_items.get(&want_start(5)), Some(&1));
-        assert_eq!(split_items.get(&want_split(Direction::North, 15)), Some(&1));
+        assert_eq!(result.want_start(), vec![5]);
+        assert_eq!(result.want_split(&mut rng), Some((Direction::North, 15)));
     }
 }

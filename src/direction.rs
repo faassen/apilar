@@ -1,7 +1,18 @@
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(
-    Debug, Hash, Eq, PartialEq, Clone, Copy, FromPrimitive, ToPrimitive, Serialize, Deserialize,
+    Debug,
+    Hash,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Clone,
+    Copy,
+    FromPrimitive,
+    ToPrimitive,
+    Serialize,
+    Deserialize,
 )]
 pub enum Direction {
     North,
