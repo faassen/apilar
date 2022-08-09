@@ -93,6 +93,12 @@ impl Wants {
     }
 }
 
+impl Default for Wants {
+    fn default() -> Self {
+        Wants::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
