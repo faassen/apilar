@@ -12,7 +12,6 @@ pub struct Computer {
     pub resources: u64,
     pub memory: Memory,
     pub wants: Wants,
-    processor_index: usize,
     pub processors: Vec<Processor>,
 }
 
@@ -22,7 +21,6 @@ impl Computer {
             resources,
             memory: Memory::new(size),
             wants: Wants::new(),
-            processor_index: 0,
             processors: Vec::new(),
         }
     }
@@ -36,8 +34,8 @@ impl Computer {
     ) {
         self.wants.clear();
         // execute amount of instructions per processor
-        for i in self.processor_index..self.processors.len() {
-            self.processors[i].execute_amount(
+        for processor in &mut self.processors {
+            processor.execute_amount(
                 &mut self.memory,
                 &mut self.wants,
                 rng,
@@ -45,17 +43,6 @@ impl Computer {
                 metabolism,
             );
         }
-        for i in 0..self.processor_index {
-            self.processors[i].execute_amount(
-                &mut self.memory,
-                &mut self.wants,
-                rng,
-                instructions_per_update,
-                metabolism,
-            );
-        }
-        self.processor_index = (self.processor_index + 1) % self.processors.len();
-
         // sweep any dead processors
         // found in description of drain_filter (method in nightly)
         let mut i = 0;
@@ -132,14 +119,12 @@ impl Computer {
 
         self.resources = parent_resources;
         self.processors = parent_processors;
-        self.processor_index = 0;
         self.memory = Memory::from_values(parent_memory_values);
 
         Some(Computer {
             resources: child_resources,
             memory: Memory::from_values(child_memory_values),
             wants: Wants::new(),
-            processor_index: 0,
             processors: child_processors,
         })
     }
