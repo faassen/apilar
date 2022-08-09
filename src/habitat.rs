@@ -123,6 +123,10 @@ impl Habitat {
                 );
             }
         }
+        if let Some(neighbor_coords) = self.want_move(coords, rng) {
+            self.move_to(coords, neighbor_coords);
+        }
+
         if let Some(amount) = self.want_eat(coords, rng) {
             self.eat(coords, amount);
         }
@@ -248,6 +252,19 @@ impl Habitat {
         None
     }
 
+    fn want_move(&self, coords: Coords, rng: &mut SmallRng) -> Option<Coords> {
+        let location = self.get(coords);
+        if let Some(computer) = &location.computer {
+            if let Some(direction) = computer.wants.move_.choose(rng) {
+                let neighbor_coords = self.neighbor_coords(coords, direction);
+                if self.is_empty(neighbor_coords) {
+                    return Some(neighbor_coords);
+                }
+            }
+        }
+        None
+    }
+
     fn want_eat(&self, coords: Coords, rng: &mut SmallRng) -> Option<u64> {
         if let Some(computer) = &self.get(coords).computer {
             return computer.wants.eat.choose(rng);
@@ -277,6 +294,18 @@ impl Habitat {
         }
         let neighbor_location = self.get_mut(neighbor_coords);
         neighbor_location.computer = None;
+    }
+
+    fn move_to(&mut self, coords: Coords, neighbor_coords: Coords) {
+        let computer = &self.get_mut(coords).computer;
+        if let Some(computer) = computer {
+            // ugh, expensive to move around
+            let copy = computer.clone();
+            let neighbor_location = self.get_mut(neighbor_coords);
+            neighbor_location.computer = Some(copy);
+        }
+        let location = self.get_mut(coords);
+        location.computer = None;
     }
 
     fn eat(&mut self, coords: Coords, eat_amount: u64) {

@@ -87,6 +87,10 @@ pub enum Instruction {
     CANCEL_MERGE,
     BLOCK_MERGE,
 
+    // move
+    MOVE,
+    CANCEL_MOVE,
+
     // resources
     EAT,
     CANCEL_EAT,
@@ -440,6 +444,14 @@ impl Instruction {
             Instruction::BLOCK_MERGE => {
                 let direction = processor.pop_direction();
                 wants.block_merge.want(direction);
+            }
+
+            Instruction::MOVE => {
+                let direction = processor.pop_direction();
+                wants.move_.want(direction);
+            }
+            Instruction::CANCEL_MOVE => {
+                wants.move_.cancel();
             }
         }
     }

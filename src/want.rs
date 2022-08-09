@@ -26,6 +26,7 @@ pub struct Wants {
     pub eat: Counts<u64>,
     pub split: Counts<(Direction, usize)>,
     pub merge: Counts<Direction>,
+    pub move_: Counts<Direction>,
     pub block_merge: Counts<Direction>,
 }
 
@@ -138,6 +139,7 @@ impl Wants {
             split: Counts::new(),
             merge: Counts::new(),
             block_merge: Counts::new(),
+            move_: Counts::new(),
         }
     }
 
