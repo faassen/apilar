@@ -27,65 +27,6 @@ impl Computer {
         }
     }
 
-    pub fn split(&mut self, address: usize) -> Option<Computer> {
-        // we cannot split off nothing
-        if address == 0 || address >= self.memory.values.len() {
-            return None;
-        }
-
-        let parent_memory_values = self.memory.values[..address].to_vec();
-        let child_memory_values = self.memory.values[address..].to_vec();
-
-        let mut parent_processors: Vec<Processor> = Vec::new();
-        let mut child_processors: Vec<Processor> = Vec::new();
-
-        for mut processor in self.processors.clone() {
-            if processor.ip < address {
-                processor.adjust_backward(address, child_memory_values.len());
-                parent_processors.push(processor);
-            } else {
-                processor.adjust_backward(0, address);
-                child_processors.push(processor);
-            }
-        }
-
-        let child_resources = self.resources / 2;
-        let parent_resources = self.resources - child_resources;
-
-        self.resources = parent_resources;
-        self.processors = parent_processors;
-        self.processor_index = 0;
-        self.memory = Memory::from_values(parent_memory_values);
-
-        Some(Computer {
-            resources: child_resources,
-            memory: Memory::from_values(child_memory_values),
-            wants: Wants::new(),
-            processor_index: 0,
-            processors: child_processors,
-        })
-    }
-
-    pub fn merge(&mut self, other: &Computer, max_processors: usize) {
-        for mut processor in other.processors.clone() {
-            let distance = self.memory.values.len();
-            processor.adjust_forward(0, distance);
-            self.processors.push(processor);
-        }
-        self.memory.values.extend(other.memory.values.clone());
-        if self.processors.len() > max_processors {
-            // throw away any excess processors
-            // this may lead to a strategy where being near max processors is good
-            // for predation
-            self.processors = self.processors[0..max_processors].to_vec();
-        }
-        self.resources += other.resources;
-    }
-
-    pub fn add_processor(&mut self, index: usize) {
-        self.processors.push(Processor::new(index));
-    }
-
     pub fn execute(
         &mut self,
         rng: &mut SmallRng,
@@ -162,6 +103,65 @@ impl Computer {
             }
             self.resources += amount as u64;
         }
+    }
+
+    pub fn split(&mut self, address: usize) -> Option<Computer> {
+        // we cannot split off nothing
+        if address == 0 || address >= self.memory.values.len() {
+            return None;
+        }
+
+        let parent_memory_values = self.memory.values[..address].to_vec();
+        let child_memory_values = self.memory.values[address..].to_vec();
+
+        let mut parent_processors: Vec<Processor> = Vec::new();
+        let mut child_processors: Vec<Processor> = Vec::new();
+
+        for mut processor in self.processors.clone() {
+            if processor.ip < address {
+                processor.adjust_backward(address, child_memory_values.len());
+                parent_processors.push(processor);
+            } else {
+                processor.adjust_backward(0, address);
+                child_processors.push(processor);
+            }
+        }
+
+        let child_resources = self.resources / 2;
+        let parent_resources = self.resources - child_resources;
+
+        self.resources = parent_resources;
+        self.processors = parent_processors;
+        self.processor_index = 0;
+        self.memory = Memory::from_values(parent_memory_values);
+
+        Some(Computer {
+            resources: child_resources,
+            memory: Memory::from_values(child_memory_values),
+            wants: Wants::new(),
+            processor_index: 0,
+            processors: child_processors,
+        })
+    }
+
+    pub fn merge(&mut self, other: &Computer, max_processors: usize) {
+        for mut processor in other.processors.clone() {
+            let distance = self.memory.values.len();
+            processor.adjust_forward(0, distance);
+            self.processors.push(processor);
+        }
+        self.memory.values.extend(other.memory.values.clone());
+        if self.processors.len() > max_processors {
+            // throw away any excess processors
+            // this may lead to a strategy where being near max processors is good
+            // for predation
+            self.processors = self.processors[0..max_processors].to_vec();
+        }
+        self.resources += other.resources;
+    }
+
+    pub fn add_processor(&mut self, index: usize) {
+        self.processors.push(Processor::new(index));
     }
 
     pub fn mutate_memory_overwrite(&mut self, rng: &mut SmallRng) {
