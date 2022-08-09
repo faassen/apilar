@@ -46,7 +46,6 @@ impl Processor {
         rng: &mut SmallRng,
         metabolism: &Metabolism,
     ) {
-        println!("IP {}", self.ip);
         if !self.alive {
             return;
         }
