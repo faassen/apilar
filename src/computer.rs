@@ -158,6 +158,14 @@ impl Computer {
         self.processors.push(Processor::new(index));
     }
 
+    pub fn peek(&self, address: usize) -> Option<u64> {
+        if address < self.memory.values.len() {
+            Some(self.memory.values[address] as u64)
+        } else {
+            None
+        }
+    }
+
     pub fn mutate_memory_overwrite(&mut self, rng: &mut SmallRng) {
         if self.memory.values.is_empty() {
             return;

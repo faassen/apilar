@@ -116,6 +116,9 @@ impl Habitat {
         if let Some(amount) = self.want_eat(coords, rng) {
             self.eat(coords, amount);
         }
+        if let Some((neighbor_coords, sensor_id, address)) = self.want_peek(coords, rng) {
+            self.peek(coords, neighbor_coords, sensor_id, address);
+        }
         if let Some((neighbor_coords, address)) = self.want_split(coords, rng) {
             self.split(coords, neighbor_coords, address);
         }
@@ -227,6 +230,39 @@ impl Habitat {
         None
     }
 
+    // fn want_maybe_blocked<T>(
+    //     &self,
+    //     coords: Coords,
+    //     rng: &mut SmallRng,
+    //     counts: &Counts,
+    //     args: T,
+    // ) -> Option<(Coords, T)> {
+    //     let location = self.get(coords);
+    //     if let Some(computer) = &location.computer {
+    //         if let Some(((direction, args), strength)) = counts.choose_with_strength(rng) {
+    //             let neighbor_coords = self.neighbor_coords(coords, direction);
+    //             if !self.is_empty(neighbor_coords) {
+    //                 let neighbor_computer = &self.get(neighbor_coords).computer;
+    //                 if let Some(neighbor_computer) = neighbor_computer {
+    //                     if let Some(block_strength) = neighbor_computer
+    //                         .wants
+    //                         .block_peek
+    //                         .get_strength_by_value(direction.flip())
+    //                     {
+    //                         if strength > block_strength {
+    //                             return Some((neighbor_coords, sensor_id, address));
+    //                         } else {
+    //                             return None;
+    //                         }
+    //                     } else {
+    //                         return Some((neighbor_coords, sensor_id, address));
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     None
+    // }
     fn want_merge(&self, coords: Coords, rng: &mut SmallRng) -> Option<Coords> {
         let location = self.get(coords);
         if let Some(computer) = &location.computer {
@@ -247,6 +283,36 @@ impl Habitat {
                             }
                         } else {
                             return Some(neighbor_coords);
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn want_peek(&self, coords: Coords, rng: &mut SmallRng) -> Option<(Coords, usize, usize)> {
+        let location = self.get(coords);
+        if let Some(computer) = &location.computer {
+            if let Some(((direction, sensor_id, address), strength)) =
+                computer.wants.peek.choose_with_strength(rng)
+            {
+                let neighbor_coords = self.neighbor_coords(coords, direction);
+                if !self.is_empty(neighbor_coords) {
+                    let neighbor_computer = &self.get(neighbor_coords).computer;
+                    if let Some(neighbor_computer) = neighbor_computer {
+                        if let Some(block_strength) = neighbor_computer
+                            .wants
+                            .block_peek
+                            .get_strength_by_value(direction.flip())
+                        {
+                            if strength > block_strength {
+                                return Some((neighbor_coords, sensor_id, address));
+                            } else {
+                                return None;
+                            }
+                        } else {
+                            return Some((neighbor_coords, sensor_id, address));
                         }
                     }
                 }
@@ -297,6 +363,17 @@ impl Habitat {
         }
         let neighbor_location = self.get_mut(neighbor_coords);
         neighbor_location.computer = None;
+    }
+
+    fn peek(&mut self, coords: Coords, neighbor_coords: Coords, sensor_id: usize, address: usize) {
+        let neighbor_computer = &mut self.get_mut(neighbor_coords).computer;
+        if let Some(neighbor_computer) = neighbor_computer {
+            let value = neighbor_computer.peek(address);
+            let computer = &mut self.get_mut(coords).computer;
+            if let Some(computer) = computer {
+                computer.sensors[sensor_id] = value;
+            }
+        }
     }
 
     fn move_to(&mut self, coords: Coords, neighbor_coords: Coords) {
@@ -596,5 +673,20 @@ mod tests {
 
         let mut rng = SmallRng::from_seed([0; 32]);
         assert_eq!(habitat.want_merge((2, 2), &mut rng), Some((2, 1)));
+    }
+
+    #[test]
+    fn test_want_peek_into_neighbor() {
+        let mut habitat = Habitat::new(5, 5, 5);
+        let mut location = habitat.get_mut((2, 2));
+        location.computer = Some(Computer::new(1, 1));
+        if let Some(computer) = &mut location.computer {
+            computer.wants.peek.want((Direction::North, 0, 10));
+        }
+        let mut location_north = habitat.get_mut((2, 1));
+        location_north.computer = Some(Computer::new(1, 1));
+
+        let mut rng = SmallRng::from_seed([0; 32]);
+        assert_eq!(habitat.want_peek((2, 2), &mut rng), Some(((2, 1), 0, 10)));
     }
 }

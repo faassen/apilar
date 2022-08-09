@@ -107,6 +107,9 @@ pub enum Instruction {
     BLOCK_MERGE,
     MOVE,
     CANCEL_MOVE,
+    PEEK,
+    CANCEL_PEEK,
+    BLOCK_PEEK,
 
     // Noop
     NOOP = u8::MAX as isize,
@@ -474,6 +477,20 @@ impl Instruction {
             }
             Instruction::CANCEL_MOVE => {
                 wants.move_.cancel();
+            }
+            Instruction::PEEK => {
+                let address = processor.pop() as usize;
+                let direction = processor.pop_direction();
+                wants
+                    .peek
+                    .want((direction, processor.current_sensor, address));
+            }
+            Instruction::CANCEL_PEEK => {
+                wants.peek.cancel();
+            }
+            Instruction::BLOCK_PEEK => {
+                let direction = processor.pop_direction();
+                wants.block_peek.want(direction);
             }
         }
     }

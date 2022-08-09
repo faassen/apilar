@@ -28,6 +28,10 @@ pub struct Wants {
     pub merge: Counts<Direction>,
     pub move_: Counts<Direction>,
     pub block_merge: Counts<Direction>,
+    pub peek: Counts<(Direction, usize, usize)>,
+    pub block_peek: Counts<Direction>,
+    pub poke: Counts<(Direction, usize, u64)>,
+    pub block_poke: Counts<Direction>,
 }
 
 impl<T: Eq + Copy + Default> Counts<T> {
@@ -140,6 +144,10 @@ impl Wants {
             merge: Counts::new(),
             block_merge: Counts::new(),
             move_: Counts::new(),
+            peek: Counts::new(),
+            block_peek: Counts::new(),
+            poke: Counts::new(),
+            block_poke: Counts::new(),
         }
     }
 
