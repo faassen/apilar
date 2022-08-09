@@ -1,3 +1,4 @@
+use crate::computer::{Sensors, SENSORS_AMOUNT};
 use crate::direction::Direction;
 use crate::instruction::{Instruction, Metabolism};
 use crate::memory::Memory;
@@ -18,6 +19,7 @@ pub struct Processor {
     jumped: bool,
     pub alive: bool,
     pub current_head: usize,
+    pub current_sensor: usize,
     heads: [Option<usize>; HEADS_AMOUNT],
     #[serde(with = "BigArray")]
     stack: [u64; STACK_SIZE],
@@ -28,6 +30,7 @@ impl Processor {
         Processor {
             ip,
             current_head: 0,
+            current_sensor: 0,
             heads: [None; HEADS_AMOUNT],
             stack: [0; STACK_SIZE],
             jumped: false,
@@ -43,6 +46,7 @@ impl Processor {
     pub fn execute(
         &mut self,
         memory: &mut Memory,
+        sensors: &Sensors,
         wants: &mut Wants,
         rng: &mut SmallRng,
         metabolism: &Metabolism,
@@ -56,7 +60,7 @@ impl Processor {
         }
         let value = memory.values[self.ip];
         if let Some(instruction) = Instruction::decode(value) {
-            instruction.execute(self, memory, wants, rng, metabolism);
+            instruction.execute(self, memory, sensors, wants, rng, metabolism);
         } // any other instruction is a noop
         if !self.jumped {
             self.ip += 1;
@@ -68,13 +72,14 @@ impl Processor {
     pub fn execute_amount(
         &mut self,
         memory: &mut Memory,
+        sensors: &Sensors,
         wants: &mut Wants,
         rng: &mut SmallRng,
         amount: usize,
         metabolism: &Metabolism,
     ) {
         for _ in 0..amount {
-            self.execute(memory, wants, rng, metabolism);
+            self.execute(memory, sensors, wants, rng, metabolism);
         }
     }
 
@@ -107,6 +112,11 @@ impl Processor {
 
     pub fn pop_head_nr(&mut self) -> usize {
         let value = self.pop_clamped(HEADS_AMOUNT as u64);
+        value as usize
+    }
+
+    pub fn pop_sensor_nr(&mut self) -> usize {
+        let value = self.pop_clamped(SENSORS_AMOUNT as u64);
         value as usize
     }
 

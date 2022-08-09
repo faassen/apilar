@@ -109,10 +109,13 @@ impl Habitat {
         let location = self.get_mut(coords);
         location.update(rng, config);
 
+        // XXX could move this into location update near elimate computer
         if self.death(rng, coords, &config.death) {
             return;
         }
-
+        if let Some(amount) = self.want_eat(coords, rng) {
+            self.eat(coords, amount);
+        }
         if let Some((neighbor_coords, address)) = self.want_split(coords, rng) {
             self.split(coords, neighbor_coords, address);
         }
@@ -129,10 +132,6 @@ impl Habitat {
         }
         if let Some(neighbor_coords) = self.want_move(coords, rng) {
             self.move_to(coords, neighbor_coords);
-        }
-
-        if let Some(amount) = self.want_eat(coords, rng) {
-            self.eat(coords, amount);
         }
     }
 

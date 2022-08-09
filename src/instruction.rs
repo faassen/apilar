@@ -1,6 +1,6 @@
-use crate::memory::Memory;
 use crate::processor::Processor;
 use crate::want::Wants;
+use crate::{computer::Sensors, memory::Memory};
 use rand::rngs::SmallRng;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
@@ -75,30 +75,38 @@ pub enum Instruction {
     // PRINT1,
     // PRINT2,
 
-    // processors
-    START, // start a new processor given a starting point (only 1 can started in execution block)
-    CANCEL_START,
-    END, // end this processor's existence
+    // end processor's existence
+    END,
 
-    // split and merge
+    // get the amount of memory in this computer
+    RES_MEMORY,
+    // get the amount of resources bound in this computer
+    // RES_BOUND,
+    // // get the amount of resources free in location
+    // RES_FREE,
+
+    // sensor management
+    SENSOR,
+    SENSOR_READ,
+
+    // indirect instructions, operated on computer-level
+    START,
+    CANCEL_START,
+    GROW,
+    CANCEL_GROW,
+    SHRINK,
+    CANCEL_SHRINK,
+
+    // indirect instructions, operated on location-level
+    EAT,
+    CANCEL_EAT,
     SPLIT,
     CANCEL_SPLIT,
     MERGE,
     CANCEL_MERGE,
     BLOCK_MERGE,
-
-    // move
     MOVE,
     CANCEL_MOVE,
-
-    // resources
-    EAT,
-    CANCEL_EAT,
-    GROW,
-    CANCEL_GROW,
-    SHRINK,
-    CANCEL_SHRINK,
-    MEMORY,
 
     // Noop
     NOOP = u8::MAX as isize,
@@ -113,6 +121,7 @@ impl Instruction {
         &self,
         processor: &mut Processor,
         memory: &mut Memory,
+        sensors: &Sensors,
         wants: &mut Wants,
         rng: &mut SmallRng,
         metabolism: &Metabolism,
@@ -382,6 +391,18 @@ impl Instruction {
                 }
             }
 
+            // Sensors
+            Instruction::SENSOR => {
+                let sensor_nr = processor.pop_sensor_nr();
+                processor.current_sensor = sensor_nr as usize;
+            }
+            Instruction::SENSOR_READ => {
+                let value = sensors[processor.current_sensor];
+                if let Some(value) = value {
+                    processor.push(value as u64);
+                }
+            }
+
             // Processors
             Instruction::START => {
                 let popped = processor.get_current_head_value();
@@ -417,11 +438,12 @@ impl Instruction {
             Instruction::CANCEL_SHRINK => {
                 wants.shrink.cancel();
             }
-            Instruction::MEMORY => {
+            Instruction::RES_MEMORY => {
                 let length = memory.values.len();
                 processor.push(length as u64);
             }
-
+            // Instruction::RES_BOUND => {}
+            // Instruction::RES_FREE => {}
             // split and merge
             Instruction::SPLIT => {
                 let direction = processor.pop_direction();
@@ -462,6 +484,7 @@ mod tests {
 
     use super::*;
     use crate::assembler::text_to_words;
+    use crate::computer::SENSORS_AMOUNT;
     use crate::testutil::{execute, execute_lines};
 
     #[test]
@@ -678,12 +701,26 @@ mod tests {
     }
 
     #[test]
+    fn test_sensor_read_nothing_there() {
+        let exec = execute("SENSOR_READ");
+        assert_eq!(exec.processor.current_stack(), &[] as &[u64]);
+    }
+
+    #[test]
+    fn test_sensor_read_something_there() {
+        let exec = execute("N1 SENSOR SENSOR_READ");
+        assert_eq!(exec.processor.current_stack(), [17]);
+    }
+
+    #[test]
     fn test_die_if_out_of_bounds() {
         let mut exec = execute("N1 N2");
         assert_eq!(exec.processor.current_stack(), [1, 2]);
+        let sensors = [None; SENSORS_AMOUNT];
         // execute two more
         exec.processor.execute_amount(
             &mut exec.memory,
+            &sensors,
             &mut exec.wants,
             &mut exec.rng,
             1002,
@@ -729,9 +766,10 @@ mod tests {
         let mut exec = execute_lines(text);
         let words = text_to_words(text);
         let words_amount = words.len();
-
+        let sensors = [None; SENSORS_AMOUNT];
         exec.processor.execute_amount(
             &mut exec.memory,
+            &sensors,
             &mut exec.wants,
             &mut exec.rng,
             (words_amount - 1) * words_amount,

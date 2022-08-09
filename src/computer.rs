@@ -7,12 +7,17 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 
+pub const SENSORS_AMOUNT: usize = 8;
+
+pub type Sensors = [Option<u64>; SENSORS_AMOUNT];
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Computer {
     pub resources: u64,
     pub memory: Memory,
     pub wants: Wants,
     pub processors: Vec<Processor>,
+    pub sensors: Sensors,
 }
 
 impl Computer {
@@ -22,6 +27,7 @@ impl Computer {
             memory: Memory::new(size),
             wants: Wants::new(),
             processors: Vec::new(),
+            sensors: [None; SENSORS_AMOUNT],
         }
     }
 
@@ -37,6 +43,7 @@ impl Computer {
         for processor in &mut self.processors {
             processor.execute_amount(
                 &mut self.memory,
+                &self.sensors,
                 &mut self.wants,
                 rng,
                 instructions_per_update,
@@ -74,6 +81,7 @@ impl Computer {
             self.resources -= amount;
         }
 
+        // shrink if we want to shrink
         if let Some(amount) = self.wants.shrink.choose(rng) {
             let amount = amount as usize;
             let amount = if amount < self.memory.values.len() {
@@ -126,6 +134,7 @@ impl Computer {
             memory: Memory::from_values(child_memory_values),
             wants: Wants::new(),
             processors: child_processors,
+            sensors: [None; SENSORS_AMOUNT],
         })
     }
 
