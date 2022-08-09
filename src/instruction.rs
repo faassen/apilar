@@ -68,8 +68,9 @@ pub enum Instruction {
     WRITE,
 
     // control
-    JMP,   // also serves as return
-    JMPIF, // jump if boolean true,
+    IF, // execute next instruction if top of stack is true
+    JMP,
+    JMPIF, // jump if top of the stack is true
 
     // PRINT0,
     // PRINT1,
@@ -354,6 +355,12 @@ impl Instruction {
             }
 
             // Control
+            Instruction::IF => {
+                let condition = processor.pop();
+                if condition == 0 {
+                    processor.skip()
+                }
+            }
             Instruction::JMP => {
                 let popped = processor.get_current_head_value();
                 if let Some(address) = popped {
@@ -618,6 +625,27 @@ mod tests {
     fn test_distance_with_reverse() {
         let exec = execute("N0 HEAD ADDR N1 HEAD ADDR N0 HEAD N1 DISTANCE");
         assert_eq!(exec.processor.current_stack(), [3]);
+    }
+
+    #[test]
+    fn test_if_true() {
+        let exec = execute("N1 IF N2");
+        assert_eq!(exec.processor.current_stack(), [2]);
+        assert_eq!(exec.processor.address(), 3);
+    }
+
+    #[test]
+    fn test_if_false() {
+        let exec = execute("N0 IF N2 N3 N4 N5");
+        assert_eq!(exec.processor.current_stack(), [3, 4, 5]);
+        assert_eq!(exec.processor.address(), 7);
+    }
+
+    #[test]
+    fn test_if_false_at_end() {
+        let exec = execute("N0 IF N2");
+        assert_eq!(exec.processor.current_stack(), &[] as &[u64]);
+        assert_eq!(exec.processor.address(), 4);
     }
 
     #[test]

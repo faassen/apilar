@@ -45,13 +45,14 @@ impl Processor {
         wants: &mut Wants,
         rng: &mut SmallRng,
         metabolism: &Metabolism,
-    ) -> bool {
+    ) {
+        println!("IP {}", self.ip);
         if !self.alive {
-            return false;
+            return;
         }
         if self.ip >= memory.values.len() {
             self.alive = false;
-            return false;
+            return;
         }
         let value = memory.values[self.ip];
         if let Some(instruction) = Instruction::decode(value) {
@@ -62,7 +63,6 @@ impl Processor {
         } else {
             self.jumped = false;
         }
-        true
     }
 
     pub fn execute_amount(
@@ -80,6 +80,11 @@ impl Processor {
 
     pub fn end(&mut self) {
         self.alive = false;
+    }
+
+    pub fn skip(&mut self) {
+        self.ip += 2;
+        self.jumped = true;
     }
 
     pub fn jump(&mut self, address: usize) {
