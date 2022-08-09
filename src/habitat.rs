@@ -109,6 +109,10 @@ impl Habitat {
         let location = self.get_mut(coords);
         location.update(rng, config);
 
+        if self.death(rng, coords, &config.death) {
+            return;
+        }
+
         if let Some((neighbor_coords, address)) = self.want_split(coords, rng) {
             self.split(coords, neighbor_coords, address);
         }
@@ -130,8 +134,6 @@ impl Habitat {
         if let Some(amount) = self.want_eat(coords, rng) {
             self.eat(coords, amount);
         }
-
-        self.death(rng, coords, &config.death);
     }
 
     pub fn mutate(&mut self, rng: &mut SmallRng, mutation: &Mutation) {
@@ -181,14 +183,16 @@ impl Habitat {
         }
     }
 
-    pub fn death(&mut self, rng: &mut SmallRng, coords: Coords, death: &Death) {
+    pub fn death(&mut self, rng: &mut SmallRng, coords: Coords, death: &Death) -> bool {
         let location = self.get_mut(coords);
         if let Some(computer) = &mut location.computer {
             if rng.gen_ratio(1, death.rate) || computer.memory.values.len() > death.memory_size {
                 location.resources += computer.resources + computer.memory.values.len() as u64;
                 location.computer = None;
+                return true;
             }
         }
+        false
     }
 
     pub fn die(&mut self, coords: Coords) {
