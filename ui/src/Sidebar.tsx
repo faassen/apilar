@@ -71,7 +71,7 @@ function Info(props: {
         <div>Resources total: {totalResources()}</div>
       </div>
       <div class="shrink flex-grow basis-auto overflow-y-auto border">
-        <div>Length: {props.code()?.length}</div>
+        <div>Length: {props.code()?.split("\n").length}</div>
         <code>
           <pre>{props.code()}</pre>
         </code>
