@@ -5,9 +5,16 @@ use serde_derive::{Deserialize, Serialize};
 
 const MAX_ARGS: usize = 16;
 
+#[derive(Debug, Copy, Clone, Deserialize, Serialize)]
+pub struct CountEntry<T: Eq> {
+    count: i32,
+    value: T,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Counts<T: Eq> {
-    wants: [(i32, T); MAX_ARGS],
+pub struct Counts<T: Eq + Default> {
+    wants: [CountEntry<T>; MAX_ARGS],
+    cancel: i32,
     pointer: usize,
 }
 
@@ -24,30 +31,29 @@ pub struct Wants {
 impl<T: Eq + Copy + Default> Counts<T> {
     fn new() -> Counts<T> {
         Counts {
-            wants: [(0, T::default()); MAX_ARGS],
+            wants: [CountEntry::default(); MAX_ARGS],
+            cancel: 0,
             pointer: 0,
         }
     }
 
     pub fn want(&mut self, value: T) {
         for i in 0..self.pointer {
-            if self.wants[i].1 == value {
-                self.wants[i].0 += 1;
+            if self.wants[i].value == value {
+                self.wants[i].count += 1;
                 return;
             }
         }
         if self.pointer >= MAX_ARGS {
             return;
         }
-        self.wants[self.pointer].0 += 1;
-        self.wants[self.pointer].1 = value;
+        self.wants[self.pointer].count += 1;
+        self.wants[self.pointer].value = value;
         self.pointer += 1;
     }
 
     pub fn cancel(&mut self) {
-        for i in 0..self.pointer {
-            self.wants[i].0 -= 1;
-        }
+        self.cancel += 1;
     }
 
     pub fn clear(&mut self) {
@@ -55,19 +61,32 @@ impl<T: Eq + Copy + Default> Counts<T> {
     }
 
     pub fn get(&self) -> impl Iterator<Item = T> + '_ {
-        self.wants[0..self.pointer].iter().filter_map(
-            |(count, value)| {
-                if *count > 0 {
-                    Some(*value)
-                } else {
-                    None
-                }
-            },
-        )
+        self.wants[0..self.pointer].iter().filter_map(|entry| {
+            if (entry.count - self.cancel) > 0 {
+                Some(entry.value)
+            } else {
+                None
+            }
+        })
     }
 
     pub fn choose(&self, rng: &mut SmallRng) -> Option<T> {
         self.get().choose(rng)
+    }
+}
+
+impl<T: Eq + Copy + Default> CountEntry<T> {
+    pub fn new() -> CountEntry<T> {
+        CountEntry {
+            count: 0,
+            value: T::default(),
+        }
+    }
+}
+
+impl<T: Eq + Copy + Default> Default for CountEntry<T> {
+    fn default() -> Self {
+        CountEntry::new()
     }
 }
 
@@ -152,6 +171,16 @@ mod tests {
     }
 
     #[test]
+    fn test_want_with_cancel_ahead_of_time() {
+        let mut wants = Wants::new();
+
+        wants.start.cancel();
+        wants.start.want(0);
+
+        assert!(wants.start.get().next().is_none());
+    }
+
+    #[test]
     fn test_want_with_cancel_something_else() {
         let mut wants = Wants::new();
 
@@ -175,11 +204,20 @@ mod tests {
         let mut wants = Wants::new();
         wants.start.want(0);
         wants.start.want(0);
-        assert_eq!(wants.start.wants[0], (2, 0));
         wants.start.cancel();
-        assert_eq!(wants.start.wants[0], (1, 0));
         assert_eq!(wants.start.get().collect::<Result>(), vec![0]);
     }
+
+    #[test]
+    fn test_really_want_really_cancel() {
+        let mut wants = Wants::new();
+        wants.start.cancel();
+        wants.start.want(0);
+        wants.start.want(0);
+        wants.start.cancel();
+        assert!(wants.start.get().next().is_none());
+    }
+
     #[test]
     fn test_want_start_too_many() {
         let mut wants = Wants::new();
