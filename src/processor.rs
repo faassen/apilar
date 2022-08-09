@@ -1,3 +1,4 @@
+use crate::direction::Direction;
 use crate::instruction::{Instruction, Metabolism};
 use crate::memory::Memory;
 use crate::want::Wants;
@@ -107,6 +108,16 @@ impl Processor {
     pub fn pop_head_nr(&mut self) -> usize {
         let value = self.pop_clamped(HEADS_AMOUNT as u64);
         value as usize
+    }
+
+    pub fn pop_direction(&mut self) -> Direction {
+        let direction_nr = self.pop_clamped(4);
+        if let Some(direction) = num::FromPrimitive::from_u8(direction_nr as u8) {
+            direction
+        } else {
+            // XXX random instead. but shouldn't happen...
+            Direction::North
+        }
     }
 
     pub fn get_head(&self, head_nr: usize) -> Option<usize> {

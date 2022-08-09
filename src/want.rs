@@ -3,7 +3,7 @@ use rand::rngs::SmallRng;
 use rand::seq::IteratorRandom;
 use serde_derive::{Deserialize, Serialize};
 
-const MAX_ARGS: usize = 16;
+const MAX_ARGS: usize = 8;
 
 #[derive(Debug, Copy, Clone, Deserialize, Serialize)]
 pub struct CountEntry<T: Eq> {
@@ -26,6 +26,7 @@ pub struct Wants {
     pub eat: Counts<u64>,
     pub split: Counts<(Direction, usize)>,
     pub merge: Counts<Direction>,
+    pub block_merge: Counts<Direction>,
 }
 
 impl<T: Eq + Copy + Default> Counts<T> {
@@ -60,6 +61,30 @@ impl<T: Eq + Copy + Default> Counts<T> {
         self.pointer = 0;
     }
 
+    fn get_strength(&self) -> impl Iterator<Item = (T, i32)> + '_ {
+        self.wants[0..self.pointer].iter().filter_map(|entry| {
+            let strength = entry.count - self.cancel;
+            if strength > 0 {
+                Some((entry.value, strength))
+            } else {
+                None
+            }
+        })
+    }
+
+    fn get_max(&self) -> i32 {
+        self.get_strength()
+            .map(|(_, strength)| strength)
+            .max()
+            .unwrap_or(0)
+    }
+
+    fn get_winners(&self) -> impl Iterator<Item = (T, i32)> + '_ {
+        let max = self.get_max();
+        self.get_strength()
+            .filter(move |(_, strength)| strength == &max)
+    }
+
     pub fn get(&self) -> impl Iterator<Item = T> + '_ {
         self.wants[0..self.pointer].iter().filter_map(|entry| {
             if (entry.count - self.cancel) > 0 {
@@ -70,8 +95,21 @@ impl<T: Eq + Copy + Default> Counts<T> {
         })
     }
 
+    pub fn get_strength_by_value(&self, value: T) -> Option<i32> {
+        for (found_value, strength) in self.get_strength() {
+            if found_value == value {
+                return Some(strength);
+            }
+        }
+        None
+    }
+
     pub fn choose(&self, rng: &mut SmallRng) -> Option<T> {
-        self.get().choose(rng)
+        self.get_winners().choose(rng).map(|(value, _)| value)
+    }
+
+    pub fn choose_with_strength(&self, rng: &mut SmallRng) -> Option<(T, i32)> {
+        self.get_winners().choose(rng)
     }
 }
 
@@ -99,6 +137,7 @@ impl Wants {
             eat: Counts::new(),
             split: Counts::new(),
             merge: Counts::new(),
+            block_merge: Counts::new(),
         }
     }
 
@@ -150,7 +189,7 @@ mod tests {
     }
 
     #[test]
-    fn test_want_split_multiple() {
+    fn test_want_split_multiple_winners() {
         let mut wants = Wants::new();
         wants.split.want((Direction::North, 0));
         wants.split.want((Direction::South, 10));
@@ -216,6 +255,85 @@ mod tests {
         wants.start.want(0);
         wants.start.cancel();
         assert!(wants.start.get().next().is_none());
+    }
+
+    #[test]
+    fn test_really_really_want_choose_strongest_wins() {
+        let mut wants = Wants::new();
+        wants.split.want((Direction::North, 0));
+        wants.split.want((Direction::North, 0));
+        wants.split.want((Direction::South, 10));
+        let mut rng = SmallRng::from_seed([0; 32]);
+
+        assert_eq!(wants.split.choose(&mut rng), Some((Direction::North, 0)));
+    }
+
+    #[test]
+    fn test_really_really_want_choose_strongest_wins2() {
+        let mut wants = Wants::new();
+        wants.split.want((Direction::North, 0));
+        wants.split.want((Direction::North, 0));
+        wants.split.want((Direction::South, 10));
+        wants.split.want((Direction::South, 10));
+        wants.split.want((Direction::South, 10));
+
+        let mut rng = SmallRng::from_seed([0; 32]);
+
+        assert_eq!(wants.split.choose(&mut rng), Some((Direction::South, 10)));
+    }
+
+    #[test]
+    fn test_really_really_want_choose_strongest_wins_with_strength() {
+        let mut wants = Wants::new();
+        wants.split.want((Direction::North, 0));
+        wants.split.want((Direction::North, 0));
+        wants.split.want((Direction::South, 10));
+        let mut rng = SmallRng::from_seed([0; 32]);
+
+        assert_eq!(
+            wants.split.choose_with_strength(&mut rng),
+            Some(((Direction::North, 0), 2))
+        );
+    }
+
+    #[test]
+    fn test_really_really_want_choose_strongest_wins2_with_strength() {
+        let mut wants = Wants::new();
+        wants.split.want((Direction::North, 0));
+        wants.split.want((Direction::North, 0));
+        wants.split.want((Direction::South, 10));
+        wants.split.want((Direction::South, 10));
+        wants.split.want((Direction::South, 10));
+
+        let mut rng = SmallRng::from_seed([0; 32]);
+
+        assert_eq!(
+            wants.split.choose_with_strength(&mut rng),
+            Some(((Direction::South, 10), 3))
+        );
+    }
+
+    #[test]
+    fn test_get_by_value() {
+        let mut wants = Wants::new();
+        wants.block_merge.want(Direction::North);
+        wants.block_merge.want(Direction::North);
+        wants.block_merge.want(Direction::South);
+        wants.block_merge.want(Direction::South);
+        wants.block_merge.want(Direction::South);
+
+        assert_eq!(
+            wants.block_merge.get_strength_by_value(Direction::North),
+            Some(2)
+        );
+        assert_eq!(
+            wants.block_merge.get_strength_by_value(Direction::South),
+            Some(3)
+        );
+        assert_eq!(
+            wants.block_merge.get_strength_by_value(Direction::West),
+            None
+        );
     }
 
     #[test]

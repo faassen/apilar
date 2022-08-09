@@ -21,6 +21,17 @@ pub enum Direction {
     West,
 }
 
+impl Direction {
+    pub fn flip(&self) -> Direction {
+        match self {
+            Direction::North => Direction::South,
+            Direction::East => Direction::West,
+            Direction::South => Direction::North,
+            Direction::West => Direction::East,
+        }
+    }
+}
+
 impl Default for Direction {
     fn default() -> Self {
         Direction::North

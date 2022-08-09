@@ -223,10 +223,25 @@ impl Habitat {
     fn want_merge(&self, coords: Coords, rng: &mut SmallRng) -> Option<Coords> {
         let location = self.get(coords);
         if let Some(computer) = &location.computer {
-            if let Some(direction) = computer.wants.merge.choose(rng) {
+            if let Some((direction, strength)) = computer.wants.merge.choose_with_strength(rng) {
                 let neighbor_coords = self.neighbor_coords(coords, direction);
                 if !self.is_empty(neighbor_coords) {
-                    return Some(neighbor_coords);
+                    let neighbor_computer = &self.get(neighbor_coords).computer;
+                    if let Some(neighbor_computer) = neighbor_computer {
+                        if let Some(block_strength) = neighbor_computer
+                            .wants
+                            .block_merge
+                            .get_strength_by_value(direction.flip())
+                        {
+                            if strength > block_strength {
+                                return Some(neighbor_coords);
+                            } else {
+                                return None;
+                            }
+                        } else {
+                            return Some(neighbor_coords);
+                        }
+                    }
                 }
             }
         }
@@ -419,18 +434,135 @@ impl Location {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::SeedableRng;
 
     #[test]
     fn test_neighbor_out_of_bounds() {
-        let island = Habitat::new(5, 5, 5);
-        assert_eq!(island.neighbor_coords((2, 2), Direction::North), (2, 1));
-        assert_eq!(island.neighbor_coords((2, 2), Direction::South), (2, 3));
-        assert_eq!(island.neighbor_coords((2, 2), Direction::West), (1, 2));
-        assert_eq!(island.neighbor_coords((2, 2), Direction::East), (3, 2));
+        let habitat = Habitat::new(5, 5, 5);
+        assert_eq!(habitat.neighbor_coords((2, 2), Direction::North), (2, 1));
+        assert_eq!(habitat.neighbor_coords((2, 2), Direction::South), (2, 3));
+        assert_eq!(habitat.neighbor_coords((2, 2), Direction::West), (1, 2));
+        assert_eq!(habitat.neighbor_coords((2, 2), Direction::East), (3, 2));
 
-        assert_eq!(island.neighbor_coords((1, 0), Direction::North), (1, 4));
-        assert_eq!(island.neighbor_coords((1, 4), Direction::South), (1, 0));
-        assert_eq!(island.neighbor_coords((0, 2), Direction::West), (4, 2));
-        assert_eq!(island.neighbor_coords((4, 2), Direction::East), (0, 2));
+        assert_eq!(habitat.neighbor_coords((1, 0), Direction::North), (1, 4));
+        assert_eq!(habitat.neighbor_coords((1, 4), Direction::South), (1, 0));
+        assert_eq!(habitat.neighbor_coords((0, 2), Direction::West), (4, 2));
+        assert_eq!(habitat.neighbor_coords((4, 2), Direction::East), (0, 2));
+    }
+
+    #[test]
+    fn test_want_split_no_obstructions() {
+        let mut habitat = Habitat::new(5, 5, 5);
+        let mut location = habitat.get_mut((2, 2));
+        location.computer = Some(Computer::new(1, 1));
+        if let Some(computer) = &mut location.computer {
+            computer.wants.split.want((Direction::North, 1));
+        }
+        let mut rng = SmallRng::from_seed([0; 32]);
+        let result = habitat.want_split((2, 2), &mut rng);
+        assert_eq!(result, Some(((2, 1), 1)));
+    }
+
+    #[test]
+    fn test_want_split_with_obstruction() {
+        let mut habitat = Habitat::new(5, 5, 5);
+        let mut location = habitat.get_mut((2, 2));
+        location.computer = Some(Computer::new(1, 1));
+        if let Some(computer) = &mut location.computer {
+            computer.wants.split.want((Direction::North, 1));
+        }
+        let mut location_north = habitat.get_mut((2, 1));
+        location_north.computer = Some(Computer::new(1, 1));
+
+        let mut rng = SmallRng::from_seed([0; 32]);
+        assert!(habitat.want_split((2, 2), &mut rng).is_none());
+    }
+
+    #[test]
+    fn test_want_merge_no_neighbor() {
+        let mut habitat = Habitat::new(5, 5, 5);
+        let mut location = habitat.get_mut((2, 2));
+        location.computer = Some(Computer::new(1, 1));
+        if let Some(computer) = &mut location.computer {
+            computer.wants.merge.want(Direction::North);
+        }
+        let mut rng = SmallRng::from_seed([0; 32]);
+        assert!(habitat.want_merge((2, 2), &mut rng).is_none());
+    }
+
+    #[test]
+    fn test_want_merge_with_unblocked_neighbor() {
+        let mut habitat = Habitat::new(5, 5, 5);
+        let mut location = habitat.get_mut((2, 2));
+        location.computer = Some(Computer::new(1, 1));
+        if let Some(computer) = &mut location.computer {
+            computer.wants.merge.want(Direction::North);
+        }
+        let mut location_north = habitat.get_mut((2, 1));
+        location_north.computer = Some(Computer::new(1, 1));
+
+        let mut rng = SmallRng::from_seed([0; 32]);
+        assert_eq!(habitat.want_merge((2, 2), &mut rng), Some((2, 1)));
+    }
+
+    #[test]
+    fn test_want_merge_with_blocked_neighbor() {
+        let mut habitat = Habitat::new(5, 5, 5);
+        let mut location = habitat.get_mut((2, 2));
+        location.computer = Some(Computer::new(1, 1));
+        if let Some(computer) = &mut location.computer {
+            computer.wants.merge.want(Direction::North);
+        }
+
+        let mut location_north = habitat.get_mut((2, 1));
+        location_north.computer = Some(Computer::new(1, 1));
+        let location_north = habitat.get_mut((2, 1));
+        if let Some(computer) = &mut location_north.computer {
+            computer.wants.block_merge.want(Direction::South);
+        }
+
+        let mut rng = SmallRng::from_seed([0; 32]);
+        assert_eq!(habitat.want_merge((2, 2), &mut rng), None);
+    }
+
+    #[test]
+    fn test_want_merge_overcome_blocked_neighbor() {
+        let mut habitat = Habitat::new(5, 5, 5);
+        let mut location = habitat.get_mut((2, 2));
+        location.computer = Some(Computer::new(1, 1));
+        if let Some(computer) = &mut location.computer {
+            computer.wants.merge.want(Direction::North);
+            computer.wants.merge.want(Direction::North);
+        }
+
+        let mut location_north = habitat.get_mut((2, 1));
+        location_north.computer = Some(Computer::new(1, 1));
+        let location_north = habitat.get_mut((2, 1));
+        if let Some(computer) = &mut location_north.computer {
+            computer.wants.block_merge.want(Direction::South);
+        }
+
+        let mut rng = SmallRng::from_seed([0; 32]);
+        assert_eq!(habitat.want_merge((2, 2), &mut rng), Some((2, 1)));
+    }
+
+    #[test]
+    fn test_want_merge_with_blocked_neighbor_but_not_in_right_direction() {
+        let mut habitat = Habitat::new(5, 5, 5);
+        let mut location = habitat.get_mut((2, 2));
+        location.computer = Some(Computer::new(1, 1));
+        if let Some(computer) = &mut location.computer {
+            computer.wants.merge.want(Direction::North);
+        }
+
+        let mut location_north = habitat.get_mut((2, 1));
+        location_north.computer = Some(Computer::new(1, 1));
+        let location_north = habitat.get_mut((2, 1));
+        if let Some(computer) = &mut location_north.computer {
+            computer.wants.block_merge.want(Direction::West); // wrong direction
+        }
+
+        let mut rng = SmallRng::from_seed([0; 32]);
+        assert_eq!(habitat.want_merge((2, 2), &mut rng), Some((2, 1)));
     }
 }

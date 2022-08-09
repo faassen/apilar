@@ -1,4 +1,3 @@
-use crate::direction::Direction;
 use crate::memory::Memory;
 use crate::processor::Processor;
 use crate::want::Wants;
@@ -86,6 +85,7 @@ pub enum Instruction {
     CANCEL_SPLIT,
     MERGE,
     CANCEL_MERGE,
+    BLOCK_MERGE,
 
     // resources
     EAT,
@@ -420,16 +420,9 @@ impl Instruction {
 
             // split and merge
             Instruction::SPLIT => {
-                let direction = processor.pop_clamped(4);
+                let direction = processor.pop_direction();
                 let popped = processor.get_current_head_value();
                 if let Some(address) = popped {
-                    let direction = if let Some(direction) = num::FromPrimitive::from_u64(direction)
-                    {
-                        direction
-                    } else {
-                        // XXX random instead. but shouldn't happen...
-                        Direction::North
-                    };
                     wants.split.want((direction, address));
                 }
             }
@@ -438,18 +431,15 @@ impl Instruction {
             }
 
             Instruction::MERGE => {
-                let direction = processor.pop();
-                let direction =
-                    if let Some(direction) = num::FromPrimitive::from_u8((direction % 4) as u8) {
-                        direction
-                    } else {
-                        // XXX random instead. but shouldn't happen...
-                        Direction::North
-                    };
+                let direction = processor.pop_direction();
                 wants.merge.want(direction);
             }
             Instruction::CANCEL_MERGE => {
                 wants.merge.cancel();
+            }
+            Instruction::BLOCK_MERGE => {
+                let direction = processor.pop_direction();
+                wants.block_merge.want(direction);
             }
         }
     }
