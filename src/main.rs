@@ -51,7 +51,7 @@ pub struct RunConfigArgs {
     #[clap(long, default_value_t = false, value_parser)]
     autosave: bool,
 
-    #[clap(long, default_value_t = 1000 * 60, value_parser)]
+    #[clap(long, default_value_t = 60 * 5, value_parser)]
     autosave_frequency: u64,
 
     #[clap(long, default_value_t = 1000 / 8, value_parser)]

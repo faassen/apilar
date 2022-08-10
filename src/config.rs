@@ -15,8 +15,8 @@ impl From<&RunConfigArgs> for RunConfig {
         RunConfig {
             autosave: Autosave {
                 enabled: cli.autosave,
-                // how many milliseconds between autosaves
-                frequency: Duration::from_millis(cli.autosave_frequency),
+                // how many seconds between autosaves
+                frequency: Duration::from_secs(cli.autosave_frequency),
             },
             redraw_frequency: Duration::from_millis(cli.redraw_frequency),
             server: !cli.no_server,
